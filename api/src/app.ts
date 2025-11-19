@@ -8,10 +8,14 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // Importar rotas
 import authRoutes from './routes/auth.routes';
+import jornadaRoutes from './routes/jornada.routes';
+import faseRoutes from './routes/fase.routes';
 import quizRoutes from './routes/quiz.routes';
-import sessaoRoutes from './routes/sessao.routes';
+import tentativaRoutes from './routes/tentativa.routes';
 import respostaRoutes from './routes/resposta.routes';
 import relatorioRoutes from './routes/relatorio.routes';
+import grupoRoutes from './routes/grupo.routes';
+import atribuicaoRoutes from './routes/atribuicao.routes';
 
 const app = express();
 
@@ -50,10 +54,14 @@ app.get('/health', (req, res) => {
 
 // Rotas da API
 app.use('/api/auth', authRoutes);
+app.use('/api/jornadas', jornadaRoutes);
+app.use('/api/fases', faseRoutes);
 app.use('/api/quizzes', quizRoutes);
-app.use('/api/sessoes', sessaoRoutes);
+app.use('/api/tentativas', tentativaRoutes);
 app.use('/api/respostas', respostaRoutes);
 app.use('/api/relatorios', relatorioRoutes);
+app.use('/api/grupos', grupoRoutes);
+app.use('/api/atribuicoes', atribuicaoRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

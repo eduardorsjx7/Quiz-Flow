@@ -82,8 +82,14 @@ cd Quiz-Flow
 
 Na raiz do projeto:
 
+**Modo com logs (recomendado para desenvolvimento):**
 ```bash
 docker-compose up --build
+```
+
+**Modo sem logs (background/detached):**
+```bash
+docker-compose up -d --build
 ```
 
 Este comando irá:
@@ -92,6 +98,12 @@ Este comando irá:
 - Criar e iniciar o container do Web
 - Executar as migrations do Prisma automaticamente
 - Criar um administrador padrão
+
+**Comandos úteis:**
+- Ver logs: `docker-compose logs` ou `docker-compose logs -f` (seguir logs)
+- Ver logs de um serviço específico: `docker-compose logs api` ou `docker-compose logs web`
+- Parar containers: `docker-compose down`
+- Parar e remover volumes: `docker-compose down -v`
 
 ### 3. Acesse a aplicação
 

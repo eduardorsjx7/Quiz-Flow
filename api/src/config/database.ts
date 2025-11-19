@@ -1,7 +1,23 @@
 import { PrismaClient } from '@prisma/client';
 import logger from './logger';
+import dotenv from 'dotenv';
+
+// Garantir que .env está carregado
+dotenv.config();
+
+// Garantir que DATABASE_URL está disponível
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  logger.error('DATABASE_URL não está definida no ambiente');
+  throw new Error('DATABASE_URL não está definida');
+}
 
 const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseUrl,
+    },
+  },
   log: [
     {
       emit: 'event',
@@ -20,6 +36,7 @@ const prisma = new PrismaClient({
       level: 'warn',
     },
   ],
+  errorFormat: 'pretty',
 });
 
 // Log de queries em desenvolvimento
@@ -51,10 +68,21 @@ prisma.$on('warn' as never, (e: any) => {
 // Middleware para conectar ao banco
 export const connectDatabase = async () => {
   try {
+    logger.info('Attempting to connect to database', { 
+      databaseUrl: databaseUrl ? `${databaseUrl.split('@')[0]}@***` : 'not set' 
+    });
     await prisma.$connect();
     logger.info('Database connected successfully');
-  } catch (error) {
-    logger.error('Failed to connect to database', { error });
+    
+    // Testar uma query simples
+    await prisma.$queryRaw`SELECT 1`;
+    logger.info('Database connection test successful');
+  } catch (error: any) {
+    logger.error('Failed to connect to database', { 
+      error: error.message || error,
+      code: error.code,
+      meta: error.meta 
+    });
     throw error;
   }
 };

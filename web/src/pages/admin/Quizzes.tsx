@@ -19,29 +19,29 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  PlayArrow as PlayIcon,
+  Assignment as AssignmentIcon,
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 interface Quiz {
   id: number;
   titulo: string;
   descricao: string | null;
-  codigoAcesso: string;
   ativo: boolean;
   pontosBase: number;
+  fase?: {
+    id: number;
+    titulo: string;
+  };
   _count: {
-    sessoes: number;
+    tentativas: number;
   };
 }
 
 const AdminQuizzes: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
 
   useEffect(() => {
@@ -51,9 +51,12 @@ const AdminQuizzes: React.FC = () => {
   const carregarQuizzes = async () => {
     try {
       const response = await api.get('/quizzes');
-      setQuizzes(response.data);
+      const dados = response.data.data || response.data;
+      // Garantir que sempre seja um array
+      setQuizzes(Array.isArray(dados) ? dados : []);
     } catch (error) {
       console.error('Erro ao carregar quizzes:', error);
+      setQuizzes([]); // Garantir que seja um array mesmo em caso de erro
     }
   };
 
@@ -69,15 +72,8 @@ const AdminQuizzes: React.FC = () => {
     }
   };
 
-  const handleCriarSessao = async (quizId: number) => {
-    try {
-      const response = await api.post('/sessoes', { quizId });
-      const codigoSessao = response.data.codigoSessao;
-      alert(`Sessão criada! Código: ${codigoSessao}\n\nCompartilhe este código com os participantes.`);
-    } catch (error) {
-      console.error('Erro ao criar sessão:', error);
-      alert('Erro ao criar sessão');
-    }
+  const handleAtribuirQuiz = (quizId: number) => {
+    navigate(`/admin/quizzes/${quizId}/atribuir`);
   };
 
   return (
@@ -110,20 +106,18 @@ const AdminQuizzes: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Título</TableCell>
-                <TableCell>Código de Acesso</TableCell>
+                <TableCell>Fase</TableCell>
                 <TableCell>Pontos Base</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Sessões</TableCell>
+                <TableCell>Tentativas</TableCell>
                 <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {quizzes.map((quiz) => (
+              {quizzes.map((quiz: Quiz) => (
                 <TableRow key={quiz.id}>
                   <TableCell>{quiz.titulo}</TableCell>
-                  <TableCell>
-                    <code>{quiz.codigoAcesso}</code>
-                  </TableCell>
+                  <TableCell>{quiz.fase?.titulo || '-'}</TableCell>
                   <TableCell>{quiz.pontosBase}</TableCell>
                   <TableCell>
                     <Chip
@@ -132,20 +126,21 @@ const AdminQuizzes: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{quiz._count.sessoes}</TableCell>
+                  <TableCell>{quiz._count.tentativas}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => handleCriarSessao(quiz.id)}
-                      title="Criar Sessão"
+                      onClick={() => handleAtribuirQuiz(quiz.id)}
+                      title="Atribuir Quiz"
                     >
-                      <PlayIcon />
+                      <AssignmentIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => handleDeletar(quiz.id)}
+                      title="Deletar Quiz"
                     >
                       <DeleteIcon />
                     </IconButton>

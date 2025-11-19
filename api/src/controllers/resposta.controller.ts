@@ -3,13 +3,14 @@ import respostaService from '../services/resposta.service';
 import { asyncHandler } from '../middleware/errorHandler';
 
 export const processarResposta = asyncHandler(async (req: Request, res: Response) => {
-  const { sessaoParticipanteId, perguntaId, alternativaId, tempoResposta } = req.body;
+  const { tentativaId, perguntaId, alternativaId, tempoResposta, tempoEsgotado } = req.body;
 
   const resultado = await respostaService.processarResposta({
-    sessaoParticipanteId,
+    tentativaId,
     perguntaId,
     alternativaId,
     tempoResposta,
+    tempoEsgotado,
   });
 
   res.status(201).json({
@@ -18,9 +19,9 @@ export const processarResposta = asyncHandler(async (req: Request, res: Response
   });
 });
 
-export const buscarRespostasParticipante = asyncHandler(async (req: Request, res: Response) => {
+export const buscarRespostasTentativa = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const respostas = await respostaService.buscarRespostasParticipante(parseInt(id));
+  const respostas = await respostaService.buscarRespostasTentativa(parseInt(id));
   res.json({
     success: true,
     data: respostas,

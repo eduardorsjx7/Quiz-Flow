@@ -2,32 +2,31 @@ import prisma from '../config/database';
 import logger from '../config/logger';
 import { CustomError } from '../middleware/errorHandler';
 import { calcularPontuacao } from '../utils/pontuacao';
-import { atualizarRankingSessao } from './socket.service';
-import { io } from '../server';
-import { io } from '../server';
+import tentativaService from './tentativa.service';
 
 export class RespostaService {
   async processarResposta(dados: {
-    sessaoParticipanteId: number;
+    tentativaId: number;
     perguntaId: number;
-    alternativaId: number;
+    alternativaId?: number;
     tempoResposta: number;
+    tempoEsgotado?: boolean;
   }) {
     try {
       // Buscar dados necessários
-      const participante = await prisma.sessaoQuizParticipante.findUnique({
-        where: { id: dados.sessaoParticipanteId },
+      const tentativa = await prisma.tentativaQuiz.findUnique({
+        where: { id: dados.tentativaId },
         include: {
-          sessao: {
-            include: {
-              quiz: true,
-            },
-          },
+          quiz: true,
         },
       });
 
-      if (!participante) {
-        throw new CustomError('Participante não encontrado', 404);
+      if (!tentativa) {
+        throw new CustomError('Tentativa não encontrada', 404);
+      }
+
+      if (tentativa.status !== 'EM_ANDAMENTO') {
+        throw new CustomError('Tentativa não está em andamento', 400);
       }
 
       const pergunta = await prisma.pergunta.findUnique({
@@ -41,18 +40,10 @@ export class RespostaService {
         throw new CustomError('Pergunta não encontrada', 404);
       }
 
-      const alternativaEscolhida = pergunta.alternativas.find(
-        (a) => a.id === dados.alternativaId
-      );
-
-      if (!alternativaEscolhida) {
-        throw new CustomError('Alternativa não encontrada', 404);
-      }
-
       // Verificar se já respondeu esta pergunta
       const respostaExistente = await prisma.resposta.findFirst({
         where: {
-          sessaoParticipanteId: dados.sessaoParticipanteId,
+          tentativaId: dados.tentativaId,
           perguntaId: dados.perguntaId,
         },
       });
@@ -61,62 +52,80 @@ export class RespostaService {
         throw new CustomError('Pergunta já respondida', 400);
       }
 
-      // Verificar se a resposta está correta
-      const acertou = alternativaEscolhida.correta;
+      // Verificar se o tempo esgotou
+      const tempoEsgotado = dados.tempoEsgotado || dados.tempoResposta >= pergunta.tempoSegundos;
 
-      // Calcular pontuação
-      const pontuacao = calcularPontuacao(
-        participante.sessao.quiz.pontosBase,
-        dados.tempoResposta,
-        pergunta.tempoSegundos,
-        acertou
-      );
+      let acertou = false;
+      let pontuacao = 0;
+
+      if (tempoEsgotado || !dados.alternativaId) {
+        // Se o tempo esgotou ou não foi selecionada alternativa, considera errado
+        acertou = false;
+        pontuacao = 0;
+      } else {
+        const alternativaEscolhida = pergunta.alternativas.find(
+          (a) => a.id === dados.alternativaId
+        );
+
+        if (!alternativaEscolhida) {
+          throw new CustomError('Alternativa não encontrada', 404);
+        }
+
+        acertou = alternativaEscolhida.correta;
+
+        // Calcular pontuação apenas se acertou
+        if (acertou) {
+          pontuacao = calcularPontuacao(
+            tentativa.quiz.pontosBase,
+            dados.tempoResposta,
+            pergunta.tempoSegundos,
+            acertou
+          );
+        }
+      }
 
       // Criar resposta
       const resposta = await prisma.resposta.create({
         data: {
-          sessaoParticipanteId: dados.sessaoParticipanteId,
+          tentativaId: dados.tentativaId,
           perguntaId: dados.perguntaId,
-          alternativaId: dados.alternativaId,
+          alternativaId: dados.alternativaId || null,
           tempoResposta: dados.tempoResposta,
           pontuacao,
           acertou,
-          usuarioId: participante.usuarioId,
+          tempoEsgotado,
         },
       });
 
-      // Atualizar pontuação total e tempo total do participante
+      // Atualizar pontuação total e tempo total da tentativa
       const todasRespostas = await prisma.resposta.findMany({
-        where: { sessaoParticipanteId: dados.sessaoParticipanteId },
+        where: { tentativaId: dados.tentativaId },
       });
 
       const pontuacaoTotal = todasRespostas.reduce((sum, r) => sum + r.pontuacao, 0);
       const tempoTotal = todasRespostas.reduce((sum, r) => sum + r.tempoResposta, 0);
 
-      await prisma.sessaoQuizParticipante.update({
-        where: { id: dados.sessaoParticipanteId },
+      await prisma.tentativaQuiz.update({
+        where: { id: dados.tentativaId },
         data: {
           pontuacaoTotal,
           tempoTotal,
         },
       });
 
-      // Atualizar ranking em tempo real
-      if (io) {
-        await atualizarRankingSessao(participante.sessaoId, io);
-      }
-
       logger.info('Answer processed', {
         respostaId: resposta.id,
-        participanteId: dados.sessaoParticipanteId,
+        tentativaId: dados.tentativaId,
         acertou,
         pontuacao,
+        tempoEsgotado,
       });
 
       return {
         resposta,
         pontuacao,
         acertou,
+        tempoEsgotado,
         pontuacaoTotal,
         tempoTotal,
       };
@@ -126,10 +135,10 @@ export class RespostaService {
     }
   }
 
-  async buscarRespostasParticipante(participanteId: number) {
+  async buscarRespostasTentativa(tentativaId: number) {
     try {
       const respostas = await prisma.resposta.findMany({
-        where: { sessaoParticipanteId: participanteId },
+        where: { tentativaId },
         include: {
           pergunta: {
             include: {
@@ -144,7 +153,7 @@ export class RespostaService {
 
       return respostas;
     } catch (error) {
-      logger.error('Error finding participant answers', { error, participanteId });
+      logger.error('Error finding attempt answers', { error, tentativaId });
       throw error;
     }
   }

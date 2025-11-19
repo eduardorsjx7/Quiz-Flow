@@ -60,6 +60,7 @@ const AdminRelatorios: React.FC = () => {
     if (quizSelecionado) {
       carregarRelatorio();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizSelecionado]);
 
   const exportarCSV = async () => {
@@ -156,41 +157,34 @@ const AdminRelatorios: React.FC = () => {
               {relatorio.quiz.titulo}
             </Typography>
 
-            {relatorio.sessoes.map((sessao: any) => (
-              <Box key={sessao.id} sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Sessão: {sessao.codigo}
-                </Typography>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Posição</TableCell>
-                        <TableCell>Nome</TableCell>
-                        <TableCell>Matrícula</TableCell>
-                        <TableCell>Pontuação</TableCell>
-                        <TableCell>Tempo Total</TableCell>
-                        <TableCell>Acertos</TableCell>
-                        <TableCell>% Acertos</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {sessao.participantes.map((p: any) => (
-                        <TableRow key={p.id}>
-                          <TableCell>{p.posicao}</TableCell>
-                          <TableCell>{p.nome}</TableCell>
-                          <TableCell>{p.matricula || '-'}</TableCell>
-                          <TableCell>{p.pontuacao}</TableCell>
-                          <TableCell>{p.tempoTotal}s</TableCell>
-                          <TableCell>{p.acertos}/{p.totalPerguntas}</TableCell>
-                          <TableCell>{p.percentualAcertos}%</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Posição</TableCell>
+                    <TableCell>Nome</TableCell>
+                    <TableCell>Matrícula</TableCell>
+                    <TableCell>Pontuação</TableCell>
+                    <TableCell>Tempo Total</TableCell>
+                    <TableCell>Acertos</TableCell>
+                    <TableCell>% Acertos</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {relatorio.tentativas.map((tentativa: any) => (
+                    <TableRow key={tentativa.id}>
+                      <TableCell>{tentativa.posicao}</TableCell>
+                      <TableCell>{tentativa.usuario.nome}</TableCell>
+                      <TableCell>{tentativa.usuario.matricula || '-'}</TableCell>
+                      <TableCell>{tentativa.pontuacao}</TableCell>
+                      <TableCell>{tentativa.tempoTotal}s</TableCell>
+                      <TableCell>{tentativa.acertos}/{tentativa.totalPerguntas}</TableCell>
+                      <TableCell>{tentativa.percentualAcertos}%</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
         )}
       </Container>

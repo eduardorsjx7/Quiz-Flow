@@ -4,7 +4,7 @@ import app from './app';
 import config from './config/env';
 import logger from './config/logger';
 import { connectDatabase, disconnectDatabase } from './config/database';
-import { atualizarRanking } from './services/socket.service';
+import { inicializarSocket } from './services/socket.service';
 
 const httpServer = createServer(app);
 
@@ -18,7 +18,7 @@ export const io = new Server(httpServer, {
 });
 
 // Inicializar serviço de socket
-atualizarRanking(io);
+inicializarSocket(io);
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {

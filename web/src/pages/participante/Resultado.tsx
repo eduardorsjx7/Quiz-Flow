@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -10,31 +10,39 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Button,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import api from '../../services/api';
 
 const ParticipanteResultado: React.FC = () => {
-  const { sessaoParticipanteId } = useParams<{ sessaoParticipanteId: string }>();
+  const { tentativaId } = useParams<{ tentativaId: string }>();
+  const navigate = useNavigate();
   const [dados, setDados] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
-    carregarResultado();
-  }, []);
+    if (tentativaId) {
+      carregarResultado();
+    }
+  }, [tentativaId]);
 
   const carregarResultado = async () => {
     try {
-      // Buscar informações do participante (inclui sessão e respostas)
-      const participanteRes = await api.get(`/sessoes/participante/${sessaoParticipanteId}`);
-      const participante = participanteRes.data;
-      
-      // Buscar ranking da sessão
-      const rankingRes = await api.get(`/sessoes/${participante.sessao.codigoSessao}/ranking`).catch(() => null);
+      setLoading(true);
+      // Buscar tentativa com respostas
+      const tentativaRes = await api.get(`/tentativas/${tentativaId}`);
+      const tentativa = tentativaRes.data.data || tentativaRes.data;
 
-      const respostas = participante.respostas || [];
-      const ranking = rankingRes?.data || [];
+      // Buscar ranking do quiz
+      const rankingRes = await api.get(`/tentativas/quiz/${tentativa.quizId}/ranking`).catch(() => null);
+      const ranking = rankingRes?.data || rankingRes || [];
 
-      const participanteRanking = ranking.find((p: any) => p.id === parseInt(sessaoParticipanteId || '0'));
+      const respostas = tentativa.respostas || [];
+      const usuarioRanking = ranking.find((r: any) => r.usuario.id === tentativa.usuarioId);
 
       const acertos = respostas.filter((r: any) => r.acertou).length;
       const tempoTotal = respostas.reduce((sum: number, r: any) => sum + r.tempoResposta, 0);
@@ -44,27 +52,43 @@ const ParticipanteResultado: React.FC = () => {
         : 0;
 
       setDados({
+        tentativa,
         respostas,
-        participante: participanteRanking,
+        ranking: usuarioRanking,
         estatisticas: {
-          pontuacaoTotal: participante.pontuacaoTotal || 0,
+          pontuacaoTotal: tentativa.pontuacaoTotal || 0,
           acertos,
           totalPerguntas: respostas.length,
           percentualAcertos,
           tempoTotal,
           tempoMedio,
-          posicaoRanking: participanteRanking?.posicao || participante.posicaoRanking || 0
-        }
+          posicaoRanking: usuarioRanking?.posicaoRanking || tentativa.posicaoRanking || 0,
+        },
       });
-    } catch (error) {
-      console.error('Erro ao carregar resultado:', error);
+    } catch (error: any) {
+      setErro(error.response?.data?.error || 'Erro ao carregar resultado');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (!dados) {
+  if (loading) {
     return (
       <Container>
-        <Typography>Carregando...</Typography>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (erro || !dados) {
+    return (
+      <Container>
+        <Alert severity="error">{erro || 'Erro ao carregar resultado'}</Alert>
+        <Button onClick={() => navigate('/dashboard')} sx={{ mt: 2 }}>
+          Voltar ao Dashboard
+        </Button>
       </Container>
     );
   }
@@ -74,6 +98,9 @@ const ParticipanteResultado: React.FC = () => {
       <Paper sx={{ p: 4 }}>
         <Typography variant="h4" align="center" gutterBottom>
           Quiz Finalizado!
+        </Typography>
+        <Typography variant="h6" align="center" color="text.secondary" gutterBottom>
+          {dados.tentativa.quiz.titulo}
         </Typography>
 
         <Box sx={{ mt: 4, mb: 4 }}>
@@ -122,7 +149,11 @@ const ParticipanteResultado: React.FC = () => {
                 <TableRow key={resposta.id}>
                   <TableCell>{resposta.pergunta.texto}</TableCell>
                   <TableCell>
-                    {resposta.acertou ? '✓ Correto' : '✗ Incorreto'}
+                    {resposta.tempoEsgotado
+                      ? '⏱ Tempo Esgotado'
+                      : resposta.acertou
+                      ? '✓ Correto'
+                      : '✗ Incorreto'}
                   </TableCell>
                   <TableCell>{resposta.tempoResposta}s</TableCell>
                   <TableCell>{resposta.pontuacao} pts</TableCell>
@@ -131,10 +162,15 @@ const ParticipanteResultado: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Button variant="contained" onClick={() => navigate('/dashboard')}>
+            Voltar ao Dashboard
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );
 };
 
 export default ParticipanteResultado;
-

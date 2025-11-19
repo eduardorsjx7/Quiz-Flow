@@ -37,7 +37,6 @@ export const exportarCSV = asyncHandler(async (req: Request, res: Response) => {
 
   // Criar CSV manualmente
   const headers = [
-    'Sessão',
     'Nome',
     'Matrícula',
     'Pontuação',
@@ -45,12 +44,13 @@ export const exportarCSV = asyncHandler(async (req: Request, res: Response) => {
     'Acertos',
     'Total Perguntas',
     '% Acertos',
+    'Posição Ranking',
+    'Data Finalização',
   ];
   const csvRows = [headers.join(',')];
 
   for (const item of dados) {
     const row = [
-      item.sessao,
       `"${item.nome}"`,
       item.matricula,
       item.pontuacao,
@@ -58,6 +58,8 @@ export const exportarCSV = asyncHandler(async (req: Request, res: Response) => {
       item.acertos,
       item.totalPerguntas,
       item.percentualAcertos,
+      item.posicaoRanking,
+      item.dataFinalizacao ? new Date(item.dataFinalizacao).toLocaleString('pt-BR') : '',
     ];
     csvRows.push(row.join(','));
   }
@@ -83,37 +85,40 @@ export const exportarPDF = asyncHandler(async (req: Request, res: Response) => {
   doc.fontSize(14).text(`Quiz: ${relatorio.quiz.titulo || 'N/A'}`, { align: 'left' });
   doc.moveDown();
 
-  for (const sessao of relatorio.sessoes) {
-    doc.fontSize(16).text(`Sessão: ${sessao.codigo}`);
-    doc.moveDown(0.5);
-    doc.fontSize(12);
+  doc.fontSize(12);
+  let y = doc.y;
+  doc.text('Posição', 50, y);
+  doc.text('Nome', 120, y);
+  doc.text('Matrícula', 200, y);
+  doc.text('Pontuação', 280, y);
+  doc.text('Acertos', 350, y);
+  doc.text('% Acertos', 420, y);
+  doc.text('Tempo Total', 500, y);
+  doc.moveDown();
 
-    let y = doc.y;
-    doc.text('Posição', 50, y);
-    doc.text('Nome', 120, y);
-    doc.text('Pontuação', 250, y);
-    doc.text('Acertos', 330, y);
-    doc.text('% Acertos', 400, y);
+  for (let i = 0; i < relatorio.tentativas.length; i++) {
+    const t = relatorio.tentativas[i];
+
+    doc.text(`${t.posicao}`, 50);
+    doc.text(t.usuario.nome.substring(0, 20), 120);
+    doc.text(t.usuario.matricula || '-', 200);
+    doc.text(t.pontuacao.toString(), 280);
+    doc.text(`${t.acertos}/${t.totalPerguntas}`, 350);
+    doc.text(`${t.percentualAcertos}%`, 420);
+    doc.text(`${t.tempoTotal}s`, 500);
     doc.moveDown();
 
-    for (let i = 0; i < sessao.participantes.length; i++) {
-      const p = sessao.participantes[i];
-
-      doc.text(`${i + 1}`, 50);
-      doc.text(p.nome.substring(0, 20), 120);
-      doc.text(p.pontuacao.toString(), 250);
-      doc.text(`${p.acertos}/${p.totalPerguntas}`, 330);
-      doc.text(`${p.percentualAcertos}%`, 400);
-      doc.moveDown();
-
-      if (doc.y > 700) {
-        doc.addPage();
-      }
-    }
-
-    doc.moveDown();
     if (doc.y > 700) {
       doc.addPage();
+      y = doc.y;
+      doc.text('Posição', 50, y);
+      doc.text('Nome', 120, y);
+      doc.text('Matrícula', 200, y);
+      doc.text('Pontuação', 280, y);
+      doc.text('Acertos', 350, y);
+      doc.text('% Acertos', 420, y);
+      doc.text('Tempo Total', 500, y);
+      doc.moveDown();
     }
   }
 

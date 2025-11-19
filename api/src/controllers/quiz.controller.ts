@@ -3,7 +3,25 @@ import quizService from '../services/quiz.service';
 import { asyncHandler } from '../middleware/errorHandler';
 
 export const listarQuizzes = asyncHandler(async (req: Request, res: Response) => {
-  const quizzes = await quizService.listarQuizzes();
+  const faseId = req.query.faseId ? Number(req.query.faseId) : undefined;
+  const quizzes = await quizService.listarQuizzes(faseId);
+  res.json({
+    success: true,
+    data: quizzes,
+  });
+});
+
+export const listarQuizzesDisponiveis = asyncHandler(async (req: Request, res: Response) => {
+  const usuarioId = req.userId;
+
+  if (!usuarioId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Usuário não autenticado',
+    });
+  }
+
+  const quizzes = await quizService.listarQuizzesDisponiveisParaUsuario(usuarioId);
   res.json({
     success: true,
     data: quizzes,
@@ -19,9 +37,17 @@ export const buscarQuiz = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export const buscarQuizPorCodigo = asyncHandler(async (req: Request, res: Response) => {
-  const { codigo } = req.params;
-  const quiz = await quizService.buscarPorCodigo(codigo);
+export const buscarQuizPorFase = asyncHandler(async (req: Request, res: Response) => {
+  const { faseId } = req.params;
+  const quiz = await quizService.buscarQuizPorFase(parseInt(faseId));
+  
+  if (!quiz) {
+    return res.status(404).json({
+      success: false,
+      error: 'Quiz não encontrado para esta fase',
+    });
+  }
+  
   res.json({
     success: true,
     data: quiz,
@@ -29,13 +55,25 @@ export const buscarQuizPorCodigo = asyncHandler(async (req: Request, res: Respon
 });
 
 export const criarQuiz = asyncHandler(async (req: Request, res: Response) => {
-  const { titulo, descricao, pontosBase, perguntas } = req.body;
-  const userId = (req as any).userId;
+  const { titulo, descricao, faseId, ordem, pontosBase, tags, dataInicio, dataFim, perguntas } = req.body;
+  const userId = req.userId;
+
+  if (!faseId) {
+    return res.status(400).json({
+      success: false,
+      error: 'faseId é obrigatório',
+    });
+  }
 
   const quiz = await quizService.criarQuiz({
     titulo,
     descricao,
+    faseId,
+    ordem,
     pontosBase,
+    tags,
+    dataInicio: dataInicio ? new Date(dataInicio) : undefined,
+    dataFim: dataFim ? new Date(dataFim) : undefined,
     criadoPor: userId,
     perguntas,
   });
@@ -48,12 +86,17 @@ export const criarQuiz = asyncHandler(async (req: Request, res: Response) => {
 
 export const atualizarQuiz = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { titulo, descricao, pontosBase, ativo } = req.body;
+  const { titulo, descricao, faseId, ordem, pontosBase, tags, dataInicio, dataFim, ativo } = req.body;
 
   const quiz = await quizService.atualizarQuiz(parseInt(id), {
     titulo,
     descricao,
+    faseId,
+    ordem,
     pontosBase,
+    tags,
+    dataInicio: dataInicio ? new Date(dataInicio) : undefined,
+    dataFim: dataFim ? new Date(dataFim) : undefined,
     ativo,
   });
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -12,7 +12,9 @@ import {
   Toolbar,
   FormControlLabel,
   Checkbox,
-  Divider
+  Divider,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -34,9 +36,15 @@ interface Pergunta {
 
 const AdminQuizCreate: React.FC = () => {
   const navigate = useNavigate();
+  const { faseId: faseIdParam } = useParams<{ faseId: string }>();
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [pontosBase, setPontosBase] = useState(100);
+  const [faseId, setFaseId] = useState<number | ''>(faseIdParam ? Number(faseIdParam) : '');
+  const [fase, setFase] = useState<any>(null);
+  const [erro, setErro] = useState('');
+  const [errosCampos, setErrosCampos] = useState<{ titulo?: string; perguntas?: string }>({});
+  const [salvando, setSalvando] = useState(false);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([
     {
       texto: '',
@@ -47,6 +55,24 @@ const AdminQuizCreate: React.FC = () => {
       ]
     }
   ]);
+
+  const carregarFase = useCallback(async () => {
+    if (!faseIdParam) return;
+    
+    try {
+      const response = await api.get(`/fases/${faseIdParam}`);
+      const faseData = response.data.data || response.data;
+      setFase(faseData);
+      setFaseId(faseData.id);
+    } catch (error) {
+      console.error('Erro ao carregar fase:', error);
+      setErro('Erro ao carregar fase');
+    }
+  }, [faseIdParam]);
+
+  useEffect(() => {
+    carregarFase();
+  }, [carregarFase]);
 
   const adicionarPergunta = () => {
     setPerguntas([
@@ -100,47 +126,83 @@ const AdminQuizCreate: React.FC = () => {
     setPerguntas(novasPerguntas);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validarFormulario = (): boolean => {
+    const novosErros: { titulo?: string; faseId?: string; perguntas?: string } = {};
 
-    // Validações
     if (!titulo.trim()) {
-      alert('Título é obrigatório');
-      return;
+      novosErros.titulo = 'Título é obrigatório';
+    } else if (titulo.trim().length < 3) {
+      novosErros.titulo = 'Título deve ter pelo menos 3 caracteres';
+    }
+
+    if (!faseId) {
+      setErro('Fase não selecionada');
+      return false;
+    }
+
+    if (perguntas.length === 0) {
+      novosErros.perguntas = 'Adicione pelo menos uma pergunta';
     }
 
     for (let i = 0; i < perguntas.length; i++) {
       const p = perguntas[i];
       if (!p.texto.trim()) {
-        alert(`Pergunta ${i + 1}: texto é obrigatório`);
-        return;
+        novosErros.perguntas = `Pergunta ${i + 1}: texto é obrigatório`;
+        break;
       }
       if (p.alternativas.length < 2) {
-        alert(`Pergunta ${i + 1}: é necessário pelo menos 2 alternativas`);
-        return;
+        novosErros.perguntas = `Pergunta ${i + 1}: é necessário pelo menos 2 alternativas`;
+        break;
       }
       if (!p.alternativas.some(a => a.correta)) {
-        alert(`Pergunta ${i + 1}: é necessário marcar uma alternativa como correta`);
-        return;
+        novosErros.perguntas = `Pergunta ${i + 1}: é necessário marcar uma alternativa como correta`;
+        break;
       }
       if (p.alternativas.some(a => !a.texto.trim())) {
-        alert(`Pergunta ${i + 1}: todas as alternativas devem ter texto`);
-        return;
+        novosErros.perguntas = `Pergunta ${i + 1}: todas as alternativas devem ter texto`;
+        break;
+      }
+      if (p.tempoSegundos < 5 || p.tempoSegundos > 300) {
+        novosErros.perguntas = `Pergunta ${i + 1}: tempo deve estar entre 5 e 300 segundos`;
+        break;
       }
     }
 
+    setErrosCampos(novosErros);
+    return Object.keys(novosErros).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro('');
+    setErrosCampos({});
+
+    if (!validarFormulario()) {
+      return;
+    }
+
     try {
+      setSalvando(true);
       await api.post('/quizzes', {
-        titulo,
-        descricao,
-        pontosBase,
-        perguntas
+        titulo: titulo.trim(),
+        descricao: descricao.trim() || undefined,
+        faseId: Number(faseId),
+        pontosBase: pontosBase > 0 ? pontosBase : 100,
+        perguntas: perguntas.map(p => ({
+          ...p,
+          texto: p.texto.trim(),
+          alternativas: p.alternativas.map(a => ({
+            ...a,
+            texto: a.texto.trim()
+          }))
+        }))
       });
-      alert('Quiz criado com sucesso!');
-      navigate('/admin/quizzes');
+      navigate('/admin/fases');
     } catch (error: any) {
       console.error('Erro ao criar quiz:', error);
-      alert(error.response?.data?.error || 'Erro ao criar quiz');
+      setErro(error.response?.data?.error || 'Erro ao criar quiz');
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -148,16 +210,22 @@ const AdminQuizCreate: React.FC = () => {
     <>
       <AppBar position="static">
         <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin/quizzes')} sx={{ mr: 2 }}>
+          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin/fases')} sx={{ mr: 2 }}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Criar Novo Quiz
+            Criar Quiz - {fase?.titulo || 'Fase'}
           </Typography>
         </Toolbar>
       </AppBar>
 
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        {erro && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
+            {erro}
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -167,10 +235,30 @@ const AdminQuizCreate: React.FC = () => {
               fullWidth
               label="Título"
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(e) => {
+                setTitulo(e.target.value);
+                if (errosCampos.titulo) {
+                  setErrosCampos({ ...errosCampos, titulo: undefined });
+                }
+              }}
               margin="normal"
               required
+              error={!!errosCampos.titulo}
+              helperText={errosCampos.titulo}
+              disabled={salvando}
             />
+            {fase && (
+              <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, mb: 2 }}>
+                <Typography variant="subtitle2" color="primary.contrastText">
+                  Fase: {fase.titulo}
+                </Typography>
+                {fase.jornada && (
+                  <Typography variant="body2" color="primary.contrastText">
+                    Jornada: {fase.jornada.titulo}
+                  </Typography>
+                )}
+              </Box>
+            )}
             <TextField
               fullWidth
               label="Descrição"
@@ -179,14 +267,20 @@ const AdminQuizCreate: React.FC = () => {
               margin="normal"
               multiline
               rows={3}
+              disabled={salvando}
             />
             <TextField
               fullWidth
               label="Pontos Base"
               type="number"
               value={pontosBase}
-              onChange={(e) => setPontosBase(parseInt(e.target.value) || 100)}
+              onChange={(e) => {
+                const valor = parseInt(e.target.value) || 100;
+                setPontosBase(valor > 0 ? valor : 100);
+              }}
               margin="normal"
+              inputProps={{ min: 1, max: 1000 }}
+              disabled={salvando}
             />
           </Paper>
 
@@ -210,6 +304,7 @@ const AdminQuizCreate: React.FC = () => {
                 required
                 multiline
                 rows={2}
+                disabled={salvando}
               />
               <TextField
                 fullWidth
@@ -219,6 +314,8 @@ const AdminQuizCreate: React.FC = () => {
                 onChange={(e) => atualizarPergunta(pIndex, 'tempoSegundos', parseInt(e.target.value) || 30)}
                 margin="normal"
                 required
+                inputProps={{ min: 5, max: 300 }}
+                disabled={salvando}
               />
 
               <Divider sx={{ my: 2 }} />
@@ -236,12 +333,14 @@ const AdminQuizCreate: React.FC = () => {
                     onChange={(e) => atualizarAlternativa(pIndex, aIndex, 'texto', e.target.value)}
                     margin="normal"
                     required
+                    disabled={salvando}
                   />
                   <FormControlLabel
                     control={
                       <Checkbox
                         checked={alt.correta}
                         onChange={(e) => atualizarAlternativa(pIndex, aIndex, 'correta', e.target.checked)}
+                        disabled={salvando}
                       />
                     }
                     label="Correta"
@@ -264,17 +363,25 @@ const AdminQuizCreate: React.FC = () => {
                 startIcon={<AddIcon />}
                 onClick={() => adicionarAlternativa(pIndex)}
                 sx={{ mt: 1 }}
+                disabled={salvando}
               >
                 Adicionar Alternativa
               </Button>
             </Paper>
           ))}
 
+          {errosCampos.perguntas && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errosCampos.perguntas}
+            </Alert>
+          )}
+
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
               onClick={adicionarPergunta}
+              disabled={salvando}
             >
               Adicionar Pergunta
             </Button>
@@ -285,12 +392,15 @@ const AdminQuizCreate: React.FC = () => {
               type="submit"
               variant="contained"
               size="large"
+              disabled={salvando}
+              startIcon={salvando ? <CircularProgress size={20} /> : undefined}
             >
-              Criar Quiz
+              {salvando ? 'Salvando...' : 'Criar Quiz'}
             </Button>
             <Button
               variant="outlined"
-              onClick={() => navigate('/admin/quizzes')}
+              onClick={() => navigate('/admin/fases')}
+              disabled={salvando}
             >
               Cancelar
             </Button>

@@ -1,12 +1,23 @@
 import prisma from '../config/database';
 import logger from '../config/logger';
 import { CustomError } from '../middleware/errorHandler';
+import atribuicaoService from './atribuicao.service';
 
 export class QuizService {
-  async listarQuizzes() {
+  async listarQuizzes(faseId?: number) {
     try {
       const quizzes = await prisma.quiz.findMany({
+        where: {
+          ...(faseId ? { faseId } : {}),
+          ativo: true,
+        },
         include: {
+          fase: {
+            select: {
+              id: true,
+              titulo: true,
+            },
+          },
           perguntas: {
             include: {
               alternativas: true,
@@ -17,18 +28,128 @@ export class QuizService {
           },
           _count: {
             select: {
-              sessoes: true,
+              tentativas: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          ordem: 'asc',
         },
       });
 
       return quizzes;
     } catch (error) {
       logger.error('Error listing quizzes', { error });
+      throw error;
+    }
+  }
+
+  async listarQuizzesDisponiveisParaUsuario(usuarioId: number) {
+    try {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        include: {
+          grupo: true,
+        },
+      });
+
+      if (!usuario) {
+        throw new CustomError('Usuário não encontrado', 404);
+      }
+
+      // Buscar atribuições do usuário (direta ou por grupo)
+      const atribuicoes = await prisma.atribuicaoQuiz.findMany({
+        where: {
+          OR: [
+            { usuarioId },
+            ...(usuario.grupoId ? [{ grupoId: usuario.grupoId }] : []),
+          ],
+        },
+        include: {
+          quiz: {
+            include: {
+              fase: {
+                select: {
+                  id: true,
+                  titulo: true,
+                },
+              },
+              _count: {
+                select: {
+                  perguntas: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const agora = new Date();
+      const quizIds = atribuicoes
+        .map((a: any) => a.quiz)
+        .filter((quiz: any) => {
+          // Verificar período de disponibilidade
+          if (quiz.dataInicio && agora < quiz.dataInicio) return false;
+          if (quiz.dataFim && agora > quiz.dataFim) return false;
+          return quiz.ativo;
+        })
+        .map((quiz: any) => quiz.id);
+
+      // Buscar quizzes com informações de tentativas do usuário
+      const quizzes = await prisma.quiz.findMany({
+        where: {
+          id: { in: quizIds },
+        },
+        include: {
+          fase: {
+            select: {
+              id: true,
+              titulo: true,
+            },
+          },
+          tentativas: {
+            where: {
+              usuarioId,
+            },
+            select: {
+              id: true,
+              status: true,
+              pontuacaoTotal: true,
+              finalizadaEm: true,
+            },
+          },
+          _count: {
+            select: {
+              perguntas: true,
+            },
+          },
+        },
+        orderBy: {
+          ordem: 'asc',
+        },
+      });
+
+      // Formatar resposta com status de cada quiz
+      return quizzes.map((quiz: any) => {
+        const tentativa = quiz.tentativas[0];
+        let status: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+
+        if (tentativa) {
+          if (tentativa.status === 'FINALIZADA') {
+            status = 'concluido';
+          } else if (tentativa.status === 'EM_ANDAMENTO') {
+            status = 'em_andamento';
+          }
+        }
+
+        return {
+          ...quiz,
+          status,
+          tentativa: tentativa || null,
+        };
+      });
+    } catch (error) {
+      logger.error('Error listing available quizzes for user', { error, usuarioId });
       throw error;
     }
   }
@@ -60,20 +181,23 @@ export class QuizService {
     }
   }
 
-  async buscarPorCodigo(codigo: string) {
+  async buscarQuizPorFase(faseId: number) {
     try {
-      const quiz = await prisma.quiz.findUnique({
-        where: { codigoAcesso: codigo },
+      const quiz = await prisma.quiz.findFirst({
+        where: {
+          faseId,
+          ativo: true,
+        },
         include: {
+          fase: {
+            select: {
+              id: true,
+              titulo: true,
+            },
+          },
           perguntas: {
             include: {
-              alternativas: {
-                select: {
-                  id: true,
-                  texto: true,
-                  ordem: true,
-                },
-              },
+              alternativas: true,
             },
             orderBy: {
               ordem: 'asc',
@@ -82,13 +206,9 @@ export class QuizService {
         },
       });
 
-      if (!quiz) {
-        throw new CustomError('Quiz não encontrado', 404);
-      }
-
       return quiz;
     } catch (error) {
-      logger.error('Error finding quiz by code', { error, codigo });
+      logger.error('Error finding quiz by fase', { error, faseId });
       throw error;
     }
   }
@@ -96,7 +216,12 @@ export class QuizService {
   async criarQuiz(dados: {
     titulo: string;
     descricao?: string;
+    faseId: number;
+    ordem?: number;
     pontosBase?: number;
+    tags?: string;
+    dataInicio?: Date;
+    dataFim?: Date;
     criadoPor?: number;
     perguntas: Array<{
       texto: string;
@@ -108,24 +233,37 @@ export class QuizService {
     }>;
   }) {
     try {
-      // Gerar código único
-      let codigoAcesso: string;
-      let codigoExiste = true;
+      // Verificar se a fase existe
+      const fase = await prisma.fase.findUnique({
+        where: { id: dados.faseId },
+        include: {
+          quizzes: {
+            where: {
+              ativo: true,
+            },
+          },
+        },
+      });
 
-      while (codigoExiste) {
-        codigoAcesso = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const existe = await prisma.quiz.findUnique({
-          where: { codigoAcesso },
-        });
-        codigoExiste = !!existe;
+      if (!fase) {
+        throw new CustomError('Fase não encontrada', 404);
+      }
+
+      // Verificar se já existe um quiz ativo nesta fase
+      if (fase.quizzes.length > 0) {
+        throw new CustomError('Esta fase já possui um quiz. Cada fase pode ter apenas um quiz.', 400);
       }
 
       const quiz = await prisma.quiz.create({
         data: {
           titulo: dados.titulo,
           descricao: dados.descricao,
+          faseId: dados.faseId,
+          ordem: dados.ordem || 0,
           pontosBase: dados.pontosBase || 100,
-          codigoAcesso: codigoAcesso!,
+          tags: dados.tags,
+          dataInicio: dados.dataInicio,
+          dataFim: dados.dataFim,
           criadoPor: dados.criadoPor,
           perguntas: {
             create: dados.perguntas.map((pergunta, index) => ({
@@ -143,6 +281,12 @@ export class QuizService {
           },
         },
         include: {
+          fase: {
+            select: {
+              id: true,
+              titulo: true,
+            },
+          },
           perguntas: {
             include: {
               alternativas: true,
@@ -151,7 +295,7 @@ export class QuizService {
         },
       });
 
-      logger.info('Quiz created', { quizId: quiz.id, codigoAcesso: quiz.codigoAcesso });
+      logger.info('Quiz created', { quizId: quiz.id, faseId: dados.faseId });
 
       return quiz;
     } catch (error) {
@@ -163,7 +307,12 @@ export class QuizService {
   async atualizarQuiz(id: number, dados: {
     titulo?: string;
     descricao?: string;
+    faseId?: number;
+    ordem?: number;
     pontosBase?: number;
+    tags?: string;
+    dataInicio?: Date;
+    dataFim?: Date;
     ativo?: boolean;
   }) {
     try {

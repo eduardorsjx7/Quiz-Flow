@@ -1,13 +1,14 @@
 import express from 'express';
 import {
   processarResposta,
-  buscarRespostasParticipante,
+  buscarRespostasTentativa,
 } from '../controllers/resposta.controller';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-router.post('/', processarResposta);
-router.get('/participante/:id', buscarRespostasParticipante);
+router.post('/', authenticate, processarResposta);
+router.get('/tentativa/:id', authenticate, buscarRespostasTentativa);
 
 export default router;
 

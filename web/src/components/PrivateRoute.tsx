@@ -13,10 +13,8 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/participante/entrada" replace />;
-  }
-
+  // Não redirecionar automaticamente - deixar a rota decidir
+  // As rotas específicas de admin já têm verificação de admin
   return children;
 };
 

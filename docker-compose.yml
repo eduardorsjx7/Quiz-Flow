@@ -39,6 +39,12 @@ services:
         condition: service_healthy
     networks:
       - quiz-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
 
   web:
     build:
@@ -46,8 +52,10 @@ services:
       dockerfile: Dockerfile
     container_name: quiz-flow-web
     environment:
-      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_API_URL: http://localhost:3001/api
       REACT_APP_WS_URL: ws://localhost:3001
+      NODE_OPTIONS: --no-deprecation
+      CI: "true"
     ports:
       - "3000:3000"
     volumes:
@@ -58,6 +66,12 @@ services:
     networks:
       - quiz-network
     command: npm start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
 
 volumes:
   postgres_data:

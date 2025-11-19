@@ -117,3 +117,119 @@ export const getMe = asyncHandler(async (req: Request, res: Response, next: Next
   });
 });
 
+export const listarUsuarios = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const usuarios = await prisma.usuario.findMany({
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      matricula: true,
+      tipo: true,
+      grupo: {
+        select: {
+          id: true,
+          nome: true,
+        },
+      },
+    },
+    orderBy: {
+      nome: 'asc',
+    },
+  });
+
+  res.json({
+    success: true,
+    data: usuarios,
+  });
+});
+
+export const criarUsuario = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { nome, email, senha, matricula, tipo, grupoId } = req.body;
+
+  if (!nome || !email || !senha) {
+    throw new CustomError('Nome, email e senha são obrigatórios', 400);
+  }
+
+  const usuarioExistente = await prisma.usuario.findUnique({
+    where: { email },
+  });
+
+  if (usuarioExistente) {
+    throw new CustomError('Email já cadastrado', 409);
+  }
+
+  // Validar grupo se fornecido
+  if (grupoId) {
+    const grupo = await prisma.grupo.findUnique({
+      where: { id: grupoId },
+    });
+    if (!grupo) {
+      throw new CustomError('Grupo não encontrado', 404);
+    }
+  }
+
+  const senhaHash = await bcrypt.hash(senha, 10);
+
+  const usuario = await prisma.usuario.create({
+    data: {
+      nome,
+      email,
+      senha: senhaHash,
+      matricula: matricula || null,
+      tipo: tipo || 'COLABORADOR',
+      grupoId: grupoId || null,
+    },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      matricula: true,
+      tipo: true,
+      grupo: {
+        select: {
+          id: true,
+          nome: true,
+        },
+      },
+    },
+  });
+
+  logger.info('User created', { userId: usuario.id, email, tipo });
+
+  res.status(201).json({
+    success: true,
+    message: 'Usuário criado com sucesso',
+    data: usuario,
+  });
+});
+
+export const deletarUsuario = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const userId = parseInt(id);
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+  });
+
+  if (!usuario) {
+    throw new CustomError('Usuário não encontrado', 404);
+  }
+
+  // Não permitir deletar a si mesmo
+  const currentUserId = (req as any).userId;
+  if (currentUserId === userId) {
+    throw new CustomError('Você não pode deletar seu próprio usuário', 400);
+  }
+
+  await prisma.usuario.delete({
+    where: { id: userId },
+  });
+
+  logger.info('User deleted', { userId });
+
+  res.json({
+    success: true,
+    message: 'Usuário deletado com sucesso',
+  });
+});
+

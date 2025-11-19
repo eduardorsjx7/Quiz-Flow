@@ -1,8 +1,9 @@
 import express from 'express';
 import {
   listarQuizzes,
+  listarQuizzesDisponiveis,
   buscarQuiz,
-  buscarQuizPorCodigo,
+  buscarQuizPorFase,
   criarQuiz,
   atualizarQuiz,
   deletarQuiz,
@@ -13,8 +14,9 @@ import { authenticate, requireAdmin } from '../middleware/auth';
 const router = express.Router();
 
 router.get('/', authenticate, listarQuizzes);
-router.get('/:id', buscarQuiz);
-router.get('/codigo/:codigo', buscarQuizPorCodigo);
+router.get('/disponiveis', authenticate, listarQuizzesDisponiveis);
+router.get('/fase/:faseId', authenticate, buscarQuizPorFase);
+router.get('/:id', authenticate, buscarQuiz);
 router.post('/', authenticate, requireAdmin, criarQuiz);
 router.put('/:id', authenticate, requireAdmin, atualizarQuiz);
 router.delete('/:id', authenticate, requireAdmin, deletarQuiz);

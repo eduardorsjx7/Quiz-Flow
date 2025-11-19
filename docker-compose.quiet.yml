@@ -1,0 +1,87 @@
+# Arquivo para subir containers de forma silenciosa
+# Use: docker-compose -f docker-compose.quiet.yml up -d
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: quiz-flow-postgres
+    environment:
+      POSTGRES_USER: quizuser
+      POSTGRES_PASSWORD: quizpassword
+      POSTGRES_DB: quizflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quiz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quizuser -d quizflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "none"
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: quiz-flow-api
+    environment:
+      DATABASE_URL: postgresql://quizuser:quizpassword@postgres:5432/quizflow
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      PORT: 3001
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - quiz-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+        tag: "{{.Name}}"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: quiz-flow-web
+    environment:
+      REACT_APP_API_URL: http://localhost:3001/api
+      REACT_APP_WS_URL: ws://localhost:3001
+      NODE_OPTIONS: --no-deprecation
+      CI: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - quiz-network
+    command: npm start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+        tag: "{{.Name}}"
+
+volumes:
+  postgres_data:
+
+networks:
+  quiz-network:
+    driver: bridge
+

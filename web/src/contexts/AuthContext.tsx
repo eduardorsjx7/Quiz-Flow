@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface Usuario {
   id: number;
@@ -27,15 +27,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      // O interceptor do api.ts já adiciona o token automaticamente
       verificarToken(storedToken);
     }
   }, []);
 
   const verificarToken = async (tokenToVerify: string) => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/auth/me`);
-      setUsuario(response.data);
+      const response = await api.get('/auth/me');
+      // A resposta vem como { success: true, data: usuario }
+      const usuario = response.data.data || response.data;
+      setUsuario(usuario);
     } catch (error) {
       localStorage.removeItem('token');
       setToken(null);
@@ -45,18 +47,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, senha: string) => {
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/auth/login`, {
+      const response = await api.post('/auth/login', {
         email,
         senha
       });
 
-      const { token: newToken, usuario: newUsuario } = response.data;
+      // A resposta vem como { success: true, data: { token, usuario } }
+      const { token: newToken, usuario: newUsuario } = response.data.data || response.data;
+      
+      if (!newToken) {
+        throw new Error('Token não recebido do servidor');
+      }
+
       setToken(newToken);
       setUsuario(newUsuario);
       localStorage.setItem('token', newToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Erro ao fazer login');
+      throw new Error(error.response?.data?.error || error.response?.data?.message || error.message || 'Erro ao fazer login');
     }
   };
 
@@ -64,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setUsuario(null);
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+    // O interceptor do api.ts gerencia o token automaticamente
   };
 
   return (

@@ -15,7 +15,9 @@ import {
 import {
   Quiz as QuizIcon,
   Assessment as AssessmentIcon,
-  ExitToApp as ExitToAppIcon
+  ExitToApp as ExitToAppIcon,
+  People as PeopleIcon,
+  Route as RouteIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -25,8 +27,8 @@ const AdminDashboard: React.FC = () => {
   const { usuario, logout } = useAuth();
   const [estatisticas, setEstatisticas] = useState({
     totalQuizzes: 0,
-    totalSessoes: 0,
-    totalParticipantes: 0
+    totalTentativas: 0,
+    totalUsuarios: 0
   });
 
   useEffect(() => {
@@ -39,10 +41,11 @@ const AdminDashboard: React.FC = () => {
         api.get('/quizzes')
       ]);
 
+      const quizzesData = quizzesRes.data.data || quizzesRes.data;
       setEstatisticas({
-        totalQuizzes: quizzesRes.data.length,
-        totalSessoes: 0, // Implementar quando necessário
-        totalParticipantes: 0 // Implementar quando necessário
+        totalQuizzes: Array.isArray(quizzesData) ? quizzesData.length : 0,
+        totalTentativas: 0, // Implementar quando necessário
+        totalUsuarios: 0 // Implementar quando necessário
       });
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
@@ -90,10 +93,10 @@ const AdminDashboard: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <AssessmentIcon sx={{ fontSize: 40, color: 'secondary.main', mr: 2 }} />
-                  <Typography variant="h4">{estatisticas.totalSessoes}</Typography>
+                  <Typography variant="h4">{estatisticas.totalTentativas}</Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Sessões Realizadas
+                  Tentativas Realizadas
                 </Typography>
               </CardContent>
             </Card>
@@ -102,19 +105,43 @@ const AdminDashboard: React.FC = () => {
 
         <Box sx={{ mt: 4 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<RouteIcon />}
+                onClick={() => navigate('/admin/jornadas')}
+                sx={{ py: 2 }}
+              >
+                Jornadas
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
               <Button
                 fullWidth
                 variant="contained"
                 size="large"
                 startIcon={<QuizIcon />}
-                onClick={() => navigate('/admin/quizzes')}
+                onClick={() => navigate('/admin/fases')}
                 sx={{ py: 2 }}
               >
-                Gerenciar Quizzes
+                Fases
               </Button>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<PeopleIcon />}
+                onClick={() => navigate('/admin/usuarios')}
+                sx={{ py: 2 }}
+              >
+                Usuários
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
               <Button
                 fullWidth
                 variant="contained"

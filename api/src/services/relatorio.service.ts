@@ -6,57 +6,64 @@ import { calcularTempoMedio, calcularPercentualAcertos } from '../utils/pontuaca
 export class RelatorioService {
   async relatorioPorQuiz(quizId: number) {
     try {
-      const sessoes = await prisma.sessaoQuiz.findMany({
-        where: { quizId },
+      const quiz = await prisma.quiz.findUnique({
+        where: { id: quizId },
         include: {
-          participantes: {
-            include: {
-              respostas: {
-                include: {
-                  pergunta: true,
-                },
-              },
+          perguntas: true,
+        },
+      });
+
+      if (!quiz) {
+        throw new CustomError('Quiz não encontrado', 404);
+      }
+
+      const tentativas = await prisma.tentativaQuiz.findMany({
+        where: {
+          quizId,
+          status: 'FINALIZADA',
+        },
+        include: {
+          usuario: {
+            select: {
+              id: true,
+              nome: true,
+              email: true,
+              matricula: true,
             },
-            orderBy: [
-              { pontuacaoTotal: 'desc' },
-              { tempoTotal: 'asc' },
-            ],
           },
-          quiz: {
+          respostas: {
             include: {
-              perguntas: true,
+              pergunta: true,
             },
           },
         },
+        orderBy: [
+          { pontuacaoTotal: 'desc' },
+          { tempoTotal: 'asc' },
+        ],
       });
 
       const relatorio = {
         quiz: {
-          id: sessoes[0]?.quiz.id,
-          titulo: sessoes[0]?.quiz.titulo,
-          totalPerguntas: sessoes[0]?.quiz.perguntas.length || 0,
+          id: quiz.id,
+          titulo: quiz.titulo,
+          totalPerguntas: quiz.perguntas.length || 0,
         },
-        sessoes: sessoes.map((sessao) => ({
-          id: sessao.id,
-          codigo: sessao.codigoSessao,
-          status: sessao.status,
-          iniciadaEm: sessao.iniciadaEm,
-          finalizadaEm: sessao.finalizadaEm,
-          totalParticipantes: sessao.participantes.length,
-          participantes: sessao.participantes.map((p, index) => ({
-            posicao: index + 1,
-            nome: p.nomeParticipante,
-            matricula: p.matricula,
-            pontuacao: p.pontuacaoTotal,
-            tempoTotal: p.tempoTotal,
-            tempoMedio: calcularTempoMedio(p.respostas.map((r) => r.tempoResposta)),
-            acertos: p.respostas.filter((r) => r.acertou).length,
-            totalPerguntas: p.respostas.length,
-            percentualAcertos: calcularPercentualAcertos(
-              p.respostas.length,
-              p.respostas.filter((r) => r.acertou).length
-            ),
-          })),
+        tentativas: tentativas.map((tentativa, index) => ({
+          id: tentativa.id,
+          usuario: tentativa.usuario,
+          iniciadaEm: tentativa.iniciadaEm,
+          finalizadaEm: tentativa.finalizadaEm,
+          posicao: index + 1,
+          pontuacao: tentativa.pontuacaoTotal,
+          tempoTotal: tentativa.tempoTotal,
+          tempoMedio: calcularTempoMedio(tentativa.respostas.map((r) => r.tempoResposta)),
+          acertos: tentativa.respostas.filter((r) => r.acertou).length,
+          totalPerguntas: tentativa.respostas.length,
+          percentualAcertos: calcularPercentualAcertos(
+            tentativa.respostas.length,
+            tentativa.respostas.filter((r) => r.acertou).length
+          ),
         })),
       };
 
@@ -69,14 +76,26 @@ export class RelatorioService {
 
   async relatorioPorColaborador(usuarioId: number) {
     try {
-      const participacoes = await prisma.sessaoQuizParticipante.findMany({
-        where: { usuarioId },
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+        },
+      });
+
+      if (!usuario) {
+        throw new CustomError('Usuário não encontrado', 404);
+      }
+
+      const tentativas = await prisma.tentativaQuiz.findMany({
+        where: {
+          usuarioId,
+          status: 'FINALIZADA',
+        },
         include: {
-          sessao: {
-            include: {
-              quiz: true,
-            },
-          },
+          quiz: true,
           respostas: {
             include: {
               pergunta: true,
@@ -84,48 +103,48 @@ export class RelatorioService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          finalizadaEm: 'desc',
         },
       });
 
       const relatorio = {
         usuario: {
-          id: participacoes[0]?.usuarioId,
-          nome: participacoes[0]?.nomeParticipante,
+          id: usuario.id,
+          nome: usuario.nome,
+          email: usuario.email,
         },
-        historico: participacoes.map((p) => ({
-          quizId: p.sessao.quiz.id,
-          quizTitulo: p.sessao.quiz.titulo,
-          sessaoCodigo: p.sessao.codigoSessao,
-          dataParticipacao: p.createdAt,
-          pontuacao: p.pontuacaoTotal,
-          tempoTotal: p.tempoTotal,
-          tempoMedio: calcularTempoMedio(p.respostas.map((r) => r.tempoResposta)),
-          acertos: p.respostas.filter((r) => r.acertou).length,
-          totalPerguntas: p.respostas.length,
+        historico: tentativas.map((tentativa) => ({
+          quizId: tentativa.quiz.id,
+          quizTitulo: tentativa.quiz.titulo,
+          dataParticipacao: tentativa.finalizadaEm || tentativa.iniciadaEm,
+          pontuacao: tentativa.pontuacaoTotal,
+          tempoTotal: tentativa.tempoTotal,
+          tempoMedio: calcularTempoMedio(tentativa.respostas.map((r) => r.tempoResposta)),
+          acertos: tentativa.respostas.filter((r) => r.acertou).length,
+          totalPerguntas: tentativa.respostas.length,
           percentualAcertos: calcularPercentualAcertos(
-            p.respostas.length,
-            p.respostas.filter((r) => r.acertou).length
+            tentativa.respostas.length,
+            tentativa.respostas.filter((r) => r.acertou).length
           ),
-          posicaoRanking: p.posicaoRanking,
+          posicaoRanking: tentativa.posicaoRanking,
         })),
         estatisticas: {
-          totalQuizzes: participacoes.length,
+          totalQuizzes: tentativas.length,
           pontuacaoMedia:
-            participacoes.length > 0
+            tentativas.length > 0
               ? Math.round(
-                  participacoes.reduce((sum, p) => sum + p.pontuacaoTotal, 0) /
-                    participacoes.length
+                  tentativas.reduce((sum, t) => sum + t.pontuacaoTotal, 0) /
+                    tentativas.length
                 )
               : 0,
           percentualAcertosMedio:
-            participacoes.length > 0
+            tentativas.length > 0
               ? Math.round(
-                  participacoes.reduce((sum, p) => {
-                    const total = p.respostas.length;
-                    const acertos = p.respostas.filter((r) => r.acertou).length;
+                  tentativas.reduce((sum, t) => {
+                    const total = t.respostas.length;
+                    const acertos = t.respostas.filter((r) => r.acertou).length;
                     return sum + calcularPercentualAcertos(total, acertos);
-                  }, 0) / participacoes.length
+                  }, 0) / tentativas.length
                 )
               : 0,
         },
@@ -146,7 +165,16 @@ export class RelatorioService {
           alternativas: true,
           respostas: {
             include: {
-              sessaoParticipante: true,
+              tentativa: {
+                include: {
+                  usuario: {
+                    select: {
+                      id: true,
+                      nome: true,
+                    },
+                  },
+                },
+              },
             },
           },
           quiz: true,
@@ -204,36 +232,40 @@ export class RelatorioService {
 
   async dadosParaExportacaoCSV(quizId: number) {
     try {
-      const sessoes = await prisma.sessaoQuiz.findMany({
-        where: { quizId },
+      const tentativas = await prisma.tentativaQuiz.findMany({
+        where: {
+          quizId,
+          status: 'FINALIZADA',
+        },
         include: {
-          participantes: {
-            include: {
-              respostas: true,
+          usuario: {
+            select: {
+              nome: true,
+              matricula: true,
             },
           },
-          quiz: true,
+          respostas: true,
         },
+        orderBy: [
+          { pontuacaoTotal: 'desc' },
+          { tempoTotal: 'asc' },
+        ],
       });
 
-      const dados = [];
-      for (const sessao of sessoes) {
-        for (const participante of sessao.participantes) {
-          dados.push({
-            sessao: sessao.codigoSessao,
-            nome: participante.nomeParticipante,
-            matricula: participante.matricula || '',
-            pontuacao: participante.pontuacaoTotal,
-            tempoTotal: participante.tempoTotal,
-            acertos: participante.respostas.filter((r) => r.acertou).length,
-            totalPerguntas: participante.respostas.length,
-            percentualAcertos: calcularPercentualAcertos(
-              participante.respostas.length,
-              participante.respostas.filter((r) => r.acertou).length
-            ),
-          });
-        }
-      }
+      const dados = tentativas.map((tentativa) => ({
+        nome: tentativa.usuario.nome,
+        matricula: tentativa.usuario.matricula || '',
+        pontuacao: tentativa.pontuacaoTotal,
+        tempoTotal: tentativa.tempoTotal,
+        acertos: tentativa.respostas.filter((r) => r.acertou).length,
+        totalPerguntas: tentativa.respostas.length,
+        percentualAcertos: calcularPercentualAcertos(
+          tentativa.respostas.length,
+          tentativa.respostas.filter((r) => r.acertou).length
+        ),
+        posicaoRanking: tentativa.posicaoRanking || 0,
+        dataFinalizacao: tentativa.finalizadaEm || tentativa.iniciadaEm,
+      }));
 
       return dados;
     } catch (error) {

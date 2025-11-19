@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env(DATABASE_URL)
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String?  @unique
+  matricula String?
+  senha     String?
+  tipo      TipoUsuario @default(COLABORADOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessoesParticipadas SessaoQuizParticipante[]
+  respostas           Resposta[]
+
+  @@map("usuarios")
+}
+
+enum TipoUsuario {
+  ADMINISTRADOR
+  COLABORADOR
+}
+
+model Quiz {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descricao   String?
+  codigoAcesso String  @unique
+  ativo       Boolean  @default(true)
+  pontosBase  Int      @default(100)
+  criadoPor   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  perguntas   Pergunta[]
+  sessoes     SessaoQuiz[]
+
+  @@map("quizzes")
+}
+
+model Pergunta {
+  id          Int      @id @default(autoincrement())
+  quizId      Int
+  texto       String
+  tempoSegundos Int    @default(30)
+  ordem       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  alternativas Alternativa[]
+  respostas   Resposta[]
+  perguntasAtivas PerguntaAtiva[]
+
+  @@map("perguntas")
+}
+
+model Alternativa {
+  id          Int      @id @default(autoincrement())
+  perguntaId  Int
+  texto       String
+  correta     Boolean  @default(false)
+  ordem       Int
+  createdAt   DateTime @default(now())
+
+  pergunta    Pergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+
+  @@map("alternativas")
+}
+
+model SessaoQuiz {
+  id          Int      @id @default(autoincrement())
+  quizId      Int
+  codigoSessao String  @unique
+  status      StatusSessao @default(AGUARDANDO)
+  iniciadaEm  DateTime?
+  finalizadaEm DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  participantes SessaoQuizParticipante[]
+  perguntasAtivas PerguntaAtiva[]
+
+  @@map("sessoes_quiz")
+}
+
+enum StatusSessao {
+  AGUARDANDO
+  EM_ANDAMENTO
+  FINALIZADA
+}
+
+model PerguntaAtiva {
+  id          Int      @id @default(autoincrement())
+  sessaoId    Int
+  perguntaId  Int
+  iniciadaEm  DateTime @default(now())
+  finalizadaEm DateTime?
+
+  sessao      SessaoQuiz @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  pergunta    Pergunta   @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+
+  @@map("perguntas_ativas")
+}
+
+model SessaoQuizParticipante {
+  id          Int      @id @default(autoincrement())
+  sessaoId    Int
+  usuarioId   Int?
+  nomeParticipante String
+  matricula   String?
+  pontuacaoTotal Int   @default(0)
+  tempoTotal  Int     @default(0)
+  posicaoRanking Int?
+  createdAt   DateTime @default(now())
+
+  sessao      SessaoQuiz @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  respostas   Resposta[]
+
+  @@map("sessoes_quiz_participantes")
+}
+
+model Resposta {
+  id          Int      @id @default(autoincrement())
+  sessaoParticipanteId Int
+  perguntaId  Int
+  alternativaId Int
+  tempoResposta Int
+  pontuacao   Int
+  acertou     Boolean
+  respondidaEm DateTime @default(now())
+
+  sessaoParticipante SessaoQuizParticipante @relation(fields: [sessaoParticipanteId], references: [id], onDelete: Cascade)
+  pergunta    Pergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId  Int?
+
+  @@map("respostas")
+}
+

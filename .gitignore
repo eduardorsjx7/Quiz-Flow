@@ -1,0 +1,18 @@
+node_modules/
+.env
+*.log
+dist/
+build/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+api/logs/
+*.log
+
+# Dependencies
+api/node_modules/
+web/node_modules/
+

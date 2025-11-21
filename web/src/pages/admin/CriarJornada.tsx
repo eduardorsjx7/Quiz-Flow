@@ -214,7 +214,7 @@ const CriarJornada: React.FC = () => {
 
     try {
       setSalvando(true);
-      const response = await api.post('/jornadas', {
+      await api.post('/jornadas', {
         titulo: titulo.trim(),
         fases: fases.map((f) => ({
           titulo: f.titulo,

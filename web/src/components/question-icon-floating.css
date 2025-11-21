@@ -1,0 +1,31 @@
+.qif-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  animation-name: qif-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  opacity: 0;
+}
+
+@keyframes qif-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.95);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.04);
+  }
+  85% {
+    opacity: 0;
+    transform: translate(-50%, -70%) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+

@@ -18,6 +18,8 @@ import {
   Login as LoginIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingScreen } from '../components/LoadingScreen';
+import { QuestionIconBackground } from '../components/QuestionIconBackground';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,7 +28,7 @@ const Login: React.FC = () => {
   const [erro, setErro] = useState('');
   const [errosCampos, setErrosCampos] = useState<{ email?: string; senha?: string }>({});
   const [enviando, setEnviando] = useState(false);
-  const { login, usuario, isAuthenticated } = useAuth();
+  const { login, usuario, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirecionar se já estiver autenticado
@@ -85,29 +87,35 @@ const Login: React.FC = () => {
     }
   };
 
+  // Mostrar tela de loading durante o processo de login ou verificação inicial
+  if (enviando || isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <Box
       sx={{
+        position: 'relative',
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#ffffff',
         padding: 2,
+        overflow: 'hidden',
       }}
     >
-      <Container maxWidth="sm">
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            width: '100%',
-            borderRadius: 3,
-            background: '#ffffff',
-            border: '1px solid rgba(255, 44, 25, 0.1)',
-            boxShadow: '0 8px 32px rgba(1, 27, 73, 0.1)',
-          }}
-        >
+      {/* Fundo animado com caixinhas de ícone flutuantes */}
+      <QuestionIconBackground />
+      
+      <Container 
+        maxWidth="sm"
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+      
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <img 
               src="/logo/logo1.svg" 

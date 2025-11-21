@@ -9,6 +9,7 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
+    "@types/react-slick": "^0.23.13",
     "ajv": "^8.12.0",
     "ajv-keywords": "^5.1.0",
     "axios": "^1.6.2",
@@ -16,7 +17,9 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
+    "react-slick": "^0.31.0",
     "recharts": "^2.10.3",
+    "slick-carousel": "^1.8.1",
     "socket.io-client": "^4.6.1"
   },
   "devDependencies": {

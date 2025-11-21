@@ -9,19 +9,16 @@ import {
   Box,
   Alert,
   CircularProgress,
-  AppBar,
-  Toolbar,
-  IconButton,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 const CriarUsuario: React.FC = () => {
   const navigate = useNavigate();
@@ -116,19 +113,8 @@ const CriarUsuario: React.FC = () => {
   };
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin/usuarios')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Criar Novo Usuário
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Criar Usuário">
+      <Container maxWidth="md">
         {erro && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
             {erro}
@@ -255,7 +241,7 @@ const CriarUsuario: React.FC = () => {
           </Box>
         </Paper>
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

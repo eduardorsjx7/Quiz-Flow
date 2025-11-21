@@ -152,8 +152,9 @@ export const getAdminMenuItems = (
 
 /**
  * Itens do menu para participantes/colaboradores
+ * @param onLogout - Função de logout para o item 'Sair'
  */
-export const getParticipanteMenuItems = (): MenuItem[] => [
+export const getParticipanteMenuItems = (onLogout?: () => void): MenuItem[] => [
   {
     id: 'dashboard',
     text: 'Dashboard',
@@ -171,6 +172,18 @@ export const getParticipanteMenuItems = (): MenuItem[] => [
     text: 'Todas as Fases',
     icon: <RouteIcon />,
     path: '/fases',
+  },
+  {
+    id: 'divider-1',
+    text: '',
+    icon: <></>,
+    divider: true,
+  },
+  {
+    id: 'sair',
+    text: 'Sair',
+    icon: <ExitToAppIcon />,
+    onClick: onLogout,
   },
 ];
 

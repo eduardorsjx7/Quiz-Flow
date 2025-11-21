@@ -8,20 +8,17 @@ import {
   Box,
   CircularProgress,
   Alert,
-  AppBar,
-  Toolbar,
-  IconButton,
   Card,
   CardContent,
   CardActions,
   Chip,
+  Grid,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
-  ExitToApp as ExitIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import ParticipantLayout from '../../components/ParticipantLayout';
 
 interface Fase {
   id: number;
@@ -43,7 +40,6 @@ interface Fase {
 }
 
 const FaseAtual: React.FC = () => {
-  const { usuario, logout } = useAuth();
   const navigate = useNavigate();
   const [fase, setFase] = useState<Fase | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,31 +78,17 @@ const FaseAtual: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <ParticipantLayout title="Fase Atual">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </ParticipantLayout>
     );
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Quiz Flow - Minha Fase Atual
-          </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
-            {usuario?.nome}
-          </Typography>
-          <IconButton color="inherit" onClick={logout}>
-            <ExitIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+    <ParticipantLayout title="Fase Atual">
+      <Container maxWidth="lg">
         {erro ? (
           <Alert severity="warning" sx={{ mb: 3 }}>
             {erro}
@@ -143,40 +125,42 @@ const FaseAtual: React.FC = () => {
                 Nenhum quiz disponível nesta fase no momento.
               </Alert>
             ) : (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+              <Grid container spacing={3}>
                 {fase.quizzes.map((quiz) => (
-                  <Card key={quiz.id}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        {quiz.titulo}
-                      </Typography>
-                      {quiz.descricao && (
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                          {quiz.descricao}
+                  <Grid item xs={12} sm={6} md={4} key={quiz.id}>
+                    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" gutterBottom>
+                          {quiz.titulo}
                         </Typography>
-                      )}
-                      <Typography variant="body2" color="text.secondary">
-                        {quiz._count.perguntas} {quiz._count.perguntas === 1 ? 'pergunta' : 'perguntas'}
-                      </Typography>
-                    </CardContent>
-                    <CardActions>
-                      <Button
-                        variant="contained"
-                        startIcon={<PlayIcon />}
-                        onClick={() => handleIniciarQuiz(quiz.id)}
-                        fullWidth
-                      >
-                        Iniciar Quiz
-                      </Button>
-                    </CardActions>
-                  </Card>
+                        {quiz.descricao && (
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {quiz.descricao}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" color="text.secondary">
+                          {quiz._count.perguntas} {quiz._count.perguntas === 1 ? 'pergunta' : 'perguntas'}
+                        </Typography>
+                      </CardContent>
+                      <CardActions>
+                        <Button
+                          variant="contained"
+                          startIcon={<PlayIcon />}
+                          onClick={() => handleIniciarQuiz(quiz.id)}
+                          fullWidth
+                        >
+                          Iniciar Quiz
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
                 ))}
-              </Box>
+              </Grid>
             )}
           </>
         ) : null}
       </Container>
-    </>
+    </ParticipantLayout>
   );
 };
 

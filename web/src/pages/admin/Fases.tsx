@@ -3,60 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
-  Button,
   Grid,
   Card,
   CardContent,
   CardActions,
-  AppBar,
-  Toolbar,
-  IconButton,
   Box,
   CircularProgress,
   Alert,
   Chip,
   Breadcrumbs,
   Link,
+  Button,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
-  Quiz as QuizIcon,
+  Route as RouteIcon,
+  PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
-interface Fase {
+interface Jornada {
   id: number;
   titulo: string;
-  descricao?: string;
-  ordem: number;
-  jornada: {
-    id: number;
-    titulo: string;
-  };
   _count: {
-    quizzes: number;
+    fases: number;
   };
 }
 
 const AdminFases: React.FC = () => {
   const navigate = useNavigate();
-  const [fases, setFases] = useState<Fase[]>([]);
+  const [jornadas, setJornadas] = useState<Jornada[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    carregarFases();
+    carregarJornadas();
   }, []);
 
-  const carregarFases = async () => {
+  const carregarJornadas = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/fases');
+      const response = await api.get('/jornadas');
       const dados = response.data.data || response.data;
-      setFases(Array.isArray(dados) ? dados : []);
+      setJornadas(Array.isArray(dados) ? dados : []);
     } catch (error: any) {
-      setErro(error.response?.data?.error || 'Erro ao carregar fases');
-      setFases([]);
+      setErro(error.response?.data?.error || 'Erro ao carregar jornadas');
+      setJornadas([]);
     } finally {
       setLoading(false);
     }
@@ -65,28 +57,17 @@ const AdminFases: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <AdminLayout title="Fases das Jornadas">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </AdminLayout>
     );
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gerenciar Fases do PDC
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Fases das Jornadas">
+      <Container maxWidth="lg">
         <Breadcrumbs sx={{ mb: 3 }}>
           <Link
             component="button"
@@ -96,11 +77,11 @@ const AdminFases: React.FC = () => {
           >
             Dashboard
           </Link>
-          <Typography color="text.primary">Fases</Typography>
+          <Typography color="text.primary">Fases das Jornadas</Typography>
         </Breadcrumbs>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4">Fases do PDC</Typography>
+          <Typography variant="h4">Fases das Jornadas</Typography>
         </Box>
 
         {erro && (
@@ -109,62 +90,62 @@ const AdminFases: React.FC = () => {
           </Alert>
         )}
 
-        {fases.length === 0 ? (
+        {jornadas.length === 0 ? (
           <Alert severity="info">
-            Nenhuma fase cadastrada. Crie uma jornada primeiro para cadastrar fases.
+            Nenhuma jornada cadastrada. Crie uma jornada primeiro para cadastrar fases e quizzes.
           </Alert>
         ) : (
           <Grid container spacing={3}>
-            {fases.map((fase) => (
-              <Grid item xs={12} md={6} lg={4} key={fase.id}>
+            {jornadas.map((jornada) => (
+              <Grid item xs={12} md={6} lg={4} key={jornada.id}>
                 <Card
                   sx={{
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer',
                     '&:hover': {
                       transform: 'translateY(-4px)',
                       boxShadow: 4,
                     },
                   }}
+                  onClick={() => navigate(`/admin/jornadas/${jornada.id}/fases`)}
                 >
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                      <Chip label={`${fase.ordem}º`} size="small" color="primary" />
-                      {fase.jornada && (
-                        <Chip
-                          label={fase.jornada.titulo}
-                          size="small"
-                          variant="outlined"
-                          sx={{ ml: 1 }}
-                        />
-                      )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <RouteIcon color="primary" />
+                      <Typography variant="h6" component="h2">
+                        {jornada.titulo}
+                      </Typography>
                     </Box>
-                    <Typography variant="h6" component="h2" gutterBottom>
-                      {fase.titulo}
-                    </Typography>
-                    {fase.descricao && (
-                      <Typography variant="body2" color="text.secondary" paragraph>
-                        {fase.descricao}
-                      </Typography>
-                    )}
                     <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <QuizIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        {(fase._count?.quizzes || 0) > 0 ? 'Quiz criado' : 'Sem perguntas'}
-                      </Typography>
+                      <Chip
+                        label={`${jornada._count?.fases || 0} ${(jornada._count?.fases || 0) === 1 ? 'Fase' : 'Fases'}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
                     </Box>
                   </CardContent>
-                  <CardActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
+                  <CardActions sx={{ p: 2 }}>
                     <Button
                       size="small"
                       variant="contained"
-                      startIcon={<QuizIcon />}
-                      onClick={() => navigate(`/admin/fases/${fase.id}/perguntas`)}
+                      startIcon={<PlayArrowIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/jornadas/${jornada.id}/fases`);
+                      }}
                       fullWidth
+                      sx={{
+                        bgcolor: '#e62816',
+                        '&:hover': {
+                          bgcolor: '#c52214',
+                        },
+                      }}
                     >
-                      Gerenciar Perguntas
+                      Ver Fases
                     </Button>
                   </CardActions>
                 </Card>
@@ -173,7 +154,7 @@ const AdminFases: React.FC = () => {
           </Grid>
         )}
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

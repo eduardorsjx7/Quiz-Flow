@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -24,13 +24,7 @@ const ParticipanteResultado: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
 
-  useEffect(() => {
-    if (tentativaId) {
-      carregarResultado();
-    }
-  }, [tentativaId]);
-
-  const carregarResultado = async () => {
+  const carregarResultado = useCallback(async () => {
     try {
       setLoading(true);
       // Buscar tentativa com respostas
@@ -70,7 +64,13 @@ const ParticipanteResultado: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tentativaId]);
+
+  useEffect(() => {
+    if (tentativaId) {
+      carregarResultado();
+    }
+  }, [tentativaId, carregarResultado]);
 
   if (loading) {
     return (

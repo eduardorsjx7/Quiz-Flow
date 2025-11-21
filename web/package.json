@@ -4,25 +4,26 @@
   "description": "Aplicação Web React para sistema de quiz corporativo",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
+    "ajv": "^8.12.0",
+    "ajv-keywords": "^5.1.0",
+    "axios": "^1.6.2",
+    "date-fns": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "axios": "^1.6.2",
-    "socket.io-client": "^4.6.1",
-    "@mui/material": "^5.15.0",
-    "@mui/icons-material": "^5.15.0",
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
     "recharts": "^2.10.3",
-    "date-fns": "^3.0.0",
-    "ajv": "^8.12.0",
-    "ajv-keywords": "^5.1.0"
+    "socket.io-client": "^4.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
-    "typescript": "^4.9.5",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "typescript": "^4.9.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -48,4 +49,3 @@
     ]
   }
 }
-

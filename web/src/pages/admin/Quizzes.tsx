@@ -12,8 +12,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  AppBar,
-  Toolbar,
   Box,
   Chip
 } from '@mui/material';
@@ -21,9 +19,9 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Assignment as AssignmentIcon,
-  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 interface Quiz {
   id: number;
@@ -77,19 +75,8 @@ const AdminQuizzes: React.FC = () => {
   };
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gerenciar Quizzes
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Quizzes">
+      <Container maxWidth="lg">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Quizzes</Typography>
           <Button
@@ -151,7 +138,7 @@ const AdminQuizzes: React.FC = () => {
           </Table>
         </TableContainer>
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

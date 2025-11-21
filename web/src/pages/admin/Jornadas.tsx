@@ -12,8 +12,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  AppBar,
-  Toolbar,
   Box,
   Chip,
   Alert,
@@ -22,11 +20,10 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
-  ArrowBack as ArrowBackIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 interface Jornada {
   id: number;
@@ -76,28 +73,17 @@ const AdminJornadas: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <AdminLayout title="Jornadas">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </AdminLayout>
     );
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gerenciar Jornadas
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Jornadas">
+      <Container maxWidth="lg">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Jornadas do PDC</Typography>
           <Button
@@ -173,7 +159,7 @@ const AdminJornadas: React.FC = () => {
           </Table>
         </TableContainer>
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

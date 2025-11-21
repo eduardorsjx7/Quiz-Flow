@@ -16,7 +16,6 @@ import {
   Visibility,
   VisibilityOff,
   Login as LoginIcon,
-  Quiz as QuizIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -115,9 +114,6 @@ const Login: React.FC = () => {
               alt="Quiz Flow Logo" 
               style={{ height: '100px', width: 'auto', marginBottom: '16px' }}
             />
-            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: '#011b49' }}>
-              Quiz Flow
-            </Typography>
             <Typography variant="subtitle1" color="text.secondary" sx={{ color: '#6b7280' }}>
               Sistema de Avaliação e Capacitação Corporativa
             </Typography>
@@ -220,7 +216,7 @@ const Login: React.FC = () => {
 
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              Entre com suas credenciais para acessar o sistema
+              Entre com suas credenciais para acessar.
             </Typography>
           </Box>
         </Paper>

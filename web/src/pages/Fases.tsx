@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -16,6 +16,7 @@ import {
 import { Lock as LockIconMUI, LockOpen as LockOpenIconMUI } from '@mui/icons-material';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import ParticipantLayout from '../components/ParticipantLayout';
 
 interface Fase {
   id: number;
@@ -38,17 +39,13 @@ interface Fase {
 }
 
 const Fases: React.FC = () => {
-  const { usuario, logout, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [fases, setFases] = useState<Fase[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
 
-  useEffect(() => {
-    carregarFases();
-  }, []);
-
-  const carregarFases = async () => {
+  const carregarFases = useCallback(async () => {
     try {
       setLoading(true);
       // Se for colaborador, mostrar apenas a fase atual
@@ -62,7 +59,11 @@ const Fases: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    carregarFases();
+  }, [carregarFases]);
 
   const handleAbrirFase = (faseId: number) => {
     if (isAdmin) {
@@ -74,34 +75,20 @@ const Fases: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <ParticipantLayout title="Fases">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </ParticipantLayout>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" component="h1">
+    <ParticipantLayout title="Fases">
+      <Container maxWidth="lg">
+        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 3 }}>
           Fases de Avaliação
         </Typography>
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mr: 2, display: 'inline' }}>
-            {usuario?.nome}
-          </Typography>
-          {isAdmin && (
-            <Button variant="outlined" onClick={() => navigate('/admin')} sx={{ mr: 1 }}>
-              Painel Admin
-            </Button>
-          )}
-          <Button variant="outlined" onClick={logout}>
-            Sair
-          </Button>
-        </Box>
-      </Box>
 
       {erro && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -176,7 +163,8 @@ const Fases: React.FC = () => {
           ))}
         </Grid>
       )}
-    </Container>
+      </Container>
+    </ParticipantLayout>
   );
 };
 

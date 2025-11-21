@@ -9,42 +9,122 @@ import {
   Box,
   Alert,
   CircularProgress,
-  AppBar,
-  Toolbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
   IconButton,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Chip,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  ArrowBack as ArrowBackIcon,
+  DragIndicator as DragIndicatorIcon,
+  NavigateNext as NavigateNextIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DroppableProvided,
+  DraggableProvided,
+  DraggableStateSnapshot,
+} from '@hello-pangea/dnd';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 interface Fase {
+  id: string;      // id interno só para o DnD
   titulo: string;
-  descricao?: string;
   ordem: number;
 }
 
+interface AddPhaseDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (titulo: string) => void;
+}
+
+const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }) => {
+  const [titulo, setTitulo] = useState('');
+  const [erro, setErro] = useState('');
+
+  const handleConfirmar = () => {
+    if (!titulo.trim()) {
+      setErro('Informe o nome da fase');
+      return;
+    }
+    onSave(titulo.trim());
+    setTitulo('');
+    setErro('');
+    onClose();
+  };
+
+  const handleClose = () => {
+    setTitulo('');
+    setErro('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+      <DialogTitle>Adicionar fase da jornada</DialogTitle>
+      <DialogContent dividers>
+        {erro && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
+            {erro}
+          </Alert>
+        )}
+        <TextField
+          fullWidth
+          label="Nome da fase"
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          margin="normal"
+          required
+          placeholder="Ex: Setor Fiscal, Setor Comercial, Sucesso do Cliente"
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} color="inherit">
+          Cancelar
+        </Button>
+        <Button variant="contained" onClick={handleConfirmar}>
+          Adicionar
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const CriarJornada: React.FC = () => {
   const navigate = useNavigate();
+
+  const [step, setStep] = useState<1 | 2>(1);
+
   const [titulo, setTitulo] = useState('');
-  const [faseTitulo, setFaseTitulo] = useState('');
-  const [faseDescricao, setFaseDescricao] = useState('');
   const [fases, setFases] = useState<Fase[]>([]);
+
+  const [abrirModalFase, setAbrirModalFase] = useState(false);
+
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-  const [errosCampos, setErrosCampos] = useState<{ titulo?: string; fases?: string }>({});
+  const [errosCampos, setErrosCampos] = useState<{
+    titulo?: string;
+    fases?: string;
+  }>({});
 
-  const validarFormulario = (): boolean => {
-    const novosErros: { titulo?: string; fases?: string } = {};
+  const validarTitulo = (): boolean => {
+    const novosErros: { titulo?: string } = {};
 
     if (!titulo.trim()) {
       novosErros.titulo = 'Título é obrigatório';
@@ -52,42 +132,69 @@ const CriarJornada: React.FC = () => {
       novosErros.titulo = 'Título deve ter pelo menos 3 caracteres';
     }
 
+    setErrosCampos((prev) => ({ ...prev, ...novosErros }));
+    return Object.keys(novosErros).length === 0;
+  };
+
+  const validarFases = (): boolean => {
+    const novosErros: { fases?: string } = {};
+
     if (fases.length === 0) {
       novosErros.fases = 'É necessário cadastrar pelo menos uma fase';
     }
 
-    setErrosCampos(novosErros);
+    setErrosCampos((prev) => ({ ...prev, ...novosErros }));
     return Object.keys(novosErros).length === 0;
   };
 
-  const adicionarFase = () => {
-    if (!faseTitulo.trim()) {
-      setErro('Informe o título da fase');
-      return;
-    }
-
-    const novaFase: Fase = {
-      titulo: faseTitulo.trim(),
-      descricao: faseDescricao.trim() || undefined,
-      ordem: fases.length + 1,
-    };
-
-    setFases([...fases, novaFase]);
-    setFaseTitulo('');
-    setFaseDescricao('');
+  const handleNextStep = () => {
     setErro('');
-    if (errosCampos.fases) {
-      setErrosCampos({ ...errosCampos, fases: undefined });
-    }
+    if (!validarTitulo()) return;
+    setStep(2);
   };
 
-  const removerFase = (index: number) => {
-    const novasFases = fases.filter((_, i) => i !== index);
-    // Reordenar
-    const fasesReordenadas = novasFases.map((fase, i) => ({
+  const handleBackStep = () => {
+    setErro('');
+    setErrosCampos((prev) => ({ ...prev, fases: undefined }));
+    setStep(1);
+  };
+
+  const handleAddFase = (tituloFase: string) => {
+    const novaFase: Fase = {
+      id: `${Date.now()}-${Math.random()}`,
+      titulo: tituloFase,
+      ordem: fases.length + 1,
+    };
+    setFases((prev) => [...prev, novaFase]);
+    setErrosCampos((prev) => ({ ...prev, fases: undefined }));
+  };
+
+  const handleRemoverFase = (id: string) => {
+    const novasFases = fases.filter((fase) => fase.id !== id);
+    const fasesReordenadas = novasFases.map((fase, index) => ({
       ...fase,
-      ordem: i + 1,
+      ordem: index + 1,
     }));
+    setFases(fasesReordenadas);
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const origemIndex = result.source.index;
+    const destinoIndex = result.destination.index;
+
+    if (origemIndex === destinoIndex) return;
+
+    const novasFases = Array.from(fases);
+    const [removida] = novasFases.splice(origemIndex, 1);
+    novasFases.splice(destinoIndex, 0, removida);
+
+    const fasesReordenadas = novasFases.map((fase, index) => ({
+      ...fase,
+      ordem: index + 1,
+    }));
+
     setFases(fasesReordenadas);
   };
 
@@ -95,22 +202,27 @@ const CriarJornada: React.FC = () => {
     setErro('');
     setErrosCampos({});
 
-    if (!validarFormulario()) {
+    if (!validarTitulo()) {
+      setStep(1);
+      return;
+    }
+
+    if (!validarFases()) {
+      setStep(2);
       return;
     }
 
     try {
       setSalvando(true);
-      await api.post('/jornadas', {
+      const response = await api.post('/jornadas', {
         titulo: titulo.trim(),
         fases: fases.map((f) => ({
           titulo: f.titulo,
-          descricao: f.descricao,
           ordem: f.ordem,
         })),
       });
 
-      navigate('/admin/jornadas');
+      navigate('/admin/fases');
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao criar jornada');
     } finally {
@@ -119,162 +231,273 @@ const CriarJornada: React.FC = () => {
   };
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin/jornadas')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Criar Nova Jornada
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    <AdminLayout title="Criar Jornada">
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Typography 
+          variant="h4" 
+          gutterBottom 
+          sx={{ 
+            mb: 3, 
+            fontWeight: 600, 
+            textAlign: 'center',
+            color: '#e62816'
+          }}
+        >
+          Cadastrar Jornada
+        </Typography>
 
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         {erro && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
             {erro}
           </Alert>
         )}
 
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Informações da Jornada
-          </Typography>
-
-          <TextField
-            fullWidth
-            label="Título da Jornada"
-            value={titulo}
-            onChange={(e) => {
-              setTitulo(e.target.value);
-              if (errosCampos.titulo) {
-                setErrosCampos({ ...errosCampos, titulo: undefined });
-              }
-            }}
-            margin="normal"
-            required
-            error={!!errosCampos.titulo}
-            helperText={errosCampos.titulo}
-            disabled={salvando}
-            placeholder="Ex: Capacitação 2024"
-          />
-
-          <Divider sx={{ my: 3 }} />
-
-          <Typography variant="h6" gutterBottom>
-            Fases do PDC (Setores)
-          </Typography>
-
-          {errosCampos.fases && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {errosCampos.fases}
-            </Alert>
-          )}
-
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <TextField
-              fullWidth
-              label="Nome da Fase (Setor)"
-              value={faseTitulo}
-              onChange={(e) => setFaseTitulo(e.target.value)}
-              margin="normal"
-              size="small"
-              disabled={salvando}
-              placeholder="Ex: Setor Fiscal, Setor Comercial, etc."
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  adicionarFase();
-                }
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Descrição (Opcional)"
-              value={faseDescricao}
-              onChange={(e) => setFaseDescricao(e.target.value)}
-              margin="normal"
-              size="small"
-              multiline
-              rows={2}
-              disabled={salvando}
-            />
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={adicionarFase}
-              disabled={salvando || !faseTitulo.trim()}
-              sx={{ mt: 1 }}
-            >
-              Adicionar Fase
-            </Button>
-          </Box>
-
-          {fases.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Fases Cadastradas ({fases.length})
+        <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
+          {step === 1 && (
+            <>
+              <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                Nome da Jornada
               </Typography>
-              <List>
-                {fases.map((fase, index) => (
-                  <ListItem
-                    key={index}
-                    sx={{
-                      bgcolor: 'background.paper',
-                      mb: 1,
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip label={`${fase.ordem}º`} size="small" color="primary" />
-                          <Typography variant="body1" fontWeight="medium">
-                            {fase.titulo}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={fase.descricao}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() => removerFase(index)}
-                        disabled={salvando}
-                        color="error"
-                        size="small"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
+              <TextField
+                fullWidth
+                label="Título da jornada"
+                value={titulo}
+                onChange={(e) => {
+                  setTitulo(e.target.value);
+                  if (errosCampos.titulo) {
+                    setErrosCampos({ ...errosCampos, titulo: undefined });
+                  }
+                }}
+                margin="normal"
+                required
+                error={!!errosCampos.titulo}
+                helperText={errosCampos.titulo || `${titulo.length}/80`}
+                disabled={salvando}
+                placeholder="Ex: Jornada de Capacitação 2024"
+                inputProps={{ maxLength: 80 }}
+              />
+
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => navigate('/admin/jornadas')}
+                  disabled={salvando}
+                  startIcon={<CancelIcon />}
+                  sx={{
+                    minWidth: 140,
+                    py: 1.2,
+                    borderColor: 'grey.300',
+                    '&:hover': {
+                      borderColor: 'grey.400',
+                      bgcolor: 'grey.50',
+                    },
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleNextStep}
+                  disabled={salvando}
+                  endIcon={<NavigateNextIcon />}
+                  sx={{
+                    minWidth: 140,
+                    py: 1.2,
+                    bgcolor: '#e62816',
+                    '&:hover': {
+                      bgcolor: '#c52214',
+                    },
+                    '&:disabled': {
+                      bgcolor: 'grey.300',
+                    },
+                  }}
+                >
+                  Próximo
+                </Button>
+              </Box>
+            </>
           )}
 
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-            <Button variant="outlined" onClick={() => navigate('/admin/jornadas')} disabled={salvando}>
-              Cancelar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={salvando ? <CircularProgress size={20} /> : <SaveIcon />}
-              onClick={handleSalvar}
-              disabled={salvando || fases.length === 0}
-            >
-              {salvando ? 'Salvando...' : 'Criar Jornada'}
-            </Button>
-          </Box>
+          {step === 2 && (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 1 }}>
+                <IconButton onClick={handleBackStep} size="small">
+                  <ArrowBackIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="h6">Fases da Jornada</Typography>
+              </Box>
+
+              {errosCampos.fases && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {errosCampos.fases}
+                </Alert>
+              )}
+
+              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setAbrirModalFase(true)}
+                  disabled={salvando}
+                >
+                  Adicionar fase
+                </Button>
+              </Box>
+
+              {fases.length === 0 && (
+                <Box
+                  sx={{
+                    mt: 3,
+                    p: 3,
+                    textAlign: 'center',
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    border: '1px dashed',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    Nenhuma fase cadastrada ainda. Clique em "Adicionar fase" para criar a primeira.
+                  </Typography>
+                </Box>
+              )}
+
+              {fases.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <DragDropContext onDragEnd={onDragEnd}>
+                    <Droppable droppableId="tabela-fases">
+                      {(provided: DroppableProvided) => (
+                        <Table
+                          size="small"
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                        >
+                          <TableHead>
+                            <TableRow>
+                              <TableCell width={40} />
+                              <TableCell>Ordem</TableCell>
+                              <TableCell>Nome da fase</TableCell>
+                              <TableCell align="right">Ações</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {fases.map((fase, index) => (
+                              <Draggable
+                                key={fase.id}
+                                draggableId={fase.id}
+                                index={index}
+                              >
+                                {(dragProvided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                                  <TableRow
+                                    ref={dragProvided.innerRef}
+                                    {...dragProvided.draggableProps}
+                                    sx={{
+                                      bgcolor: snapshot.isDragging
+                                        ? 'grey.100'
+                                        : 'background.paper',
+                                    }}
+                                  >
+                                    <TableCell
+                                      {...dragProvided.dragHandleProps}
+                                      sx={{ cursor: 'grab' }}
+                                    >
+                                      <DragIndicatorIcon fontSize="small" color="disabled" />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        label={`${fase.ordem}ª`}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2" fontWeight={600}>
+                                        {fase.titulo}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <IconButton
+                                        onClick={() => handleRemoverFase(fase.id)}
+                                        disabled={salvando}
+                                        size="small"
+                                        sx={{
+                                          color: 'error.main',
+                                          '&:hover': {
+                                            bgcolor: 'error.light',
+                                            color: 'white',
+                                          },
+                                        }}
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={handleBackStep}
+                  disabled={salvando}
+                  startIcon={<ArrowBackIcon />}
+                  sx={{
+                    minWidth: 140,
+                    py: 1.2,
+                    borderColor: 'grey.300',
+                    '&:hover': {
+                      borderColor: 'grey.400',
+                      bgcolor: 'grey.50',
+                    },
+                  }}
+                >
+                  Voltar
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={salvando ? <CircularProgress size={20} /> : <SaveIcon />}
+                  onClick={handleSalvar}
+                  disabled={salvando || fases.length === 0}
+                  sx={{
+                    minWidth: 180,
+                    py: 1.2,
+                    bgcolor: '#e62816',
+                    '&:hover': {
+                      bgcolor: '#c52214',
+                    },
+                    '&:disabled': {
+                      bgcolor: 'grey.300',
+                    },
+                  }}
+                >
+                  {salvando ? 'Salvando...' : 'Criar jornada'}
+                </Button>
+              </Box>
+            </>
+          )}
         </Paper>
+
+        <AddPhaseDialog
+          open={abrirModalFase}
+          onClose={() => setAbrirModalFase(false)}
+          onSave={handleAddFase}
+        />
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 
 export default CriarJornada;
-
+ 

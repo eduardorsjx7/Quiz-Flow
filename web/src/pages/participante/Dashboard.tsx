@@ -14,8 +14,6 @@ import {
   Tab,
   CircularProgress,
   Alert,
-  AppBar,
-  Toolbar,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -23,7 +21,7 @@ import {
   AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import ParticipantLayout from '../../components/ParticipantLayout';
 
 interface Quiz {
   id: number;
@@ -46,7 +44,6 @@ interface Quiz {
 }
 
 const DashboardColaborador: React.FC = () => {
-  const { usuario, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,36 +97,17 @@ const DashboardColaborador: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <ParticipantLayout title="Dashboard">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </ParticipantLayout>
     );
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Quiz Flow - Dashboard
-          </Typography>
-          {isAdmin && (
-            <Button color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-              Painel Admin
-            </Button>
-          )}
-          <Typography variant="body2" sx={{ mr: 2 }}>
-            {usuario?.nome}
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Sair
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+    <ParticipantLayout title="Dashboard">
+      <Container maxWidth="lg">
         <Typography variant="h4" component="h1" gutterBottom>
           Meus Quizzes
         </Typography>
@@ -255,7 +233,7 @@ const DashboardColaborador: React.FC = () => {
           </Grid>
         )}
       </Container>
-    </>
+    </ParticipantLayout>
   );
 };
 

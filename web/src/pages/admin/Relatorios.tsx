@@ -1,10 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Container,
   Typography,
-  AppBar,
-  Toolbar,
-  IconButton,
   Box,
   Select,
   MenuItem,
@@ -20,32 +17,26 @@ import {
   TableRow
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Download as DownloadIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 const AdminRelatorios: React.FC = () => {
-  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [quizSelecionado, setQuizSelecionado] = useState<number | ''>('');
   const [relatorio, setRelatorio] = useState<any>(null);
 
-  useEffect(() => {
-    carregarQuizzes();
-  }, []);
-
-  const carregarQuizzes = async () => {
+  const carregarQuizzes = useCallback(async () => {
     try {
       const response = await api.get('/quizzes');
       setQuizzes(response.data);
     } catch (error) {
       console.error('Erro ao carregar quizzes:', error);
     }
-  };
+  }, []);
 
-  const carregarRelatorio = async () => {
+  const carregarRelatorio = useCallback(async () => {
     if (!quizSelecionado) return;
 
     try {
@@ -54,14 +45,17 @@ const AdminRelatorios: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar relatório:', error);
     }
-  };
+  }, [quizSelecionado]);
+
+  useEffect(() => {
+    carregarQuizzes();
+  }, [carregarQuizzes]);
 
   useEffect(() => {
     if (quizSelecionado) {
       carregarRelatorio();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quizSelecionado]);
+  }, [quizSelecionado, carregarRelatorio]);
 
   const exportarCSV = async () => {
     if (!quizSelecionado) return;
@@ -102,19 +96,8 @@ const AdminRelatorios: React.FC = () => {
   };
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Relatórios
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Relatórios">
+      <Container maxWidth="lg">
         <Box sx={{ mb: 3 }}>
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Selecione um Quiz</InputLabel>
@@ -188,7 +171,7 @@ const AdminRelatorios: React.FC = () => {
           </Paper>
         )}
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

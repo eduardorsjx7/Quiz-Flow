@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
@@ -50,50 +50,31 @@ const ParticipanteQuiz: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
 
-  useEffect(() => {
-    if (tentativaId) {
-      carregarTentativa();
+  const finalizarQuiz = useCallback(async () => {
+    try {
+      await api.post(`/tentativas/${tentativaId}/finalizar`);
+      navigate(`/participante/resultado/${tentativaId}`);
+    } catch (error: any) {
+      console.error('Erro ao finalizar quiz:', error);
+      // Mesmo com erro, navegar para resultado
+      navigate(`/participante/resultado/${tentativaId}`);
     }
-  }, [tentativaId]);
+  }, [tentativaId, navigate]);
 
-  useEffect(() => {
-    if (perguntas.length > 0 && perguntaAtualIndex < perguntas.length && !respondida) {
-      const pergunta = perguntas[perguntaAtualIndex];
-      setTempoRestante(pergunta.tempoSegundos);
-      setAlternativaSelecionada(null);
-      setFeedback(null);
-
-      const intervalo = setInterval(() => {
-        setTempoRestante((prev) => {
-          if (prev <= 1) {
-            clearInterval(intervalo);
-            // Tempo esgotou - enviar resposta sem alternativa (ou com a primeira se selecionada)
-            if (!respondida) {
-              enviarResposta(alternativaSelecionada, true);
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(intervalo);
-    }
-  }, [perguntaAtualIndex, perguntas, respondida, alternativaSelecionada]);
-
-  const carregarTentativa = async () => {
+  const carregarTentativa = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(`/tentativas/${tentativaId}`);
       const tentativaData = response.data.data || response.data;
       setTentativa(tentativaData);
-      setPerguntas(tentativaData.quiz.perguntas);
+      const perguntasData = tentativaData.quiz.perguntas;
+      setPerguntas(perguntasData);
       
       // Verificar se já existem respostas e avançar para a próxima pergunta não respondida
       if (tentativaData.respostas && tentativaData.respostas.length > 0) {
         const perguntasRespondidas = tentativaData.respostas.map((r: any) => r.perguntaId);
-        const proximaPerguntaIndex = perguntas.findIndex(
-          (p) => !perguntasRespondidas.includes(p.id)
+        const proximaPerguntaIndex = perguntasData.findIndex(
+          (p: Pergunta) => !perguntasRespondidas.includes(p.id)
         );
         if (proximaPerguntaIndex !== -1) {
           setPerguntaAtualIndex(proximaPerguntaIndex);
@@ -107,9 +88,9 @@ const ParticipanteQuiz: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tentativaId, finalizarQuiz]);
 
-  const enviarResposta = async (alternativaId: number | null, tempoEsgotado: boolean = false) => {
+  const enviarResposta = useCallback(async (alternativaId: number | null, tempoEsgotado: boolean = false) => {
     if (respondida || !tentativaId) return;
 
     const pergunta = perguntas[perguntaAtualIndex];
@@ -148,18 +129,38 @@ const ParticipanteQuiz: React.FC = () => {
       setErro(error.response?.data?.error || 'Erro ao enviar resposta');
       setRespondida(false);
     }
-  };
+  }, [respondida, tentativaId, perguntas, perguntaAtualIndex, tempoRestante, finalizarQuiz]);
 
-  const finalizarQuiz = async () => {
-    try {
-      await api.post(`/tentativas/${tentativaId}/finalizar`);
-      navigate(`/participante/resultado/${tentativaId}`);
-    } catch (error: any) {
-      console.error('Erro ao finalizar quiz:', error);
-      // Mesmo com erro, navegar para resultado
-      navigate(`/participante/resultado/${tentativaId}`);
+  useEffect(() => {
+    if (tentativaId) {
+      carregarTentativa();
     }
-  };
+  }, [tentativaId, carregarTentativa]);
+
+  useEffect(() => {
+    if (perguntas.length > 0 && perguntaAtualIndex < perguntas.length && !respondida) {
+      const pergunta = perguntas[perguntaAtualIndex];
+      setTempoRestante(pergunta.tempoSegundos);
+      setAlternativaSelecionada(null);
+      setFeedback(null);
+
+      const intervalo = setInterval(() => {
+        setTempoRestante((prev) => {
+          if (prev <= 1) {
+            clearInterval(intervalo);
+            // Tempo esgotou - enviar resposta sem alternativa (ou com a primeira se selecionada)
+            if (!respondida) {
+              enviarResposta(alternativaSelecionada, true);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(intervalo);
+    }
+  }, [perguntaAtualIndex, perguntas, respondida, alternativaSelecionada, enviarResposta]);
 
   const handleResponder = () => {
     if (alternativaSelecionada !== null) {

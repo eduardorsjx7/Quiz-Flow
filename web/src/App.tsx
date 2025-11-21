@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminFases from './pages/admin/Fases';
+import FasesJornada from './pages/admin/FasesJornada';
 import AdminQuizzesFase from './pages/admin/QuizzesFase';
 import AdminQuizCreate from './pages/admin/QuizCreate';
 import AdminPerguntasFase from './pages/admin/PerguntasFase';
@@ -76,6 +77,14 @@ function App() {
           element={
             <PrivateRoute>
               <AdminFases />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/jornadas/:jornadaId/fases"
+          element={
+            <PrivateRoute>
+              <FasesJornada />
             </PrivateRoute>
           }
         />

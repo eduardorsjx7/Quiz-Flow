@@ -12,8 +12,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  AppBar,
-  Toolbar,
   Box,
   Chip,
   Alert,
@@ -22,11 +20,10 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
-  ArrowBack as ArrowBackIcon,
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 interface Usuario {
   id: number;
@@ -77,28 +74,17 @@ const AdminUsuarios: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
+      <AdminLayout title="Usuários">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </Container>
+      </AdminLayout>
     );
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gerenciar Usuários
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <AdminLayout title="Usuários">
+      <Container maxWidth="lg">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Usuários</Typography>
           <Button
@@ -176,7 +162,7 @@ const AdminUsuarios: React.FC = () => {
           </Table>
         </TableContainer>
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

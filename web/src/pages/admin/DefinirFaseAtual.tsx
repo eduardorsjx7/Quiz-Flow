@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
@@ -15,13 +15,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -60,11 +53,7 @@ const DefinirFaseAtual: React.FC = () => {
   const [sucesso, setSucesso] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    carregarDados();
-  }, [usuarioId]);
-
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     try {
       setLoading(true);
       const [usuarioRes, fasesRes] = await Promise.all([
@@ -83,7 +72,11 @@ const DefinirFaseAtual: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [usuarioId]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   const handleSalvar = async () => {
     if (!faseSelecionada || !usuarioId) {

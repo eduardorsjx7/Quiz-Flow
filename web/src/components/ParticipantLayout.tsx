@@ -11,17 +11,17 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
-import { getAdminMenuItems } from '../config/menuConfig';
+import { getParticipanteMenuItems } from '../config/menuConfig';
 
-interface AdminLayoutProps {
+interface ParticipantLayoutProps {
   children: React.ReactNode;
   title?: string;
   drawerWidth?: number;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({
+const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   children,
-  title = 'Painel Administrativo',
+  title = 'Quiz Flow',
   drawerWidth = 280,
 }) => {
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       <Sidebar
         open={mobileOpen}
         onClose={handleDrawerToggle}
-        items={getAdminMenuItems(usuario?.tipo, undefined, handleLogout)}
+        items={getParticipanteMenuItems(handleLogout)}
         drawerWidth={drawerWidth}
         collapsed={desktopCollapsed}
         onToggleCollapse={handleDesktopToggle}
@@ -125,5 +125,5 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   );
 };
 
-export default AdminLayout;
+export default ParticipantLayout;
 

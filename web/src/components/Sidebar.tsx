@@ -106,12 +106,49 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (item: MenuItem): boolean => {
-    if (item.path) {
-      return (
-        location.pathname === item.path ||
-        location.pathname.startsWith(item.path + '/')
-      );
+    if (!item.path) return false;
+    
+    // Se o item tem filhos, não deve ser marcado como ativo diretamente
+    // Apenas seus filhos devem ser marcados
+    if (item.children && item.children.length > 0) {
+      return false;
     }
+    
+    // Verificação exata primeiro
+    if (location.pathname === item.path) {
+      return true;
+    }
+    
+    // Paths que devem ser verificados apenas com correspondência exata
+    const exactMatchPaths = ['/admin', '/dashboard', '/fase-atual', '/fases'];
+    if (exactMatchPaths.includes(item.path)) {
+      return location.pathname === item.path;
+    }
+    
+    // Para outros paths, verificar se o pathname começa com o path + '/'
+    // Mas garantir que não seja apenas uma parte do path
+    // Exemplo: '/admin/jornadas' não deve ativar '/admin'
+    const pathWithSlash = item.path + '/';
+    if (location.pathname.startsWith(pathWithSlash)) {
+      const pathParts = item.path.split('/').filter(Boolean);
+      const locationParts = location.pathname.split('/').filter(Boolean);
+      
+      // Se o pathname atual tem mais partes que o path do item,
+      // significa que existe um path mais específico, então este não deve estar ativo
+      // Exemplo: se estamos em '/admin/jornadas/novo' e o item é '/admin/jornadas',
+      // não devemos marcar '/admin/jornadas' como ativo
+      if (locationParts.length > pathParts.length) {
+        return false;
+      }
+      
+      // Se têm o mesmo número de partes, verificar correspondência exata
+      if (locationParts.length === pathParts.length) {
+        return pathParts.every((part, index) => locationParts[index] === part);
+      }
+      
+      return false;
+    }
+    
     return false;
   };
 

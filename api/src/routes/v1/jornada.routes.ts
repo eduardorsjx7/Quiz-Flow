@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import * as jornadaController from '../controllers/jornada.controller';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import * as jornadaController from '../../controllers/jornada.controller';
+import { authenticate, requireAdmin } from '../../middleware/auth';
 
 const router = Router();
 
 router.get('/', authenticate, jornadaController.listarJornadas);
-router.get('/:id/estatisticas', authenticate, requireAdmin, jornadaController.obterEstatisticasCompletas);
 router.get('/:id', authenticate, jornadaController.buscarJornadaPorId);
 router.post('/', authenticate, requireAdmin, jornadaController.criarJornada);
 router.put('/:id', authenticate, requireAdmin, jornadaController.atualizarJornada);

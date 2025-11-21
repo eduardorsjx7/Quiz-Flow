@@ -99,33 +99,26 @@ const Login: React.FC = () => {
     >
       <Container maxWidth="sm">
         <Paper
-          elevation={10}
+          elevation={0}
           sx={{
             p: 4,
             width: '100%',
             borderRadius: 3,
-            background: 'rgba(255, 255, 255, 0.98)',
+            background: '#ffffff',
+            border: '1px solid rgba(255, 44, 25, 0.1)',
+            boxShadow: '0 8px 32px rgba(1, 27, 73, 0.1)',
           }}
         >
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                mb: 2,
-              }}
-            >
-              <QuizIcon sx={{ fontSize: 50, color: 'white' }} />
-            </Box>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+            <img 
+              src="/logo/logo1.svg" 
+              alt="Quiz Flow Logo" 
+              style={{ height: '100px', width: 'auto', marginBottom: '16px' }}
+            />
+            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: '#011b49' }}>
               Quiz Flow
             </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
+            <Typography variant="subtitle1" color="text.secondary" sx={{ color: '#6b7280' }}>
               Sistema de Avaliação e Capacitação Corporativa
             </Typography>
           </Box>
@@ -210,11 +203,14 @@ const Login: React.FC = () => {
                 mb: 2,
                 py: 1.5,
                 borderRadius: 2,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%)',
+                  background: 'linear-gradient(135deg, #e62816 0%, #ff2c19 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.3)',
                 },
                 fontWeight: 600,
+                transition: 'all 0.3s ease-in-out',
               }}
               disabled={enviando}
             >

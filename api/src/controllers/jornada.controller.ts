@@ -63,3 +63,12 @@ export const deletarJornada = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
+export const obterEstatisticasCompletas = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const estatisticas = await jornadaService.obterEstatisticasCompletas(Number(id));
+  res.json({
+    success: true,
+    data: estatisticas,
+  });
+});
+

@@ -1,35 +1,33 @@
-import prisma from '../config/database';
-import logger from '../config/logger';
-import { CustomError } from '../middleware/errorHandler';
+import { BaseService } from '../../base/BaseService';
+import { FaseRepository } from '../../repositories/FaseRepository';
+import { CreateFaseDTO, UpdateFaseDTO } from '../../dto/fase.dto';
+import logger from '../../config/logger';
+import prisma from '../../config/database';
 
-export class FaseService {
+/**
+ * Serviço refatorado para Fase usando Design Patterns
+ */
+export class FaseService extends BaseService {
+  private faseRepository: FaseRepository;
+
+  constructor(faseRepository?: FaseRepository) {
+    super();
+    this.faseRepository = faseRepository || new FaseRepository();
+  }
+
   async listarFases(usuarioId?: number, apenasFaseAtual: boolean = false) {
     try {
-      let whereClause: any = { ativo: true };
-
-      // Se for colaborador e deve mostrar apenas fase atual
       if (usuarioId && apenasFaseAtual) {
-        const faseAtual = await prisma.desbloqueioFase.findFirst({
-          where: {
-            usuarioId,
-            faseAtual: true,
-          },
-          include: {
-            fase: true,
-          },
-        });
-
-        if (faseAtual) {
-          whereClause.id = faseAtual.faseId;
-        } else {
-          // Se não tem fase atual, retornar array vazio
+        const faseAtual = await this.faseRepository.findCurrentForUser(usuarioId);
+        if (!faseAtual) {
           return [];
         }
+        return [faseAtual];
       }
 
-      const fases = await prisma.fase.findMany({
-        where: whereClause,
-        include: {
+      const fases = await this.faseRepository.findMany(
+        { ativo: true },
+        {
           jornada: {
             select: {
               id: true,
@@ -64,160 +62,75 @@ export class FaseService {
               }
             : false,
         },
-        orderBy: {
+        {
           ordem: 'asc',
-        },
-      });
+        }
+      );
 
-      // Se há um usuário logado, marcar quais fases estão desbloqueadas e qual é a atual
       if (usuarioId) {
-        return fases.map((fase) => {
+        return fases.map((fase: any) => {
           const desbloqueio = fase.desbloqueios?.[0];
           return {
             ...fase,
             desbloqueada: !!desbloqueio,
             faseAtual: desbloqueio?.faseAtual || false,
-            desbloqueios: undefined, // Remover do retorno
+            desbloqueios: undefined,
           };
         });
       }
 
-      return fases.map((fase) => ({
+      return fases.map((fase: any) => ({
         ...fase,
         desbloqueios: undefined,
       }));
     } catch (error) {
-      logger.error('Error listing fases', { error });
-      throw error;
+      this.handleError(error, 'listarFases');
     }
   }
 
   async obterFaseAtualDoUsuario(usuarioId: number) {
     try {
-      const desbloqueio = await prisma.desbloqueioFase.findFirst({
-        where: {
-          usuarioId,
-          faseAtual: true,
-        },
-        include: {
-          fase: {
-            include: {
-              jornada: {
-                select: {
-                  id: true,
-                  titulo: true,
-                },
-              },
-              quizzes: {
-                where: {
-                  ativo: true,
-                },
-                include: {
-                  _count: {
-                    select: {
-                      perguntas: true,
-                    },
-                  },
-                },
-                orderBy: {
-                  ordem: 'asc',
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!desbloqueio) {
+      const fase = await this.faseRepository.findCurrentForUser(usuarioId);
+      if (!fase) {
         return null;
       }
-
       return {
-        ...desbloqueio.fase,
+        ...fase,
         desbloqueada: true,
         faseAtual: true,
       };
     } catch (error) {
-      logger.error('Error getting current fase for user', { error, usuarioId });
-      throw error;
+      this.handleError(error, 'obterFaseAtualDoUsuario');
     }
   }
 
   async buscarPorId(id: number, usuarioId?: number) {
     try {
-      const fase = await prisma.fase.findUnique({
-        where: { id },
-        include: {
-          jornada: {
-            select: {
-              id: true,
-              titulo: true,
-            },
-          },
-          _count: {
-            select: {
-              quizzes: true,
-            },
-          },
-          quizzes: {
-            where: {
-              ativo: true,
-            },
-            include: {
-              _count: {
-                select: {
-                  perguntas: true,
-                },
-              },
-            },
-            orderBy: {
-              ordem: 'asc',
-            },
-          },
-          desbloqueios: usuarioId
-            ? {
-                where: {
-                  usuarioId,
-                },
-              }
-            : false,
-        },
-      });
-
+      const fase = await this.faseRepository.findByIdWithRelations(id, usuarioId);
       if (!fase) {
-        throw new CustomError('Fase não encontrada', 404);
+        throw new Error('Fase não encontrada');
       }
 
-      const desbloqueio = fase.desbloqueios?.[0];
-      const desbloqueada = !!desbloqueio;
-
+      const desbloqueio = (fase as any).desbloqueios?.[0];
       return {
         ...fase,
-        desbloqueada,
+        desbloqueada: !!desbloqueio,
         faseAtual: desbloqueio?.faseAtual || false,
         desbloqueios: undefined,
       };
     } catch (error) {
-      logger.error('Error finding fase', { error, id });
-      throw error;
+      this.handleError(error, 'buscarPorId');
     }
   }
 
-  async criarFase(dados: {
-    jornadaId: number;
-    titulo: string;
-    descricao?: string;
-    ordem?: number;
-    criadoPor?: number;
-  }) {
+  async criarFase(dados: CreateFaseDTO & { criadoPor?: number }) {
     try {
-      // Verificar se a jornada existe
       const jornada = await prisma.jornada.findUnique({
         where: { id: dados.jornadaId },
       });
 
       if (!jornada) {
-        throw new CustomError('Jornada não encontrada', 404);
+        throw new Error('Jornada não encontrada');
       }
 
       const fase = await prisma.fase.create({
@@ -230,7 +143,7 @@ export class FaseService {
           ativo: true,
           quizzes: {
             create: {
-              titulo: dados.titulo, // Quiz tem o mesmo título da fase
+              titulo: dados.titulo,
               descricao: dados.descricao,
               ordem: 0,
               pontosBase: 100,
@@ -260,46 +173,28 @@ export class FaseService {
       logger.info('Fase created', { faseId: fase.id, jornadaId: dados.jornadaId });
       return fase;
     } catch (error) {
-      logger.error('Error creating fase', { error, dados });
-      throw error;
+      this.handleError(error, 'criarFase');
     }
   }
 
-  async atualizarFase(id: number, dados: {
-    titulo?: string;
-    descricao?: string;
-    ordem?: number;
-    ativo?: boolean;
-  }) {
+  async atualizarFase(id: number, dados: UpdateFaseDTO) {
     try {
-      const fase = await prisma.fase.update({
-        where: { id },
-        data: {
-          ...dados,
-        },
-        include: {
-          quizzes: true,
-        },
-      });
-
+      await this.validateResourceExists(this.faseRepository, id, 'Fase');
+      const fase = await this.faseRepository.update(id, dados);
       logger.info('Fase updated', { faseId: id });
       return fase;
     } catch (error) {
-      logger.error('Error updating fase', { error, id, dados });
-      throw error;
+      this.handleError(error, 'atualizarFase');
     }
   }
 
   async deletarFase(id: number) {
     try {
-      await prisma.fase.delete({
-        where: { id },
-      });
-
+      await this.validateResourceExists(this.faseRepository, id, 'Fase');
+      await this.faseRepository.delete(id);
       logger.info('Fase deleted', { faseId: id });
     } catch (error) {
-      logger.error('Error deleting fase', { error, id });
-      throw error;
+      this.handleError(error, 'deletarFase');
     }
   }
 
@@ -310,25 +205,16 @@ export class FaseService {
     definirComoAtual: boolean = false
   ) {
     try {
-      // Verificar se a fase existe
-      const fase = await prisma.fase.findUnique({
-        where: { id: faseId },
-      });
-
-      if (!fase) {
-        throw new CustomError('Fase não encontrada', 404);
-      }
-
-      // Verificar se o usuário existe
+      await this.validateResourceExists(this.faseRepository, faseId, 'Fase');
+      
       const usuario = await prisma.usuario.findUnique({
         where: { id: usuarioId },
       });
 
       if (!usuario) {
-        throw new CustomError('Usuário não encontrado', 404);
+        throw new Error('Usuário não encontrado');
       }
 
-      // Se deve definir como fase atual, remover faseAtual de outras fases do usuário
       if (definirComoAtual) {
         await prisma.desbloqueioFase.updateMany({
           where: {
@@ -341,7 +227,6 @@ export class FaseService {
         });
       }
 
-      // Criar ou atualizar desbloqueio
       const desbloqueio = await prisma.desbloqueioFase.upsert({
         where: {
           faseId_usuarioId: {
@@ -366,34 +251,24 @@ export class FaseService {
         faseId,
         usuarioId,
         faseAtual: definirComoAtual,
-        desbloqueioId: desbloqueio.id,
       });
 
       return desbloqueio;
     } catch (error) {
-      logger.error('Error unlocking fase', { error, faseId, usuarioId });
-      throw error;
+      this.handleError(error, 'desbloquearFaseParaUsuario');
     }
   }
 
   async desbloquearFaseParaTodosUsuarios(faseId: number, desbloqueadoPor?: number) {
     try {
-      const fase = await prisma.fase.findUnique({
-        where: { id: faseId },
-      });
+      await this.validateResourceExists(this.faseRepository, faseId, 'Fase');
 
-      if (!fase) {
-        throw new CustomError('Fase não encontrada', 404);
-      }
-
-      // Buscar todos os usuários colaboradores
       const usuarios = await prisma.usuario.findMany({
         where: {
           tipo: 'COLABORADOR',
         },
       });
 
-      // Criar desbloqueios para todos
       const desbloqueios = await Promise.all(
         usuarios.map((usuario) =>
           prisma.desbloqueioFase.upsert({
@@ -423,8 +298,7 @@ export class FaseService {
 
       return desbloqueios;
     } catch (error) {
-      logger.error('Error unlocking fase for all users', { error, faseId });
-      throw error;
+      this.handleError(error, 'desbloquearFaseParaTodosUsuarios');
     }
   }
 
@@ -441,8 +315,7 @@ export class FaseService {
 
       logger.info('Fase locked for user', { faseId, usuarioId });
     } catch (error) {
-      logger.error('Error locking fase', { error, faseId, usuarioId });
-      throw error;
+      this.handleError(error, 'bloquearFaseParaUsuario');
     }
   }
 
@@ -467,8 +340,7 @@ export class FaseService {
 
       return desbloqueios;
     } catch (error) {
-      logger.error('Error listing users with unlock', { error, faseId });
-      throw error;
+      this.handleError(error, 'listarUsuariosComDesbloqueio');
     }
   }
 }

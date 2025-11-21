@@ -1,7 +1,7 @@
 import express from 'express';
-import { QuizController } from '../controllers/v1/QuizController';
-import { authenticate, requireAdmin } from '../middleware/auth';
-import { container } from '../container/ServiceContainer';
+import { QuizController } from '../../controllers/v1/QuizController';
+import { authenticate, requireAdmin } from '../../middleware/auth';
+import { container } from '../../container/ServiceContainer';
 
 const router = express.Router();
 
@@ -10,7 +10,6 @@ const getQuizController = (): QuizController => {
   return container.resolve<QuizController>('QuizController');
 };
 
-// Rotas antigas redirecionadas para novos controllers (compatibilidade)
 router.get('/', authenticate, (req, res, next) => getQuizController().listarQuizzes(req, res, next));
 router.get('/disponiveis', authenticate, (req, res, next) => getQuizController().listarQuizzesDisponiveis(req, res, next));
 router.get('/fase/:faseId', authenticate, (req, res, next) => getQuizController().buscarQuizPorFase(req, res, next));

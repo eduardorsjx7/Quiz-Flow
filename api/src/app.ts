@@ -5,8 +5,13 @@ import config from './config/env';
 import logger from './config/logger';
 import { requestLogger, errorLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { registerServices } from './container/registerServices';
 
-// Importar rotas
+// Registrar serviços no container ANTES de importar rotas
+// Isso garante que os serviços estejam disponíveis quando as rotas forem carregadas
+registerServices();
+
+// Importar rotas legadas (mantidas para compatibilidade)
 import authRoutes from './routes/auth.routes';
 import jornadaRoutes from './routes/jornada.routes';
 import faseRoutes from './routes/fase.routes';
@@ -16,6 +21,9 @@ import respostaRoutes from './routes/resposta.routes';
 import relatorioRoutes from './routes/relatorio.routes';
 import grupoRoutes from './routes/grupo.routes';
 import atribuicaoRoutes from './routes/atribuicao.routes';
+
+// Importar rotas v1 (nova estrutura com Design Patterns)
+import v1Routes from './routes/v1';
 
 const app = express();
 
@@ -52,7 +60,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rotas da API
+// Rotas da API v1 (nova estrutura com Design Patterns)
+app.use('/api/v1', v1Routes);
+
+// Rotas legadas (mantidas para compatibilidade - serão descontinuadas)
 app.use('/api/auth', authRoutes);
 app.use('/api/jornadas', jornadaRoutes);
 app.use('/api/fases', faseRoutes);

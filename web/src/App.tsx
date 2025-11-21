@@ -13,6 +13,7 @@ import AdminUsuarios from './pages/admin/Usuarios';
 import CriarUsuario from './pages/admin/CriarUsuario';
 import AdminJornadas from './pages/admin/Jornadas';
 import CriarJornada from './pages/admin/CriarJornada';
+import DetalhesJornada from './pages/admin/DetalhesJornada';
 import DefinirFaseAtual from './pages/admin/DefinirFaseAtual';
 import FaseAtual from './pages/participante/FaseAtual';
 import ParticipanteQuiz from './pages/participante/Quiz';
@@ -155,6 +156,14 @@ function App() {
           element={
             <PrivateRoute>
               <CriarJornada />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/jornadas/:id"
+          element={
+            <PrivateRoute>
+              <DetalhesJornada />
             </PrivateRoute>
           }
         />

@@ -6,6 +6,9 @@ export class JornadaService {
   async listarJornadas() {
     try {
       const jornadas = await prisma.jornada.findMany({
+        where: {
+          ativo: true,
+        },
         include: {
           _count: {
             select: {
@@ -116,6 +119,143 @@ export class JornadaService {
       return jornadaComPerguntas;
     } catch (error) {
       logger.error('Error finding jornada by id', { error, jornadaId: id });
+      throw error;
+    }
+  }
+
+  async buscarFasesPorJornada(jornadaId: number, usuarioId?: number) {
+    try {
+      const jornada = await prisma.jornada.findUnique({
+        where: { id: jornadaId },
+        select: {
+          id: true,
+          titulo: true,
+          imagemCapa: true,
+          tempoLimitePorQuestao: true,
+        },
+      });
+
+      if (!jornada) {
+        throw new CustomError('Jornada não encontrada', 404);
+      }
+
+      // Buscar todas as fases da jornada
+      const fases = await prisma.fase.findMany({
+        where: {
+          jornadaId,
+          ativo: true,
+        },
+        include: {
+          _count: {
+            select: {
+              quizzes: true,
+            },
+          },
+          quizzes: {
+            where: {
+              ativo: true,
+            },
+            include: {
+              _count: {
+                select: {
+                  perguntas: true,
+                },
+              },
+            },
+            orderBy: {
+              ordem: 'asc',
+            },
+          },
+          desbloqueios: usuarioId
+            ? {
+                where: {
+                  usuarioId,
+                },
+              }
+            : false,
+        },
+        orderBy: {
+          ordem: 'asc',
+        },
+      });
+
+      // Verificar se a jornada tem sequência de desbloqueio
+      const jornadaTemDesbloqueio = fases.some((fase: any) => fase.dataDesbloqueio !== null);
+
+      // Buscar tentativas finalizadas do usuário para verificar quais fases foram concluídas
+      let tentativasFinalizadas: any[] = [];
+      if (usuarioId) {
+        const quizIds = fases.flatMap((fase: any) => 
+          fase.quizzes?.map((quiz: any) => quiz.id) || []
+        );
+        
+        if (quizIds.length > 0) {
+          tentativasFinalizadas = await prisma.tentativaQuiz.findMany({
+            where: {
+              quizId: { in: quizIds },
+              usuarioId,
+              status: 'FINALIZADA',
+            },
+            select: {
+              quizId: true,
+            },
+          });
+        }
+      }
+
+      // Filtrar e marcar fases desbloqueadas
+      const fasesComStatus = fases.map((fase: any) => {
+        const desbloqueio = fase.desbloqueios?.[0];
+        
+        // Calcular total de perguntas
+        const totalPerguntas = fase.quizzes?.reduce((sum: number, quiz: any) => {
+          return sum + (quiz._count?.perguntas || 0);
+        }, 0) || 0;
+        
+        // Verificar se a fase foi finalizada (todos os quizzes têm tentativas finalizadas)
+        const quizIdsDaFase = fase.quizzes?.map((quiz: any) => quiz.id) || [];
+        const tentativasFase = tentativasFinalizadas.filter((t: any) => 
+          quizIdsDaFase.includes(t.quizId)
+        );
+        const finalizada = quizIdsDaFase.length > 0 && 
+          quizIdsDaFase.every((quizId: number) => 
+            tentativasFase.some((t: any) => t.quizId === quizId)
+          );
+        
+        // Se a jornada não tem sequência de desbloqueio, todas estão desbloqueadas
+        let estaDesbloqueada = true;
+        if (jornadaTemDesbloqueio) {
+          // Se tem sequência de desbloqueio, verificar se está desbloqueada
+          if (fase.dataDesbloqueio) {
+            // Verificar se a data de desbloqueio já passou
+            estaDesbloqueada = new Date(fase.dataDesbloqueio) <= new Date();
+          } else {
+            // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
+            estaDesbloqueada = !!desbloqueio;
+          }
+        }
+
+        return {
+          ...fase,
+          desbloqueada: estaDesbloqueada,
+          faseAtual: desbloqueio?.faseAtual || false,
+          totalPerguntas,
+          finalizada,
+          desbloqueios: undefined,
+        };
+      });
+
+      // Filtrar apenas fases desbloqueadas se for participante
+      const fasesFiltradas = usuarioId 
+        ? fasesComStatus.filter((fase: { desbloqueada: boolean }) => fase.desbloqueada)
+        : fasesComStatus;
+
+      return {
+        jornada,
+        fases: fasesFiltradas,
+      };
+    } catch (error) {
+      logger.error('Error finding phases by journey', { error, jornadaId });
       throw error;
     }
   }

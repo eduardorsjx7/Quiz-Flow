@@ -79,6 +79,17 @@ export class TentativaService {
         include: {
           quiz: {
             include: {
+              fase: {
+                include: {
+                  jornada: {
+                    select: {
+                      id: true,
+                      titulo: true,
+                      tempoLimitePorQuestao: true,
+                    },
+                  },
+                },
+              },
               perguntas: {
                 include: {
                   alternativas: {
@@ -125,6 +136,17 @@ export class TentativaService {
         include: {
           quiz: {
             include: {
+              fase: {
+                include: {
+                  jornada: {
+                    select: {
+                      id: true,
+                      titulo: true,
+                      tempoLimitePorQuestao: true,
+                    },
+                  },
+                },
+              },
               perguntas: {
                 include: {
                   alternativas: {
@@ -298,6 +320,14 @@ export class TentativaService {
               id: true,
               titulo: true,
               descricao: true,
+            },
+          },
+          respostas: {
+            select: {
+              id: true,
+              acertou: true,
+              tempoResposta: true,
+              pontuacao: true,
             },
           },
         },

@@ -178,7 +178,60 @@ export class AtribuicaoService {
         }
       }
 
-      return false;
+      // Se não há atribuição específica, verificar se a fase está desbloqueada
+      const quiz = await prisma.quiz.findUnique({
+        where: { id: quizId },
+        include: {
+          fase: {
+            select: {
+              id: true,
+              jornadaId: true,
+              dataDesbloqueio: true,
+            },
+          },
+        },
+      });
+
+      if (!quiz || !quiz.fase) {
+        return false;
+      }
+
+      // Verificar se a jornada tem sequência de desbloqueio
+      const fasesDaJornada = await prisma.fase.findMany({
+        where: {
+          jornadaId: quiz.fase.jornadaId,
+          ativo: true,
+        },
+        select: {
+          dataDesbloqueio: true,
+        },
+      });
+
+      const jornadaTemDesbloqueio = fasesDaJornada.some((f) => f.dataDesbloqueio !== null);
+
+      if (!jornadaTemDesbloqueio) {
+        // Se não tem sequência de desbloqueio, todas as fases estão abertas
+        return true;
+      }
+
+      // Se tem sequência de desbloqueio, verificar se a fase está desbloqueada
+      if (quiz.fase.dataDesbloqueio) {
+        // Verificar se a data de desbloqueio já passou
+        const estaDesbloqueada = new Date(quiz.fase.dataDesbloqueio) <= new Date();
+        if (estaDesbloqueada) {
+          return true;
+        }
+      }
+
+      // Verificar desbloqueio manual
+      const desbloqueio = await prisma.desbloqueioFase.findFirst({
+        where: {
+          faseId: quiz.fase.id,
+          usuarioId,
+        },
+      });
+
+      return !!desbloqueio;
     } catch (error) {
       logger.error('Error checking user access', { error, quizId, usuarioId });
       return false;

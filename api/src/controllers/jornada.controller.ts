@@ -55,6 +55,16 @@ export const buscarJornadaPorId = asyncHandler(async (req: Request, res: Respons
   });
 });
 
+export const buscarFasesPorJornada = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const usuarioId = req.userId;
+  const resultado = await jornadaService.buscarFasesPorJornada(Number(id), usuarioId);
+  res.json({
+    success: true,
+    data: resultado,
+  });
+});
+
 export const criarJornada = asyncHandler(async (req: Request, res: Response) => {
   const { titulo, descricao, ordem, fases } = req.body;
   const criadoPor = req.userId;

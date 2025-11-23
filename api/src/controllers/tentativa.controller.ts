@@ -53,6 +53,9 @@ export const listarTentativasDoUsuario = asyncHandler(async (req: Request, res: 
   }
 
   const tentativas = await tentativaService.listarTentativasDoUsuario(usuarioId);
-  res.json(tentativas);
+  res.json({
+    success: true,
+    data: tentativas,
+  });
 });
 

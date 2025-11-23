@@ -82,7 +82,7 @@ export class FaseService extends BaseService {
           const jornadaId = fase.jornadaId || fase.jornada?.id;
           const jornadaTemDesbloqueio = jornadasComDesbloqueio.has(jornadaId);
           
-          // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas
+          // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas para todos os usuários
           let estaDesbloqueada = true;
           if (jornadaTemDesbloqueio) {
             // Se tem sequência de desbloqueio, verificar se está desbloqueada
@@ -95,6 +95,7 @@ export class FaseService extends BaseService {
             }
           }
           // Se não tem sequência de desbloqueio (jornadaTemDesbloqueio = false), todas estão desbloqueadas (true)
+          // Isso significa que a jornada está aberta e disponível para todos os usuários
           
           return {
             ...fase,

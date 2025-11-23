@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env(DATABASE_URL)
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
@@ -35,9 +35,17 @@ model Jornada {
   id          Int      @id @default(autoincrement())
   titulo      String
   descricao   String?
+  imagemCapa  String?
   ordem       Int      @default(0)
   ativo       Boolean  @default(true)
   criadoPor   Int?
+  // Configurações da jornada
+  mostrarQuestaoCerta      Boolean  @default(true)
+  mostrarTaxaErro          Boolean  @default(true)
+  mostrarPodio             Boolean  @default(true)
+  mostrarRanking           Boolean  @default(true)
+  permitirTentativasIlimitadas Boolean @default(false)
+  tempoLimitePorQuestao    Int?     // em segundos
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -53,6 +61,8 @@ model Fase {
   descricao   String?
   ordem       Int      @default(0)
   ativo       Boolean  @default(true)
+  dataDesbloqueio DateTime? // Data e hora de desbloqueio da fase
+  pontuacao   Int      @default(0) // Pontuação da fase
   criadoPor   Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

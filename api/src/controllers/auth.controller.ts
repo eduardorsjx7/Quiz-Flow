@@ -123,14 +123,7 @@ export const listarUsuarios = asyncHandler(async (req: Request, res: Response, n
       id: true,
       nome: true,
       email: true,
-      matricula: true,
       tipo: true,
-      grupo: {
-        select: {
-          id: true,
-          nome: true,
-        },
-      },
     },
     orderBy: {
       nome: 'asc',
@@ -144,7 +137,7 @@ export const listarUsuarios = asyncHandler(async (req: Request, res: Response, n
 });
 
 export const criarUsuario = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { nome, email, senha, matricula, tipo, grupoId } = req.body;
+  const { nome, email, senha, tipo } = req.body;
 
   if (!nome || !email || !senha) {
     throw new CustomError('Nome, email e senha são obrigatórios', 400);
@@ -158,16 +151,6 @@ export const criarUsuario = asyncHandler(async (req: Request, res: Response, nex
     throw new CustomError('Email já cadastrado', 409);
   }
 
-  // Validar grupo se fornecido
-  if (grupoId) {
-    const grupo = await prisma.grupo.findUnique({
-      where: { id: grupoId },
-    });
-    if (!grupo) {
-      throw new CustomError('Grupo não encontrado', 404);
-    }
-  }
-
   const senhaHash = await bcrypt.hash(senha, 10);
 
   const usuario = await prisma.usuario.create({
@@ -175,22 +158,13 @@ export const criarUsuario = asyncHandler(async (req: Request, res: Response, nex
       nome,
       email,
       senha: senhaHash,
-      matricula: matricula || null,
       tipo: tipo || 'COLABORADOR',
-      grupoId: grupoId || null,
     },
     select: {
       id: true,
       nome: true,
       email: true,
-      matricula: true,
       tipo: true,
-      grupo: {
-        select: {
-          id: true,
-          nome: true,
-        },
-      },
     },
   });
 

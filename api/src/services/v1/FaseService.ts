@@ -67,12 +67,38 @@ export class FaseService extends BaseService {
         }
       );
 
+      // Verificar se alguma jornada tem fases com dataDesbloqueio definida
+      // Agrupar fases por jornada para verificar se cada jornada tem sequência de desbloqueio
+      const jornadasComDesbloqueio = new Set<number>();
+      fases.forEach((fase: any) => {
+        if (fase.dataDesbloqueio !== null) {
+          jornadasComDesbloqueio.add(fase.jornadaId || fase.jornada?.id);
+        }
+      });
+
       if (usuarioId) {
         return fases.map((fase: any) => {
           const desbloqueio = fase.desbloqueios?.[0];
+          const jornadaId = fase.jornadaId || fase.jornada?.id;
+          const jornadaTemDesbloqueio = jornadasComDesbloqueio.has(jornadaId);
+          
+          // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas
+          let estaDesbloqueada = true;
+          if (jornadaTemDesbloqueio) {
+            // Se tem sequência de desbloqueio, verificar se está desbloqueada
+            if (fase.dataDesbloqueio) {
+              // Verificar se a data de desbloqueio já passou
+              estaDesbloqueada = new Date(fase.dataDesbloqueio) <= new Date();
+            } else {
+              // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
+              estaDesbloqueada = !!desbloqueio;
+            }
+          }
+          // Se não tem sequência de desbloqueio (jornadaTemDesbloqueio = false), todas estão desbloqueadas (true)
+          
           return {
             ...fase,
-            desbloqueada: !!desbloqueio,
+            desbloqueada: estaDesbloqueada,
             faseAtual: desbloqueio?.faseAtual || false,
             desbloqueios: undefined,
           };
@@ -98,6 +124,7 @@ export class FaseService extends BaseService {
         ...fase,
         desbloqueada: true,
         faseAtual: true,
+        quizzes: fase.quizzes || [],
       };
     } catch (error) {
       this.handleError(error, 'obterFaseAtualDoUsuario');
@@ -111,10 +138,29 @@ export class FaseService extends BaseService {
         throw new Error('Fase não encontrada');
       }
 
+      // Verificar se a jornada tem alguma fase com dataDesbloqueio definida
+      const jornadaId = (fase as any).jornadaId;
+      const fasesDaJornada = await prisma.fase.findMany({
+        where: {
+          jornadaId,
+          ativo: true,
+        },
+        select: {
+          dataDesbloqueio: true,
+        },
+      });
+
+      const jornadaTemDesbloqueio = fasesDaJornada.some((f) => f.dataDesbloqueio !== null);
       const desbloqueio = (fase as any).desbloqueios?.[0];
+      
+      // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas
+      const estaDesbloqueada = jornadaTemDesbloqueio 
+        ? !!desbloqueio || ((fase as any).dataDesbloqueio && new Date((fase as any).dataDesbloqueio) <= new Date())
+        : true; // Todas desbloqueadas se não houver sequência de desbloqueio
+
       return {
         ...fase,
-        desbloqueada: !!desbloqueio,
+        desbloqueada: estaDesbloqueada,
         faseAtual: desbloqueio?.faseAtual || false,
         desbloqueios: undefined,
       };

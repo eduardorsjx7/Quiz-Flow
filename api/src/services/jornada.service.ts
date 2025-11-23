@@ -6,11 +6,26 @@ export class JornadaService {
   async listarJornadas() {
     try {
       const jornadas = await prisma.jornada.findMany({
-        where: { ativo: true },
         include: {
           _count: {
             select: {
               fases: true,
+            },
+          },
+          fases: {
+            where: {
+              ordem: {
+                gte: 1,
+              },
+            },
+            orderBy: {
+              ordem: 'asc',
+            },
+            take: 1,
+            select: {
+              id: true,
+              titulo: true,
+              ordem: true,
             },
           },
         },
@@ -19,7 +34,32 @@ export class JornadaService {
         },
       });
 
-      return jornadas;
+      // Para cada jornada, verificar se tem sequência de desbloqueio
+      const jornadasComInfo = await Promise.all(
+        jornadas.map(async (jornada: any) => {
+          // Buscar todas as fases da jornada para verificar se alguma tem dataDesbloqueio
+          const todasFases = await prisma.fase.findMany({
+            where: {
+              jornadaId: jornada.id,
+              ativo: true,
+            },
+            select: {
+              dataDesbloqueio: true,
+            },
+          });
+
+          // Verificar se alguma fase tem dataDesbloqueio definida
+          const temSequenciaDesbloqueio = todasFases.some((fase: any) => fase.dataDesbloqueio !== null);
+
+          return {
+            ...jornada,
+            faseAtual: jornada.fases.length > 0 ? jornada.fases[0] : null,
+            todasFasesAbertas: !temSequenciaDesbloqueio && todasFases.length > 0,
+          };
+        })
+      );
+
+      return jornadasComInfo;
     } catch (error) {
       logger.error('Error listing jornadas', { error });
       throw error;
@@ -38,6 +78,15 @@ export class JornadaService {
                   quizzes: true,
                 },
               },
+              quizzes: {
+                include: {
+                  _count: {
+                    select: {
+                      perguntas: true,
+                    },
+                  },
+                },
+              },
             },
             orderBy: {
               ordem: 'asc',
@@ -50,7 +99,21 @@ export class JornadaService {
         throw new CustomError('Jornada não encontrada', 404);
       }
 
-      return jornada;
+      // Calcular total de perguntas por fase
+      const jornadaComPerguntas = {
+        ...jornada,
+        fases: jornada.fases.map((fase: any) => {
+          const totalPerguntas = (fase.quizzes || []).reduce((sum: number, quiz: any) => {
+            return sum + (quiz._count?.perguntas || 0);
+          }, 0);
+          return {
+            ...fase,
+            totalPerguntas,
+          };
+        }),
+      };
+
+      return jornadaComPerguntas;
     } catch (error) {
       logger.error('Error finding jornada by id', { error, jornadaId: id });
       throw error;
@@ -60,6 +123,7 @@ export class JornadaService {
   async criarJornada(dados: {
     titulo: string;
     descricao?: string;
+    imagemCapa?: string | null;
     ordem?: number;
     criadoPor?: number;
     fases?: Array<{
@@ -73,6 +137,7 @@ export class JornadaService {
         data: {
           titulo: dados.titulo,
           descricao: dados.descricao,
+          imagemCapa: dados.imagemCapa,
           ordem: dados.ordem || 0,
           criadoPor: dados.criadoPor,
           fases: dados.fases && dados.fases.length > 0
@@ -116,6 +181,7 @@ export class JornadaService {
   async atualizarJornada(id: number, dados: {
     titulo?: string;
     descricao?: string;
+    imagemCapa?: string | null;
     ordem?: number;
     ativo?: boolean;
   }) {
@@ -338,6 +404,121 @@ export class JornadaService {
       };
     } catch (error) {
       logger.error('Error getting jornada statistics', { error, jornadaId });
+      throw error;
+    }
+  }
+
+  async buscarConfiguracao(id: number) {
+    try {
+      const jornada = await prisma.jornada.findUnique({
+        where: { id },
+        include: {
+          fases: {
+            orderBy: {
+              ordem: 'asc',
+            },
+            select: {
+              id: true,
+              titulo: true,
+              ordem: true,
+              dataDesbloqueio: true,
+              pontuacao: true,
+            },
+          },
+        },
+      });
+
+      if (!jornada) {
+        throw new CustomError('Jornada não encontrada', 404);
+      }
+
+      return {
+        jornada: {
+          id: jornada.id,
+          titulo: jornada.titulo,
+          ativo: jornada.ativo,
+        },
+        fases: jornada.fases.map((fase) => ({
+          id: fase.id,
+          titulo: fase.titulo,
+          ordem: fase.ordem,
+          dataDesbloqueio: fase.dataDesbloqueio,
+          pontuacao: fase.pontuacao,
+        })),
+        configuracao: {
+          ativo: jornada.ativo,
+          mostrarQuestaoCerta: jornada.mostrarQuestaoCerta,
+          mostrarTaxaErro: jornada.mostrarTaxaErro,
+          mostrarPodio: jornada.mostrarPodio,
+          mostrarRanking: jornada.mostrarRanking,
+          permitirTentativasIlimitadas: jornada.permitirTentativasIlimitadas,
+          tempoLimitePorQuestao: jornada.tempoLimitePorQuestao,
+        },
+      };
+    } catch (error) {
+      logger.error('Error fetching configuration', { error, jornadaId: id });
+      throw error;
+    }
+  }
+
+  async salvarConfiguracao(
+    id: number,
+    dados: {
+      fases?: Array<{
+        faseId: number;
+        dataDesbloqueio: string | null;
+        pontuacao: number;
+      }>;
+      configuracao?: {
+        ativo?: boolean;
+        mostrarQuestaoCerta?: boolean;
+        mostrarTaxaErro?: boolean;
+        mostrarPodio?: boolean;
+        mostrarRanking?: boolean;
+        permitirTentativasIlimitadas?: boolean;
+        tempoLimitePorQuestao?: number | null;
+      };
+    }
+  ) {
+    try {
+      // Atualizar configurações da jornada
+      if (dados.configuracao) {
+        await prisma.jornada.update({
+          where: { id },
+          data: {
+            ativo: dados.configuracao.ativo,
+            mostrarQuestaoCerta: dados.configuracao.mostrarQuestaoCerta,
+            mostrarTaxaErro: dados.configuracao.mostrarTaxaErro,
+            mostrarPodio: dados.configuracao.mostrarPodio,
+            mostrarRanking: dados.configuracao.mostrarRanking,
+            permitirTentativasIlimitadas: dados.configuracao.permitirTentativasIlimitadas,
+            tempoLimitePorQuestao: dados.configuracao.tempoLimitePorQuestao,
+          },
+        });
+      }
+
+      // Atualizar fases
+      if (dados.fases && dados.fases.length > 0) {
+        await Promise.all(
+          dados.fases.map((faseData) =>
+            prisma.fase.update({
+              where: { id: faseData.faseId },
+              data: {
+                dataDesbloqueio: faseData.dataDesbloqueio
+                  ? new Date(faseData.dataDesbloqueio)
+                  : null,
+                pontuacao: faseData.pontuacao,
+              },
+            })
+          )
+        );
+      }
+
+      logger.info('Configuration saved', { jornadaId: id });
+
+      return await this.buscarConfiguracao(id);
+    } catch (error) {
+      logger.error('Error saving configuration', { error, jornadaId: id });
       throw error;
     }
   }

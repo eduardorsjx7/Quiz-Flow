@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import {
   Save as SaveIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -25,10 +26,7 @@ const CriarUsuario: React.FC = () => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [matricula, setMatricula] = useState('');
   const [tipo, setTipo] = useState<'COLABORADOR' | 'ADMINISTRADOR'>('COLABORADOR');
-  const [grupoId, setGrupoId] = useState<number | ''>('');
-  const [grupos, setGrupos] = useState<any[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState('');
@@ -37,19 +35,6 @@ const CriarUsuario: React.FC = () => {
     email?: string;
     senha?: string;
   }>({});
-
-  React.useEffect(() => {
-    carregarGrupos();
-  }, []);
-
-  const carregarGrupos = async () => {
-    try {
-      const response = await api.get('/grupos');
-      setGrupos(response.data.data || response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar grupos:', error);
-    }
-  };
 
   const validarEmail = (email: string): boolean => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,9 +81,7 @@ const CriarUsuario: React.FC = () => {
         nome: nome.trim(),
         email: email.trim(),
         senha,
-        matricula: matricula.trim() || undefined,
         tipo,
-        grupoId: grupoId || undefined,
       });
 
       setSucesso('Usuário criado com sucesso!');
@@ -185,15 +168,6 @@ const CriarUsuario: React.FC = () => {
             disabled={salvando}
           />
 
-          <TextField
-            fullWidth
-            label="Matrícula"
-            value={matricula}
-            onChange={(e) => setMatricula(e.target.value)}
-            margin="normal"
-            disabled={salvando}
-          />
-
           <FormControl fullWidth margin="normal">
             <InputLabel>Tipo de Usuário</InputLabel>
             <Select
@@ -207,27 +181,23 @@ const CriarUsuario: React.FC = () => {
             </Select>
           </FormControl>
 
-          {tipo === 'COLABORADOR' && (
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Grupo/Departamento</InputLabel>
-              <Select
-                value={grupoId}
-                onChange={(e) => setGrupoId(e.target.value as number | '')}
-                label="Grupo/Departamento"
-                disabled={salvando}
-              >
-                <MenuItem value="">Nenhum</MenuItem>
-                {grupos.map((grupo) => (
-                  <MenuItem key={grupo.id} value={grupo.id}>
-                    {grupo.nome}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-            <Button variant="outlined" onClick={() => navigate('/admin/usuarios')} disabled={salvando}>
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            <Button 
+              variant="outlined"
+              color="inherit"
+              onClick={() => navigate('/admin/usuarios')} 
+              disabled={salvando}
+              startIcon={<CancelIcon />}
+              sx={{
+                minWidth: 140,
+                py: 1.2,
+                borderColor: 'grey.300',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  bgcolor: 'grey.50',
+                },
+              }}
+            >
               Cancelar
             </Button>
             <Button

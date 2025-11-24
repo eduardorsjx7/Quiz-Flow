@@ -18,6 +18,7 @@ import {
 import {
   Route as RouteIcon,
   PlayArrow as PlayArrowIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -68,20 +69,74 @@ const AdminFases: React.FC = () => {
   return (
     <AdminLayout title="Fases das Jornadas">
       <Container maxWidth="lg">
-        <Breadcrumbs sx={{ mb: 3 }}>
+        <Breadcrumbs 
+          sx={{ 
+            mb: 3,
+            '& .MuiBreadcrumbs-separator': {
+              mx: 1.5,
+              color: 'text.disabled',
+            },
+          }}
+        >
           <Link
             component="button"
-            variant="body1"
             onClick={() => navigate('/admin')}
-            sx={{ cursor: 'pointer' }}
+            sx={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              p: 0.5,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Dashboard"
           >
-            Dashboard
+            <HomeIcon sx={{ fontSize: 20 }} />
           </Link>
-          <Typography color="text.primary">Fases das Jornadas</Typography>
+          <Typography 
+            color="text.primary"
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            Fases das Jornadas
+          </Typography>
         </Breadcrumbs>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4">Fases das Jornadas</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: '2rem',
+                background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                mb: 0.5,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Fases das Jornadas
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                mt: 0.5,
+              }}
+            >
+              Visualize e gerencie todas as fases
+            </Typography>
+          </Box>
         </Box>
 
         {erro && (
@@ -92,7 +147,7 @@ const AdminFases: React.FC = () => {
 
         {jornadas.length === 0 ? (
           <Alert severity="info">
-            Nenhuma jornada cadastrada. Crie uma jornada primeiro para cadastrar fases e quizzes.
+            Nenhuma jornada cadastrada. Crie uma jornada primeiro para cadastrar fases e perguntas.
           </Alert>
         ) : (
           <Grid container spacing={3}>

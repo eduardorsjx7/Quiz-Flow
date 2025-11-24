@@ -12,7 +12,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
 
   // Mostrar loading durante a verificação inicial do token
   if (isLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen message="Verificando autenticação..." />;
   }
 
   if (!isAuthenticated) {

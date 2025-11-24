@@ -7,7 +7,6 @@ import {
   Button,
   Typography,
   Box,
-  Alert,
   CircularProgress,
   InputAdornment,
   IconButton,
@@ -18,17 +17,18 @@ import {
   Login as LoginIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { LoadingScreen } from '../components/LoadingScreen';
-import { QuestionIconBackground } from '../components/QuestionIconBackground';
+import { AnimatedBackground } from '../components/AnimatedBackground';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [erro, setErro] = useState('');
   const [errosCampos, setErrosCampos] = useState<{ email?: string; senha?: string }>({});
   const [enviando, setEnviando] = useState(false);
   const { login, usuario, isAuthenticated, isLoading } = useAuth();
+  const { showError } = useToast();
   const navigate = useNavigate();
 
   // Redirecionar se já estiver autenticado
@@ -37,7 +37,7 @@ const Login: React.FC = () => {
       if (usuario.tipo === 'ADMINISTRADOR') {
         navigate('/admin', { replace: true });
       } else {
-        navigate('/fase-atual', { replace: true });
+        navigate('/dashboard', { replace: true });
       }
     }
   }, [isAuthenticated, usuario, navigate]);
@@ -68,7 +68,6 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro('');
     setErrosCampos({});
 
     if (!validarFormulario()) {
@@ -80,8 +79,51 @@ const Login: React.FC = () => {
       await login(email, senha);
       // O redirecionamento será feito pelo useEffect quando o contexto atualizar
     } catch (error: any) {
-      const mensagemErro = error.response?.data?.error || error.response?.data?.message || error.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      setErro(mensagemErro);
+      // Verificar se é erro de rede primeiro
+      if (error.isNetworkError || !error.response) {
+        showError('Erro de conexão. Verifique sua internet e tente novamente.', 'Erro de conexão');
+        return;
+      }
+
+      // Extrair mensagem de erro da resposta da API
+      let mensagemErro = 'Erro ao fazer login. Verifique suas credenciais e tente novamente.';
+      const statusCode = error.response?.status;
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        // A API retorna: { success: false, error: { message: "..." } }
+        if (data.error) {
+          if (typeof data.error === 'string') {
+            mensagemErro = data.error;
+          } else if (data.error.message) {
+            mensagemErro = data.error.message;
+          }
+        } else if (data.message) {
+          mensagemErro = typeof data.message === 'string' ? data.message : String(data.message);
+        }
+      } else if (error.message) {
+        mensagemErro = typeof error.message === 'string' ? error.message : String(error.message);
+      }
+      
+      // Limpar mensagem se for um objeto serializado
+      if (mensagemErro.startsWith('{') || mensagemErro === '[object Object]') {
+        mensagemErro = 'Erro ao fazer login. Verifique suas credenciais e tente novamente.';
+      }
+      
+      // Determinar o tipo de erro baseado no status code e mensagem
+      const mensagemLower = mensagemErro.toLowerCase();
+      
+      // Erro 401 = Credenciais inválidas
+      if (statusCode === 401 || mensagemLower.includes('credenciais inválidas') || mensagemLower.includes('credencial') || mensagemLower.includes('senha') || mensagemLower.includes('password') || mensagemLower.includes('incorreta') || mensagemLower.includes('inválida')) {
+        showError('Credenciais inválidas. Verifique seu e-mail e senha.', 'Credenciais inválidas');
+      } else if (statusCode === 404 || mensagemLower.includes('email') || mensagemLower.includes('usuário') || mensagemLower.includes('user') || mensagemLower.includes('não encontrado') || mensagemLower.includes('not found') || mensagemLower.includes('inexistente')) {
+        showError('E-mail não encontrado. Verifique se o e-mail está correto.', 'E-mail não encontrado');
+      } else if (statusCode === 500 || statusCode === 503 || mensagemLower.includes('servidor') || mensagemLower.includes('server')) {
+        showError('Erro no servidor. Tente novamente em alguns instantes.', 'Erro no servidor');
+      } else {
+        // Mostrar mensagem amigável mesmo se não reconhecer o tipo
+        showError('Não foi possível fazer login. Verifique suas credenciais e tente novamente.', 'Erro ao fazer login');
+      }
     } finally {
       setEnviando(false);
     }
@@ -89,7 +131,7 @@ const Login: React.FC = () => {
 
   // Mostrar tela de loading durante o processo de login ou verificação inicial
   if (enviando || isLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen message={enviando ? "Entrando..." : "Verificando autenticação..."} />;
   }
 
   return (
@@ -100,13 +142,13 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#ffffff',
+        background: 'transparent',
         padding: 2,
         overflow: 'hidden',
       }}
     >
-      {/* Fundo animado com caixinhas de ícone flutuantes */}
-      <QuestionIconBackground />
+      {/* Fundo animado com interrogações, formas e partículas */}
+      <AnimatedBackground />
       
       <Container 
         maxWidth="sm"
@@ -115,7 +157,15 @@ const Login: React.FC = () => {
           zIndex: 1,
         }}
       >
-      
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            backgroundColor: '#ffffff',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <img 
               src="/logo/logo1.svg" 
@@ -126,12 +176,6 @@ const Login: React.FC = () => {
               Sistema de Avaliação e Capacitação Corporativa
             </Typography>
           </Box>
-
-          {erro && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErro('')}>
-              {erro}
-            </Alert>
-          )}
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -144,7 +188,6 @@ const Login: React.FC = () => {
                 if (errosCampos.email) {
                   setErrosCampos({ ...errosCampos, email: undefined });
                 }
-                if (erro) setErro('');
               }}
               margin="normal"
               required
@@ -152,9 +195,37 @@ const Login: React.FC = () => {
               helperText={errosCampos.email}
               disabled={enviando}
               autoComplete="email"
+              InputLabelProps={{
+                shrink: true,
+              }}
               sx={{
+                mb: 2,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
+                  backgroundColor: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#e0e0e0',
+                    borderWidth: 2,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#ff2c19',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ff2c19',
+                    borderWidth: 2,
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#6b7280',
+                  transform: 'translate(14px, -9px) scale(0.75)',
+                  '&.Mui-focused': {
+                    color: '#ff2c19',
+                  },
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: '#011b49',
+                  fontSize: '1rem',
+                  padding: '14px',
                 },
               }}
             />
@@ -168,7 +239,6 @@ const Login: React.FC = () => {
                 if (errosCampos.senha) {
                   setErrosCampos({ ...errosCampos, senha: undefined });
                 }
-                if (erro) setErro('');
               }}
               margin="normal"
               required
@@ -176,9 +246,37 @@ const Login: React.FC = () => {
               helperText={errosCampos.senha}
               disabled={enviando}
               autoComplete="current-password"
+              InputLabelProps={{
+                shrink: true,
+              }}
               sx={{
+                mb: 2,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
+                  backgroundColor: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#e0e0e0',
+                    borderWidth: 2,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#ff2c19',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ff2c19',
+                    borderWidth: 2,
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#6b7280',
+                  transform: 'translate(14px, -9px) scale(0.75)',
+                  '&.Mui-focused': {
+                    color: '#ff2c19',
+                  },
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: '#011b49',
+                  fontSize: '1rem',
+                  padding: '14px',
                 },
               }}
               InputProps={{
@@ -189,6 +287,12 @@ const Login: React.FC = () => {
                       onClick={() => setMostrarSenha(!mostrarSenha)}
                       edge="end"
                       disabled={enviando}
+                      sx={{
+                        color: '#6b7280',
+                        '&:hover': {
+                          color: '#ff2c19',
+                        },
+                      }}
                     >
                       {mostrarSenha ? <VisibilityOff /> : <Visibility />}
                     </IconButton>

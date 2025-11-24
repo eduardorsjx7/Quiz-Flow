@@ -20,6 +20,7 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 
@@ -179,8 +180,23 @@ const CriarFase: React.FC = () => {
             disabled={salvando}
           />
 
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-            <Button variant="outlined" onClick={() => navigate('/admin/jornadas')} disabled={salvando}>
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            <Button 
+              variant="outlined"
+              color="inherit"
+              onClick={() => navigate('/admin/jornadas')} 
+              disabled={salvando}
+              startIcon={<CancelIcon />}
+              sx={{
+                minWidth: 140,
+                py: 1.2,
+                borderColor: 'grey.300',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  bgcolor: 'grey.50',
+                },
+              }}
+            >
               Cancelar
             </Button>
             <Button

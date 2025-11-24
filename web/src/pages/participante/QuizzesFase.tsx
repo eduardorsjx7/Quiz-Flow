@@ -18,6 +18,7 @@ import {
 import { Home as HomeIcon, Quiz as QuizIcon } from '@mui/icons-material';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 
 interface Quiz {
   id: number;
@@ -25,7 +26,7 @@ interface Quiz {
   descricao?: string;
   ordem: number;
   pontosBase: number;
-  _count: {
+  _count?: {
     perguntas: number;
   };
 }
@@ -35,12 +36,18 @@ interface Fase {
   titulo: string;
   descricao?: string;
   desbloqueada: boolean;
+  jornada?: {
+    id: number;
+    titulo: string;
+    tempoLimitePorQuestao?: number | null;
+  };
 }
 
 const QuizzesFase: React.FC = () => {
   const { faseId } = useParams<{ faseId: string }>();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = useConfirmDialog();
   const [fase, setFase] = useState<Fase | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,10 +68,11 @@ const QuizzesFase: React.FC = () => {
         api.get(`/quizzes?faseId=${faseId}`),
       ]);
 
-      setFase(faseResponse.data);
+      const faseData = faseResponse.data.data || faseResponse.data;
+      setFase(faseData);
       setQuizzes(quizzesResponse.data.data || quizzesResponse.data);
 
-      if (!faseResponse.data.desbloqueada) {
+      if (!faseData.desbloqueada) {
         setErro('Esta fase não está desbloqueada para você.');
       }
     } catch (error: any) {
@@ -75,6 +83,25 @@ const QuizzesFase: React.FC = () => {
   };
 
   const handleIniciarQuiz = async (quizId: number) => {
+    const tempoLimite = fase?.jornada?.tempoLimitePorQuestao;
+    
+    let mensagem = 'Tem certeza que deseja iniciar este quiz?';
+    if (tempoLimite && tempoLimite > 0) {
+      mensagem = `Este quiz possui um tempo limite de ${tempoLimite} segundo${tempoLimite > 1 ? 's' : ''} por pergunta. Tem certeza que deseja iniciar?`;
+    }
+
+    const confirmado = await confirm({
+      title: 'Confirmar Início do Quiz',
+      message: mensagem,
+      confirmText: 'Sim, iniciar',
+      cancelText: 'Cancelar',
+      type: 'info',
+    });
+
+    if (!confirmado) {
+      return;
+    }
+
     try {
       const response = await api.post(`/tentativas/quiz/${quizId}/iniciar`);
       const tentativa = response.data.data;
@@ -167,7 +194,7 @@ const QuizzesFase: React.FC = () => {
                   )}
                   <Box display="flex" gap={1} mt={2}>
                     <Chip
-                      label={`${quiz._count.perguntas} ${quiz._count.perguntas === 1 ? 'Pergunta' : 'Perguntas'}`}
+                      label={`${quiz._count?.perguntas || 0} ${(quiz._count?.perguntas || 0) === 1 ? 'Pergunta' : 'Perguntas'}`}
                       size="small"
                     />
                     <Chip

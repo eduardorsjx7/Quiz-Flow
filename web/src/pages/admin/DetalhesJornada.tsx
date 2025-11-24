@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -19,6 +19,8 @@ import {
   Chip,
   LinearProgress,
   Divider,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
 import {
   EmojiEvents as EmojiEventsIcon,
@@ -26,6 +28,7 @@ import {
   People as PeopleIcon,
   Assessment as AssessmentIcon,
   TrendingUp as TrendingUpIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
@@ -83,6 +86,7 @@ interface EstatisticasCompletas {
 
 const DetalhesJornada: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [dados, setDados] = useState<EstatisticasCompletas | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -146,11 +150,85 @@ const DetalhesJornada: React.FC = () => {
   return (
     <AdminLayout title={`Detalhes da Jornada - ${dados?.jornada.titulo || ''}`}>
       <Container maxWidth="lg">
+        <Breadcrumbs 
+          sx={{ 
+            mb: 3,
+            '& .MuiBreadcrumbs-separator': {
+              mx: 1.5,
+              color: 'text.disabled',
+            },
+          }}
+        >
+          <Link
+            component="button"
+            onClick={() => navigate('/admin')}
+            sx={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              p: 0.5,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Dashboard"
+          >
+            <HomeIcon sx={{ fontSize: 20 }} />
+          </Link>
+          <Link
+            component="button"
+            onClick={() => navigate('/admin/jornadas')}
+            sx={{ 
+              cursor: 'pointer', 
+              textDecoration: 'none',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              px: 0.75,
+              py: 0.5,
+              fontWeight: 400,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                textDecoration: 'none',
+              },
+            }}
+          >
+            Jornadas
+          </Link>
+          <Typography 
+            color="text.primary"
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            Detalhes da Jornada
+          </Typography>
+        </Breadcrumbs>
+
         {/* Cabeçalho */}
-        <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
             <Box>
-              <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#011b49' }}>
+              <Typography 
+                variant="h4" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 700,
+                  fontSize: '2rem',
+                  background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5,
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 {jornada.titulo}
               </Typography>
               {jornada.descricao && (
@@ -287,7 +365,16 @@ const DetalhesJornada: React.FC = () => {
 
         {/* Estatísticas por Fase */}
         <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 2, color: '#011b49' }}>
+          <Typography 
+            variant="h5" 
+            gutterBottom 
+            sx={{ 
+              fontWeight: 600, 
+              mb: 2, 
+              fontSize: '1.5rem',
+              color: '#011b49',
+            }}
+          >
             Estatísticas por Fase
           </Typography>
           <TableContainer>
@@ -357,7 +444,14 @@ const DetalhesJornada: React.FC = () => {
         <Paper sx={{ p: 3, borderRadius: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <EmojiEventsIcon sx={{ fontSize: 32, color: '#ffbb02', mr: 1 }} />
-            <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#011b49' }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 600, 
+                fontSize: '1.5rem',
+                color: '#011b49',
+              }}
+            >
               Pódio da Jornada
             </Typography>
           </Box>

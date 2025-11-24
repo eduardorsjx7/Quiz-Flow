@@ -20,7 +20,6 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -29,12 +28,7 @@ interface Usuario {
   id: number;
   nome: string;
   email: string;
-  matricula?: string;
   tipo: 'ADMINISTRADOR' | 'COLABORADOR';
-  grupo?: {
-    id: number;
-    nome: string;
-  };
 }
 
 const AdminUsuarios: React.FC = () => {
@@ -85,8 +79,34 @@ const AdminUsuarios: React.FC = () => {
   return (
     <AdminLayout title="Usuários">
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4">Usuários</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: '2rem',
+                background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                mb: 0.5,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Usuários
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                mt: 0.5,
+              }}
+            >
+              Gerencie usuários e permissões do sistema
+            </Typography>
+          </Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -108,16 +128,14 @@ const AdminUsuarios: React.FC = () => {
               <TableRow>
                 <TableCell>Nome</TableCell>
                 <TableCell>E-mail</TableCell>
-                <TableCell>Matrícula</TableCell>
                 <TableCell>Tipo</TableCell>
-                <TableCell>Grupo</TableCell>
                 <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {usuarios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={4} align="center">
                     <Typography variant="body2" color="text.secondary">
                       Nenhum usuário cadastrado
                     </Typography>
@@ -128,7 +146,6 @@ const AdminUsuarios: React.FC = () => {
                   <TableRow key={usuario.id}>
                     <TableCell>{usuario.nome}</TableCell>
                     <TableCell>{usuario.email}</TableCell>
-                    <TableCell>{usuario.matricula || '-'}</TableCell>
                     <TableCell>
                       <Chip
                         label={usuario.tipo === 'ADMINISTRADOR' ? 'Administrador' : 'Colaborador'}
@@ -136,16 +153,7 @@ const AdminUsuarios: React.FC = () => {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>{usuario.grupo?.nome || '-'}</TableCell>
                     <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => navigate(`/admin/usuarios/${usuario.id}/definir-fase`)}
-                        title="Definir Fase Atual"
-                      >
-                        <AssignmentIcon />
-                      </IconButton>
                       <IconButton
                         size="small"
                         color="error"

@@ -2,7 +2,13 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { LogoLoading } from './LogoLoading';
 
-export const LoadingScreen: React.FC = () => {
+interface LoadingScreenProps {
+  message?: string;
+}
+
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
+  message = 'Carregando seu painel...' 
+}) => {
   return (
     <Box
       sx={{
@@ -10,27 +16,38 @@ export const LoadingScreen: React.FC = () => {
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 2,
         alignItems: 'center',
         justifyContent: 'center',
         background: '#ffffff',
         color: '#011b49',
+        padding: 3,
       }}
     >
-      <LogoLoading size={140} />
-      <Typography
-        variant="body1"
+      <Box
         sx={{
-          fontSize: '1rem',
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-          opacity: 0.7,
-          fontWeight: 500,
-          color: '#011b49',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 7,
         }}
       >
-        Carregando seu painel...
-      </Typography>
+        <LogoLoading size={140} />
+        <Typography
+          variant="body1"
+          sx={{
+            fontSize: '1rem',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            opacity: 0.7,
+            fontWeight: 500,
+            color: '#011b49',
+            marginTop: 0,
+            textAlign: 'center',
+          }}
+        >
+          {message}
+        </Typography>
+      </Box>
     </Box>
   );
 };

@@ -29,7 +29,7 @@ interface Fase {
     id: number;
     titulo: string;
   };
-  quizzes: Array<{
+  quizzes?: Array<{
     id: number;
     titulo: string;
     descricao?: string;
@@ -54,6 +54,10 @@ const FaseAtual: React.FC = () => {
       setLoading(true);
       const response = await api.get('/fases/atual');
       const faseData = response.data.data || response.data;
+      // Garantir que quizzes seja sempre um array
+      if (faseData && !faseData.quizzes) {
+        faseData.quizzes = [];
+      }
       setFase(faseData);
     } catch (error: any) {
       if (error.response?.status === 404 || !error.response?.data?.data) {
@@ -120,7 +124,7 @@ const FaseAtual: React.FC = () => {
               Quizzes Disponíveis
             </Typography>
 
-            {fase.quizzes.length === 0 ? (
+            {(!fase.quizzes || fase.quizzes.length === 0) ? (
               <Alert severity="info">
                 Nenhum quiz disponível nesta fase no momento.
               </Alert>

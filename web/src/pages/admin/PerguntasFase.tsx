@@ -8,8 +8,6 @@ import {
   Typography,
   Box,
   IconButton,
-  AppBar,
-  Toolbar,
   FormControlLabel,
   Checkbox,
   Divider,
@@ -19,12 +17,15 @@ import {
   Link,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
+  Home as HomeIcon,
+  ArrowBack as ArrowBackIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import AdminLayout from '../../components/AdminLayout';
 
 interface Alternativa {
   id?: number;
@@ -123,7 +124,7 @@ const AdminPerguntasFase: React.FC = () => {
       ...perguntas,
       {
         texto: '',
-        tempoSegundos: 30,
+        tempoSegundos: 30, // Valor padrão, será definido pela jornada
         alternativas: [
           { texto: '', correta: false },
           { texto: '', correta: false },
@@ -194,10 +195,6 @@ const AdminPerguntasFase: React.FC = () => {
       }
       if (p.alternativas.some((a) => !a.texto.trim())) {
         novosErros.perguntas = `Pergunta ${i + 1}: todas as alternativas devem ter texto`;
-        break;
-      }
-      if (p.tempoSegundos < 5 || p.tempoSegundos > 300) {
-        novosErros.perguntas = `Pergunta ${i + 1}: tempo deve estar entre 5 e 300 segundos`;
         break;
       }
     }
@@ -276,37 +273,94 @@ const AdminPerguntasFase: React.FC = () => {
   }
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/admin/fases')} sx={{ mr: 2 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gerenciar Perguntas - {fase?.titulo || 'Fase'}
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Breadcrumbs sx={{ mb: 3 }}>
+    <AdminLayout title={`Gerenciar Perguntas - ${fase?.titulo || 'Fase'}`}>
+      <Container maxWidth="md">
+        <Breadcrumbs 
+          sx={{ 
+            mb: 3,
+            '& .MuiBreadcrumbs-separator': {
+              mx: 1.5,
+              color: 'text.disabled',
+            },
+          }}
+        >
           <Link
             component="button"
-            variant="body1"
             onClick={() => navigate('/admin')}
-            sx={{ cursor: 'pointer' }}
+            sx={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              p: 0.5,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Dashboard"
           >
-            Dashboard
+            <HomeIcon sx={{ fontSize: 20 }} />
           </Link>
           <Link
             component="button"
-            variant="body1"
-            onClick={() => navigate('/admin/fases')}
-            sx={{ cursor: 'pointer' }}
+            onClick={() => navigate('/admin/jornadas')}
+            sx={{ 
+              cursor: 'pointer', 
+              textDecoration: 'none',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              px: 0.75,
+              py: 0.5,
+              fontWeight: 400,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                textDecoration: 'none',
+              },
+            }}
           >
-            Fases
+            Jornadas
           </Link>
-          <Typography color="text.primary">{fase?.titulo || 'Fase'}</Typography>
+          {fase?.jornada && (
+            <Link
+              component="button"
+              onClick={() => {
+                if (fase?.jornada?.id) {
+                  navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+                }
+              }}
+              sx={{ 
+                cursor: 'pointer', 
+                textDecoration: 'none',
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                borderRadius: 1,
+                px: 0.75,
+                py: 0.5,
+                fontWeight: 400,
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  textDecoration: 'none',
+                },
+              }}
+            >
+              {fase.jornada.titulo}
+            </Link>
+          )}
+          <Typography 
+            color="text.primary"
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            Gerenciar Perguntas
+          </Typography>
         </Breadcrumbs>
 
         {erro && (
@@ -315,23 +369,40 @@ const AdminPerguntasFase: React.FC = () => {
           </Alert>
         )}
 
-        {fase && (
-          <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light' }}>
-            <Typography variant="h6" color="primary.contrastText">
-              {fase.titulo}
-            </Typography>
-            {fase.jornada && (
-              <Typography variant="body2" color="primary.contrastText">
-                Jornada: {fase.jornada.titulo}
-              </Typography>
-            )}
-            {fase.descricao && (
-              <Typography variant="body2" color="primary.contrastText" sx={{ mt: 1 }}>
-                {fase.descricao}
-              </Typography>
-            )}
-          </Paper>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <IconButton 
+            onClick={() => {
+              if (fase?.jornada) {
+                navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+              } else {
+                navigate('/admin/fases');
+              }
+            }} 
+            sx={{
+              color: '#011b49',
+              '&:hover': {
+                bgcolor: 'rgba(1, 27, 73, 0.05)',
+              },
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              fontSize: '2rem',
+              background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              mb: 0.5,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Gerenciar Perguntas
+          </Typography>
+        </Box>
 
         {perguntas.length === 0 ? (
           <Alert severity="info" sx={{ mb: 3 }}>
@@ -340,10 +411,38 @@ const AdminPerguntasFase: React.FC = () => {
         ) : null}
 
         {perguntas.map((pergunta, pIndex) => (
-          <Paper key={pIndex} sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Pergunta {pIndex + 1}</Typography>
-              <IconButton color="error" onClick={() => removerPergunta(pIndex)} disabled={salvando}>
+          <Paper 
+            key={pIndex} 
+            sx={{ 
+              p: 3, 
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#011b49',
+                  fontSize: '1.25rem',
+                }}
+              >
+                Pergunta {pIndex + 1}
+              </Typography>
+              <IconButton 
+                color="error" 
+                onClick={() => removerPergunta(pIndex)} 
+                disabled={salvando}
+                sx={{
+                  '&:hover': {
+                    bgcolor: 'rgba(244, 67, 54, 0.1)',
+                  },
+                }}
+              >
                 <DeleteIcon />
               </IconButton>
             </Box>
@@ -358,27 +457,45 @@ const AdminPerguntasFase: React.FC = () => {
               multiline
               rows={2}
               disabled={salvando}
-            />
-            <TextField
-              fullWidth
-              label="Tempo (segundos)"
-              type="number"
-              value={pergunta.tempoSegundos}
-              onChange={(e) => atualizarPergunta(pIndex, 'tempoSegundos', parseInt(e.target.value) || 30)}
-              margin="normal"
-              required
-              inputProps={{ min: 5, max: 300 }}
-              disabled={salvando}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#ffffff',
+                  borderRadius: 1,
+                },
+              }}
             />
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 3 }} />
 
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: 600,
+                color: '#011b49',
+                mb: 2,
+                fontSize: '1rem',
+              }}
+            >
               Alternativas
             </Typography>
 
             {pergunta.alternativas.map((alt, aIndex) => (
-              <Box key={aIndex} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box 
+                key={aIndex} 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 1.5,
+                  gap: 1,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  },
+                  transition: 'background-color 0.2s ease',
+                }}
+              >
                 <TextField
                   fullWidth
                   label={`Alternativa ${aIndex + 1}`}
@@ -387,6 +504,11 @@ const AdminPerguntasFase: React.FC = () => {
                   margin="normal"
                   required
                   disabled={salvando}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#ffffff',
+                    },
+                  }}
                 />
                 <FormControlLabel
                   control={
@@ -394,17 +516,31 @@ const AdminPerguntasFase: React.FC = () => {
                       checked={alt.correta}
                       onChange={(e) => atualizarAlternativa(pIndex, aIndex, 'correta', e.target.checked)}
                       disabled={salvando}
+                      sx={{
+                        color: alt.correta ? '#4caf50' : 'inherit',
+                        '&.Mui-checked': {
+                          color: '#4caf50',
+                        },
+                      }}
                     />
                   }
                   label="Correta"
-                  sx={{ ml: 2 }}
+                  sx={{ 
+                    ml: 1,
+                    minWidth: 100,
+                  }}
                 />
                 {pergunta.alternativas.length > 2 && (
                   <IconButton
                     color="error"
                     onClick={() => removerAlternativa(pIndex, aIndex)}
-                    sx={{ ml: 1 }}
                     disabled={salvando}
+                    sx={{
+                      ml: 'auto',
+                      '&:hover': {
+                        bgcolor: 'rgba(244, 67, 54, 0.1)',
+                      },
+                    }}
                   >
                     <DeleteIcon />
                   </IconButton>
@@ -416,7 +552,12 @@ const AdminPerguntasFase: React.FC = () => {
               variant="outlined"
               startIcon={<AddIcon />}
               onClick={() => adicionarAlternativa(pIndex)}
-              sx={{ mt: 1 }}
+              sx={{ 
+                mt: 2,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
               disabled={salvando}
             >
               Adicionar Alternativa
@@ -430,33 +571,68 @@ const AdminPerguntasFase: React.FC = () => {
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
           <Button
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={adicionarPergunta}
             disabled={salvando}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
           >
             Adicionar Pergunta
           </Button>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button 
+            variant="outlined"
+            color="inherit"
+            onClick={() => {
+              if (fase?.jornada) {
+                navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+              } else {
+                navigate('/admin/fases');
+              }
+            }} 
+            disabled={salvando}
+            startIcon={<CancelIcon />}
+            sx={{
+              minWidth: 140,
+              py: 1.2,
+              borderColor: 'grey.300',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50',
+              },
+            }}
+          >
+            Cancelar
+          </Button>
           <Button
             variant="contained"
             size="large"
-            startIcon={salvando ? <CircularProgress size={20} /> : <SaveIcon />}
+            startIcon={salvando ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
             onClick={handleSalvar}
             disabled={salvando || perguntas.length === 0}
+            sx={{
+              bgcolor: '#ff2c19',
+              '&:hover': {
+                bgcolor: '#e62816',
+              },
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
           >
             {salvando ? 'Salvando...' : 'Salvar Perguntas'}
           </Button>
-          <Button variant="outlined" onClick={() => navigate('/admin/fases')} disabled={salvando}>
-            Voltar
-          </Button>
         </Box>
       </Container>
-    </>
+    </AdminLayout>
   );
 };
 

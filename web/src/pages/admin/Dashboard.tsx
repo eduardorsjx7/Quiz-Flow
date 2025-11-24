@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -34,9 +34,10 @@ import {
   Error as ErrorIcon,
   Timer as TimerIcon,
   Close as CloseIcon,
-  Campaign as CampaignIcon,
   Flag as FlagIcon,
   Add as AddIcon,
+  PlayArrow as PlayArrowIcon,
+  LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -47,7 +48,13 @@ interface Jornada {
   descricao?: string;
   ordem: number;
   ativo: boolean;
-  imagemUrl?: string;
+  imagemCapa?: string;
+  faseAtual?: {
+    id: number;
+    titulo: string;
+    ordem: number;
+  } | null;
+  todasFasesAbertas?: boolean;
   _count: {
     fases: number;
   };
@@ -115,11 +122,40 @@ const AdminDashboard: React.FC = () => {
   const erroAnimado = useCountUp(nivelErro, 1.2);
   const tempoAnimado = useCountUp(tempoMedioResposta, 1.2);
 
-  useEffect(() => {
-    carregarJornadas();
-    carregarRankingGeral();
-    carregarMetricasGerais();
+  const carregarTodosDados = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Fazer uma única chamada para /jornadas
+      const response = await api.get('/jornadas');
+      const dados = response.data.data || response.data;
+      const jornadasArray = Array.isArray(dados) ? dados : [];
+      
+      setJornadas(jornadasArray);
+      setJornadasFiltradas(jornadasArray);
+      
+      // Carregar ranking e métricas usando os dados já obtidos
+      await Promise.all([
+        carregarRankingGeral(jornadasArray),
+        carregarMetricasGerais(jornadasArray),
+      ]);
+    } catch (error: any) {
+      // Tratar erro 429 (Too Many Requests)
+      if (error.response?.status === 429) {
+        setErro('Muitas requisições. Aguarde alguns instantes e recarregue a página.');
+        // Não tentar novamente automaticamente
+        return;
+      }
+      setErro(error.response?.data?.error?.message || 'Erro ao carregar dados');
+      setJornadas([]);
+      setJornadasFiltradas([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    carregarTodosDados();
+  }, [carregarTodosDados]);
 
   useEffect(() => {
     if (termoPesquisa.trim() === '') {
@@ -138,35 +174,22 @@ const AdminDashboard: React.FC = () => {
     }
   }, [termoPesquisa, jornadas]);
 
-  const carregarJornadas = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/jornadas');
-      const dados = response.data.data || response.data;
-      const jornadasArray = Array.isArray(dados) ? dados : [];
-      setJornadas(jornadasArray);
-      setJornadasFiltradas(jornadasArray);
-    } catch (error: any) {
-      setErro(error.response?.data?.error?.message || 'Erro ao carregar jornadas');
-      setJornadas([]);
-      setJornadasFiltradas([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const carregarRankingGeral = async () => {
+  const carregarRankingGeral = async (jornadasArray: Jornada[]) => {
     try {
       setLoadingRanking(true);
-      // Buscar estatísticas de todas as jornadas e consolidar ranking
-      const response = await api.get('/jornadas');
-      const jornadasData = response.data.data || response.data;
-      const jornadasArray = Array.isArray(jornadasData) ? jornadasData : [];
       
       // Buscar estatísticas de cada jornada e consolidar
       const rankingsConsolidados: Map<number, UsuarioRanking> = new Map();
       
-      for (const jornada of jornadasArray) {
+      // Adicionar delay entre requisições para evitar rate limiting
+      for (let i = 0; i < jornadasArray.length; i++) {
+        const jornada = jornadasArray[i];
+        
+        // Delay de 100ms entre requisições (exceto a primeira)
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         try {
           const statsResponse = await api.get(`/jornadas/${jornada.id}/estatisticas`);
           const stats = statsResponse.data.data;
@@ -194,8 +217,13 @@ const AdminDashboard: React.FC = () => {
               }
             });
           }
-        } catch (err) {
-          // Ignorar erros de jornadas individuais
+        } catch (err: any) {
+          // Tratar erro 429 especificamente
+          if (err.response?.status === 429) {
+            console.warn(`Rate limit atingido para jornada ${jornada.id}. Parando requisições.`);
+            break; // Parar o loop se atingir rate limit
+          }
+          // Ignorar outros erros de jornadas individuais
         }
       }
       
@@ -210,31 +238,36 @@ const AdminDashboard: React.FC = () => {
         .sort((a, b) => b.pontuacaoTotal - a.pontuacaoTotal)
         .slice(0, 10);
       
-      setRanking(rankingFinal);
+      // Se não houver dados, deixar vazio
+      setRanking(rankingFinal.length > 0 ? rankingFinal : []);
     } catch (error: any) {
-      console.error('Erro ao carregar ranking:', error);
-      // Em caso de erro, usar dados mockados
-      setRanking([
-        { id: 1, nome: 'João Silva', email: 'joao@example.com', pontuacaoTotal: 1250, tentativas: 15, acertos: 45, totalPerguntas: 60, percentualAcertos: 75 },
-        { id: 2, nome: 'Maria Santos', email: 'maria@example.com', pontuacaoTotal: 1180, tentativas: 12, acertos: 42, totalPerguntas: 55, percentualAcertos: 76 },
-        { id: 3, nome: 'Pedro Oliveira', email: 'pedro@example.com', pontuacaoTotal: 1100, tentativas: 14, acertos: 38, totalPerguntas: 50, percentualAcertos: 76 },
-      ]);
+      // Tratar erro 429
+      if (error.response?.status === 429) {
+        console.warn('Rate limit atingido ao carregar ranking');
+      } else {
+        console.error('Erro ao carregar ranking:', error);
+      }
+      // Em caso de erro, deixar vazio
+      setRanking([]);
     } finally {
       setLoadingRanking(false);
     }
   };
 
-  const carregarMetricasGerais = async () => {
+  const carregarMetricasGerais = async (jornadasArray: Jornada[]) => {
     try {
-      // Buscar estatísticas gerais de todas as jornadas
-      const response = await api.get('/jornadas');
-      const jornadasData = response.data.data || response.data;
-      const jornadasArray = Array.isArray(jornadasData) ? jornadasData : [];
-      
       let totalAcertos = 0;
       let totalPerguntas = 0;
       
-      for (const jornada of jornadasArray) {
+      // Adicionar delay entre requisições para evitar rate limiting
+      for (let i = 0; i < jornadasArray.length; i++) {
+        const jornada = jornadasArray[i];
+        
+        // Delay de 100ms entre requisições (exceto a primeira)
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         try {
           const statsResponse = await api.get(`/jornadas/${jornada.id}/estatisticas`);
           const stats = statsResponse.data.data;
@@ -243,8 +276,13 @@ const AdminDashboard: React.FC = () => {
             totalAcertos += stats.estatisticasGerais.totalAcertos || 0;
             totalPerguntas += stats.estatisticasGerais.totalPerguntas || 0;
           }
-        } catch (err) {
-          // Ignorar erros
+        } catch (err: any) {
+          // Tratar erro 429 especificamente
+          if (err.response?.status === 429) {
+            console.warn(`Rate limit atingido para jornada ${jornada.id}. Parando requisições.`);
+            break; // Parar o loop se atingir rate limit
+          }
+          // Ignorar outros erros
         }
       }
       
@@ -255,7 +293,11 @@ const AdminDashboard: React.FC = () => {
       setNivelErro(erro);
       // Tempo médio mockado (em segundos) - pode ser calculado se houver dados de tempo
       setTempoMedioResposta(12.5);
-    } catch (error) {
+    } catch (error: any) {
+      // Tratar erro 429
+      if (error.response?.status === 429) {
+        console.warn('Rate limit atingido ao carregar métricas');
+      }
       // Valores mockados em caso de erro
       setAcertividadeGeral(75);
       setNivelErro(25);
@@ -271,52 +313,96 @@ const AdminDashboard: React.FC = () => {
         <Box
           sx={{
             position: 'relative',
-            p: { xs: 2.5, md: 4 },
-            mb: 6,
+            p: { xs: 2.5, md: 3 },
+            mb: 4,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 50%, #fff3e0 100%)',
-            borderRadius: 3,
+            borderRadius: 4,
             flexWrap: 'wrap',
             overflow: 'hidden',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            boxShadow: '0 8px 32px rgba(255, 44, 25, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+            border: '1px solid rgba(255, 44, 25, 0.1)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 12px 40px rgba(255, 44, 25, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)',
+            },
             '&::before': {
               content: '""',
               position: 'absolute',
-              top: -50,
-              right: -50,
-              width: 200,
-              height: 200,
-              background: 'radial-gradient(circle, rgba(255,44,25,0.1) 0%, transparent 70%)',
+              top: -100,
+              right: -100,
+              width: 400,
+              height: 400,
+              background: 'radial-gradient(circle, rgba(255, 44, 25, 0.08) 0%, transparent 70%)',
+              borderRadius: '50%',
+              animation: 'pulse 4s ease-in-out infinite',
+              '@keyframes pulse': {
+                '0%, 100%': {
+                  transform: 'scale(1)',
+                  opacity: 0.8,
+                },
+                '50%': {
+                  transform: 'scale(1.1)',
+                  opacity: 0.6,
+                },
+              },
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -80,
+              left: -80,
+              width: 300,
+              height: 300,
+              background: 'radial-gradient(circle, rgba(1, 27, 73, 0.05) 0%, transparent 70%)',
               borderRadius: '50%',
             },
           }}
         >
-          <CampaignIcon
-            sx={{
-              position: 'absolute',
-              top: 20,
-              left: 20,
-              fontSize: 120,
-              color: '#ff2c19',
-              opacity: 0.1,
-              zIndex: 0,
-            }}
-          />
-          <Box sx={{ flex: 1, minWidth: 250, position: 'relative', zIndex: 1 }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#011b49', mb: 1.5 }}>
+          {/* Conteúdo principal */}
+          <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 300 }, position: 'relative', zIndex: 1 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                color: '#011b49', 
+                mb: 1,
+                fontSize: { xs: '1.5rem', md: '1.875rem' },
+                lineHeight: 1.2,
+              }}
+            >
               👋 Bem-vindo à Plataforma Administrativa
             </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.1rem' }}>
-              Aqui você gerencia jornadas, usuários e relatórios com facilidade.
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: '#6b7280', 
+                fontSize: { xs: '0.95rem', md: '1rem' },
+                lineHeight: 1.6,
+                maxWidth: '600px',
+              }}
+            >
+              Gerencie jornadas, usuários e relatórios com facilidade e eficiência. 
+              Tudo em um só lugar para você administrar sua plataforma de forma completa.
             </Typography>
           </Box>
-          <Box sx={{ maxWidth: 160, mt: { xs: 2, md: 0 }, position: 'relative', zIndex: 1 }}>
+          
+          {/* Logo */}
+          <Box 
+            sx={{ 
+              maxWidth: { xs: 100, md: 140 }, 
+              mt: { xs: 2, md: 0 }, 
+              position: 'relative', 
+              zIndex: 1,
+            }}
+          >
             <img
               src="/logo/logo1.svg"
               alt="Logo da Plataforma"
-              style={{ width: '100%', height: 'auto' }}
+              style={{ width: '100%', height: 'auto', filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))' }}
             />
           </Box>
         </Box>
@@ -324,7 +410,18 @@ const AdminDashboard: React.FC = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, mt: 2, flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RouteIcon sx={{ fontSize: 32, color: '#e62816' }} />
-            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#011b49' }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: '2rem',
+                background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                letterSpacing: '-0.02em',
+              }}
+            >
               Jornadas
             </Typography>
           </Box>
@@ -444,40 +541,66 @@ const AdminDashboard: React.FC = () => {
               },
             }}
           >
-            <Slider
-              dots={true}
-              infinite={jornadasFiltradas.length > 3}
-              speed={600}
-              slidesToShow={3.3}
-              slidesToScroll={1}
-              autoplay={true}
-              autoplaySpeed={4000}
-              pauseOnHover={true}
-              cssEase="ease-in-out"
-              arrows={true}
-              responsive={[
-                {
-                  breakpoint: 1200,
-                  settings: {
-                    slidesToShow: 2.3,
-                    arrows: true,
-                  },
+            <Box
+              sx={{
+                overflow: 'visible',
+                padding: '20px 0',
+                margin: '0 -10px',
+                '& .slick-list': {
+                  overflow: 'visible',
+                  padding: '0 20px !important',
                 },
-                {
-                  breakpoint: 900,
-                  settings: {
-                    slidesToShow: 1.3,
-                    arrows: false,
-                  },
+                '& .slick-track': {
+                  display: 'flex',
+                  alignItems: 'stretch',
                 },
-              ]}
+              }}
             >
+              <Slider
+                dots={true}
+                infinite={jornadasFiltradas.length > 3}
+                speed={600}
+                slidesToShow={3.3}
+                slidesToScroll={1}
+                autoplay={true}
+                autoplaySpeed={4000}
+                pauseOnHover={true}
+                cssEase="ease-in-out"
+                arrows={true}
+                responsive={[
+                  {
+                    breakpoint: 1200,
+                    settings: {
+                      slidesToShow: 2.3,
+                      arrows: true,
+                    },
+                  },
+                  {
+                    breakpoint: 900,
+                    settings: {
+                      slidesToShow: 1.3,
+                      arrows: false,
+                    },
+                  },
+                ]}
+              >
               {jornadasFiltradas.map((jornada: Jornada, index: number) => (
-                <Box key={jornada.id} px={1}>
+                <Box 
+                  key={jornada.id} 
+                  px={1}
+                  sx={{
+                    position: 'relative',
+                    zIndex: 1,
+                    '&:hover': {
+                      zIndex: 2,
+                    },
+                  }}
+                >
                   <Paper
                     elevation={3}
                     sx={{
-                      height: 300,
+                      minHeight: 270,
+                      height: 'auto',
                       p: 2.5,
                       borderRadius: 3,
                       transition: 'all 0.3s ease-in-out',
@@ -485,12 +608,12 @@ const AdminDashboard: React.FC = () => {
                       backgroundColor: index % 2 === 0 ? '#fff' : '#fff9f5',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
                       cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
                       '&:hover': {
-                        transform: 'translateY(-6px) scale(1.03)',
-                        boxShadow: '0 20px 50px rgba(255, 44, 25, 0.25)',
-                        zIndex: 10,
+                        transform: 'translateY(-3px) scale(1.01)',
+                        boxShadow: '0 12px 30px rgba(255, 44, 25, 0.2)',
                       },
                     }}
                     onClick={() => navigate(`/admin/jornadas/${jornada.id}`)}
@@ -503,73 +626,40 @@ const AdminDashboard: React.FC = () => {
                       }
                     }}
                   >
-                    {/* Ícone no topo */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                      {jornada.imagemUrl ? (
+                    {/* Imagem ou Ícone no topo */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+                      {jornada.imagemCapa ? (
                         <Box
                           component="img"
-                          src={jornada.imagemUrl}
-                          alt={`Ícone da jornada ${jornada.titulo}`}
+                          src={jornada.imagemCapa}
+                          alt={`Imagem da jornada ${jornada.titulo}`}
                           sx={{
-                            width: 60,
-                            height: 60,
-                            objectFit: 'contain',
+                            width: '100%',
+                            height: 100,
+                            objectFit: 'cover',
                             borderRadius: 2,
                             backgroundColor: '#f5f5f5',
-                            p: 1,
                           }}
                         />
                       ) : (
-                        <RouteIcon sx={{ fontSize: 50, color: '#ff2c19' }} />
-                      )}
-                    </Box>
-
-                    {/* Descrição */}
-                    <Box sx={{ flexGrow: 1, mb: 1.5 }}>
-                      {jornada.descricao ? (
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary"
+                        <Box
                           sx={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
+                            width: '100%',
+                            height: 100,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: 2,
                           }}
                         >
-                          {jornada.descricao}
-                        </Typography>
-                      ) : (
-                        <Box sx={{ minHeight: 40 }} />
+                          <RouteIcon sx={{ fontSize: 40, color: '#ff2c19' }} />
+                        </Box>
                       )}
                     </Box>
 
-                    {/* Chips - Fase atual e Ordem */}
-                    <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <Chip
-                        icon={<FlagIcon sx={{ fontSize: 16 }} />}
-                        label={`Fase atual: ${jornada._count.fases}`}
-                        size="small"
-                        sx={{
-                          backgroundColor: '#fff3e0',
-                          color: '#e62816',
-                          fontWeight: 600,
-                        }}
-                      />
-                      <Chip
-                        label={`Ordem: ${jornada.ordem}`}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          borderColor: '#e62816',
-                          color: '#e62816',
-                          fontWeight: 600,
-                        }}
-                      />
-                    </Box>
-
-                    {/* Título e Status - na parte inferior */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                    {/* Título e Status */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
@@ -601,7 +691,64 @@ const AdminDashboard: React.FC = () => {
                       />
                     </Box>
 
+                    {/* Descrição */}
+                    {jornada.descricao && (
+                      <Box sx={{ mb: 1.5 }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {jornada.descricao}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Chip - Fase atual */}
+                    <Box sx={{ mb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {jornada.todasFasesAbertas ? (
+                        <Chip
+                          icon={<LockOpenIcon sx={{ fontSize: 16 }} />}
+                          label="Fases Abertas"
+                          color="success"
+                          size="small"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        />
+                      ) : jornada.faseAtual ? (
+                        <Chip
+                          icon={<PlayArrowIcon sx={{ fontSize: 16 }} />}
+                          label={`${jornada.faseAtual.ordem}ª - ${jornada.faseAtual.titulo}`}
+                          color="primary"
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        />
+                      ) : (
+                        <Chip
+                          icon={<FlagIcon sx={{ fontSize: 16 }} />}
+                          label="Sem fase"
+                          size="small"
+                          sx={{
+                            backgroundColor: '#fff3e0',
+                            color: '#e62816',
+                            fontWeight: 600,
+                          }}
+                        />
+                      )}
+                    </Box>
+
                     {/* Botão na parte inferior */}
+                    <Box sx={{ mt: 'auto', pt: 1 }}>
                     <Button
                       fullWidth
                       variant="contained"
@@ -627,6 +774,7 @@ const AdminDashboard: React.FC = () => {
                     >
                       Ver Jornada
                     </Button>
+                    </Box>
                   </Paper>
                 </Box>
               ))}
@@ -636,7 +784,8 @@ const AdminDashboard: React.FC = () => {
                 <Paper
                   elevation={0}
                   sx={{
-                    height: 300,
+                    minHeight: 270,
+                    height: 'auto',
                     p: 2.5,
                     borderRadius: 3,
                     border: '2px dashed #e62816',
@@ -647,6 +796,7 @@ const AdminDashboard: React.FC = () => {
                     justifyContent: 'center',
                     transition: 'all 0.3s ease-in-out',
                     cursor: 'pointer',
+                    overflow: 'hidden',
                     '&:hover': {
                       borderColor: '#ff2c19',
                       backgroundColor: '#fff7f4',
@@ -739,7 +889,8 @@ const AdminDashboard: React.FC = () => {
                   </Button>
                 </Paper>
               </Box>
-            </Slider>
+              </Slider>
+            </Box>
           </Box>
         )}
 
@@ -748,8 +899,19 @@ const AdminDashboard: React.FC = () => {
           <>
             {/* Ranking Geral */}
             <Box sx={{ mt: 10, mb: 4 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#011b49', mb: 3 }}>
-                <TrophyIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#ffd700' }} />
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '1.5rem',
+                  color: '#011b49', 
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                <TrophyIcon sx={{ fontSize: 24, color: '#ffd700' }} />
                 Ranking Geral de Usuários
               </Typography>
               
@@ -898,7 +1060,15 @@ const AdminDashboard: React.FC = () => {
 
             {/* Métricas Gerais */}
             <Box sx={{ mt: 4, mb: 4 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#011b49', mb: 3 }}>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '1.5rem',
+                  color: '#011b49', 
+                  mb: 3,
+                }}
+              >
                 Métricas Gerais do Sistema
               </Typography>
               

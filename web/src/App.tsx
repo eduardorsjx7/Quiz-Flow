@@ -1,33 +1,35 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmDialogProvider } from './contexts/ConfirmDialogContext';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminFases from './pages/admin/Fases';
 import FasesJornada from './pages/admin/FasesJornada';
-import AdminQuizzesFase from './pages/admin/QuizzesFase';
-import AdminQuizCreate from './pages/admin/QuizCreate';
 import AdminPerguntasFase from './pages/admin/PerguntasFase';
 import AdminRelatorios from './pages/admin/Relatorios';
-import AtribuirQuiz from './pages/admin/AtribuirQuiz';
 import AdminUsuarios from './pages/admin/Usuarios';
 import CriarUsuario from './pages/admin/CriarUsuario';
 import AdminJornadas from './pages/admin/Jornadas';
 import CriarJornada from './pages/admin/CriarJornada';
 import DetalhesJornada from './pages/admin/DetalhesJornada';
-import DefinirFaseAtual from './pages/admin/DefinirFaseAtual';
-import FaseAtual from './pages/participante/FaseAtual';
+import ConfigurarJornada from './pages/admin/ConfigurarJornada';
 import ParticipanteQuiz from './pages/participante/Quiz';
 import ParticipanteResultado from './pages/participante/Resultado';
 import ParticipanteQuizzesFase from './pages/participante/QuizzesFase';
 import DashboardColaborador from './pages/participante/Dashboard';
-import Fases from './pages/Fases';
+import FasesJornadaParticipante from './pages/participante/FasesJornada';
+import Pontuacoes from './pages/participante/Pontuacoes';
+import Avaliacoes from './pages/participante/Avaliacoes';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
     <AuthProvider>
-      <Routes>
+      <ToastProvider>
+        <ConfirmDialogProvider>
+          <Routes>
         <Route path="/login" element={<Login />} />
         <Route
           path="/dashboard"
@@ -38,18 +40,26 @@ function App() {
           }
         />
         <Route
-          path="/fase-atual"
+          path="/avaliacoes"
           element={
             <PrivateRoute>
-              <FaseAtual />
+              <Avaliacoes />
             </PrivateRoute>
           }
         />
         <Route
-          path="/fases"
+          path="/pontuacoes"
           element={
             <PrivateRoute>
-              <Fases />
+              <Pontuacoes />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/participante/jornadas/:jornadaId/fases"
+          element={
+            <PrivateRoute>
+              <FasesJornadaParticipante />
             </PrivateRoute>
           }
         />
@@ -89,22 +99,6 @@ function App() {
           }
         />
         <Route
-          path="/admin/fases/:faseId/quizzes"
-          element={
-            <PrivateRoute>
-              <AdminQuizzesFase />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/fases/:faseId/quiz/novo"
-          element={
-            <PrivateRoute>
-              <AdminQuizCreate />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/admin/fases/:faseId/perguntas"
           element={
             <PrivateRoute>
@@ -121,14 +115,6 @@ function App() {
           }
         />
         <Route
-          path="/admin/quizzes/:quizId/atribuir"
-          element={
-            <PrivateRoute>
-              <AtribuirQuiz />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/admin/usuarios"
           element={
             <PrivateRoute>
@@ -141,14 +127,6 @@ function App() {
           element={
             <PrivateRoute>
               <CriarUsuario />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/usuarios/:usuarioId/definir-fase"
-          element={
-            <PrivateRoute>
-              <DefinirFaseAtual />
             </PrivateRoute>
           }
         />
@@ -176,8 +154,18 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/admin/jornadas/:jornadaId/configurar"
+          element={
+            <PrivateRoute>
+              <ConfigurarJornada />
+            </PrivateRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
+        </ConfirmDialogProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

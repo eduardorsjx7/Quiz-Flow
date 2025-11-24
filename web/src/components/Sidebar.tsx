@@ -120,9 +120,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
     
     // Paths que devem ser verificados apenas com correspondência exata
-    const exactMatchPaths = ['/admin', '/dashboard', '/fase-atual', '/fases'];
+    const exactMatchPaths = ['/admin', '/dashboard'];
     if (exactMatchPaths.includes(item.path)) {
       return location.pathname === item.path;
+    }
+    
+    // Caso especial: /admin/fases deve estar ativo para rotas relacionadas a fases
+    if (item.path === '/admin/fases') {
+      return location.pathname === '/admin/fases' || 
+             location.pathname.startsWith('/admin/fases/');
     }
     
     // Para outros paths, verificar se o pathname começa com o path + '/'

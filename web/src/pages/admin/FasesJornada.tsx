@@ -19,6 +19,8 @@ import {
 import {
   Quiz as QuizIcon,
   ArrowBack as ArrowBackIcon,
+  Settings as SettingsIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -28,6 +30,7 @@ interface Fase {
   titulo: string;
   descricao?: string;
   ordem: number;
+  totalPerguntas?: number;
   _count: {
     quizzes: number;
   };
@@ -93,36 +96,121 @@ const FasesJornada: React.FC = () => {
   return (
     <AdminLayout title={`Fases - ${jornada.titulo}`}>
       <Container maxWidth="lg">
-        <Breadcrumbs sx={{ mb: 3 }}>
+        <Breadcrumbs 
+          sx={{ 
+            mb: 3,
+            '& .MuiBreadcrumbs-separator': {
+              mx: 1.5,
+              color: 'text.disabled',
+            },
+          }}
+        >
           <Link
             component="button"
-            variant="body1"
             onClick={() => navigate('/admin')}
-            sx={{ cursor: 'pointer' }}
+            sx={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              p: 0.5,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Dashboard"
           >
-            Dashboard
+            <HomeIcon sx={{ fontSize: 20 }} />
           </Link>
           <Link
             component="button"
-            variant="body1"
             onClick={() => navigate('/admin/fases')}
-            sx={{ cursor: 'pointer' }}
+            sx={{ 
+              cursor: 'pointer', 
+              textDecoration: 'none',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              px: 0.75,
+              py: 0.5,
+              fontWeight: 400,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                textDecoration: 'none',
+              },
+            }}
           >
             Fases das Jornadas
           </Link>
-          <Typography color="text.primary">{jornada.titulo}</Typography>
+          <Typography 
+            color="text.primary"
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            {jornada.titulo}
+          </Typography>
         </Breadcrumbs>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <IconButton onClick={() => navigate('/admin/fases')} size="small">
-            <ArrowBackIcon />
-          </IconButton>
-          <Box>
-            <Typography variant="h4">{jornada.titulo}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Gerencie as fases desta jornada e cadastre os quizzes
-            </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton 
+              onClick={() => navigate('/admin/fases')} 
+              size="small"
+              sx={{
+                '&:hover': {
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700,
+                  fontSize: '2rem',
+                  background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {jornada.titulo}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.875rem',
+                  mt: 0.5,
+                }}
+              >
+                Gerencie as fases desta jornada e cadastre as perguntas
+              </Typography>
+            </Box>
           </Box>
+          <Button
+            variant="contained"
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar`)}
+            sx={{
+              bgcolor: '#ff2c19',
+              '&:hover': {
+                bgcolor: '#e62816',
+              },
+            }}
+          >
+            Configurar Jornada
+          </Button>
         </Box>
 
         {erro && (
@@ -166,9 +254,9 @@ const FasesJornada: React.FC = () => {
                     <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <QuizIcon fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        {(fase._count?.quizzes || 0) > 0 
-                          ? `${fase._count.quizzes} ${fase._count.quizzes === 1 ? 'Quiz' : 'Quizzes'}` 
-                          : 'Sem quizzes'}
+                        {(fase.totalPerguntas || 0) > 0 
+                          ? `${fase.totalPerguntas} ${fase.totalPerguntas === 1 ? 'Pergunta' : 'Perguntas'}` 
+                          : 'Sem perguntas'}
                       </Typography>
                     </Box>
                   </CardContent>

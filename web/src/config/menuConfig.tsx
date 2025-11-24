@@ -5,11 +5,12 @@ import {
   Assessment as AssessmentIcon,
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  Quiz as QuizIcon,
   School as SchoolIcon,
   Settings as SettingsIcon,
   Group as GroupIcon,
   ExitToApp as ExitToAppIcon,
+  EmojiEvents as TrophyIcon,
+  Quiz as QuizIcon,
 } from '@mui/icons-material';
 
 export interface MenuItem {
@@ -69,13 +70,6 @@ export const getAdminMenuItems = (
       text: 'Fases',
       icon: <SchoolIcon />,
       path: '/admin/fases',
-      roles: ['ADMINISTRADOR'],
-    },
-    {
-      id: 'quizzes',
-      text: 'Quizzes',
-      icon: <QuizIcon />,
-      path: '/admin/quizzes',
       roles: ['ADMINISTRADOR'],
     },
     {
@@ -162,16 +156,16 @@ export const getParticipanteMenuItems = (onLogout?: () => void): MenuItem[] => [
     path: '/dashboard',
   },
   {
-    id: 'fase-atual',
-    text: 'Fase Atual',
-    icon: <SchoolIcon />,
-    path: '/fase-atual',
+    id: 'avaliacoes',
+    text: 'Avaliações',
+    icon: <QuizIcon />,
+    path: '/avaliacoes',
   },
   {
-    id: 'fases',
-    text: 'Todas as Fases',
-    icon: <RouteIcon />,
-    path: '/fases',
+    id: 'pontuacoes',
+    text: 'Pontuações',
+    icon: <TrophyIcon />,
+    path: '/pontuacoes',
   },
   {
     id: 'divider-1',

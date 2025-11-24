@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 
 interface Usuario {
@@ -24,20 +24,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const verificandoRef = useRef(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
-    if (storedToken) {
+    if (storedToken && !verificandoRef.current) {
       setToken(storedToken);
       // O interceptor do api.ts já adiciona o token automaticamente
       verificarToken(storedToken);
     } else {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const verificarToken = async (tokenToVerify: string) => {
+    if (verificandoRef.current) return;
+    
     try {
+      verificandoRef.current = true;
       setIsLoading(true);
       // Delay mínimo de 2.5 segundos para melhorar a experiência
       const [response] = await Promise.all([
@@ -47,12 +52,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // A resposta vem como { success: true, data: usuario }
       const usuario = response.data.data || response.data;
       setUsuario(usuario);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        // Não limpar token em caso de 429, apenas aguardar
+        console.warn('Muitas requisições. Aguardando...');
+        return;
+      }
       localStorage.removeItem('token');
       setToken(null);
       setUsuario(null);
     } finally {
       setIsLoading(false);
+      verificandoRef.current = false;
     }
   };
 
@@ -78,7 +89,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUsuario(newUsuario);
       localStorage.setItem('token', newToken);
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || error.response?.data?.message || error.message || 'Erro ao fazer login');
+      // Tratar erro 429 (Too Many Requests)
+      if (error.response?.status === 429) {
+        const customError: any = new Error('Muitas tentativas de login. Aguarde alguns instantes e tente novamente.');
+        customError.response = error.response;
+        customError.isNetworkError = false;
+        throw customError;
+      }
+      // A API retorna erros no formato: { success: false, error: { message: "..." } }
+      let errorMessage = 'Erro ao fazer login';
+      
+      if (error.response) {
+        // Erro com resposta da API
+        const errorData = error.response.data;
+        if (errorData?.error) {
+          // Pode ser objeto { message: "..." } ou string
+          if (typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          } else if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          }
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (error.request) {
+        // Erro de rede (sem resposta do servidor)
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Criar um erro com informações adicionais
+      const customError: any = new Error(errorMessage);
+      customError.response = error.response;
+      customError.isNetworkError = !error.response;
+      throw customError;
     }
   };
 

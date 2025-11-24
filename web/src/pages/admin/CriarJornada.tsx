@@ -20,6 +20,8 @@ import {
   TableBody,
   IconButton,
   Chip,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -29,6 +31,8 @@ import {
   DragIndicator as DragIndicatorIcon,
   NavigateNext as NavigateNextIcon,
   Cancel as CancelIcon,
+  CloudUpload as CloudUploadIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import {
   DragDropContext,
@@ -112,6 +116,8 @@ const CriarJornada: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
 
   const [titulo, setTitulo] = useState('');
+  const [imagemCapa, setImagemCapa] = useState<File | null>(null);
+  const [previewImagem, setPreviewImagem] = useState<string | null>(null);
   const [fases, setFases] = useState<Fase[]>([]);
 
   const [abrirModalFase, setAbrirModalFase] = useState(false);
@@ -198,6 +204,35 @@ const CriarJornada: React.FC = () => {
     setFases(fasesReordenadas);
   };
 
+  const handleImagemChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        setErro('Por favor, selecione apenas arquivos de imagem');
+        return;
+      }
+      // Validar tamanho (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErro('A imagem deve ter no máximo 5MB');
+        return;
+      }
+      setImagemCapa(file);
+      // Criar preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImagem(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setErro('');
+    }
+  };
+
+  const handleRemoverImagem = () => {
+    setImagemCapa(null);
+    setPreviewImagem(null);
+  };
+
   const handleSalvar = async () => {
     setErro('');
     setErrosCampos({});
@@ -214,15 +249,34 @@ const CriarJornada: React.FC = () => {
 
     try {
       setSalvando(true);
-      await api.post('/jornadas', {
-        titulo: titulo.trim(),
-        fases: fases.map((f) => ({
+      const formData = new FormData();
+      formData.append('titulo', titulo.trim());
+      if (imagemCapa) {
+        formData.append('imagemCapa', imagemCapa);
+      }
+      formData.append('fases', JSON.stringify(
+        fases.map((f) => ({
           titulo: f.titulo,
           ordem: f.ordem,
-        })),
+        }))
+      ));
+
+      const response = await api.post('/jornadas', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      navigate('/admin/fases');
+      // Obter o ID da jornada criada
+      const jornadaId = response.data.data?.id || response.data.id;
+      
+      if (jornadaId) {
+        // Redirecionar para a tela de configurações da jornada
+        navigate(`/admin/jornadas/${jornadaId}/configurar`);
+      } else {
+        // Fallback: se não conseguir obter o ID, vai para a lista de jornadas
+        navigate('/admin/jornadas');
+      }
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao criar jornada');
     } finally {
@@ -233,18 +287,93 @@ const CriarJornada: React.FC = () => {
   return (
     <AdminLayout title="Criar Jornada">
       <Container maxWidth="md" sx={{ py: 4 }}>
-        <Typography 
-          variant="h4" 
-          gutterBottom 
+        <Breadcrumbs 
           sx={{ 
-            mb: 3, 
-            fontWeight: 600, 
-            textAlign: 'center',
-            color: '#e62816'
+            mb: 3,
+            '& .MuiBreadcrumbs-separator': {
+              mx: 1.5,
+              color: 'text.disabled',
+            },
           }}
         >
-          Cadastrar Jornada
-        </Typography>
+          <Link
+            component="button"
+            onClick={() => navigate('/admin')}
+            sx={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              p: 0.5,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Dashboard"
+          >
+            <HomeIcon sx={{ fontSize: 20 }} />
+          </Link>
+          <Link
+            component="button"
+            onClick={() => navigate('/admin/jornadas')}
+            sx={{ 
+              cursor: 'pointer', 
+              textDecoration: 'none',
+              color: 'text.secondary',
+              transition: 'all 0.2s ease',
+              borderRadius: 1,
+              px: 0.75,
+              py: 0.5,
+              fontWeight: 400,
+              '&:hover': { 
+                color: 'primary.main',
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                textDecoration: 'none',
+              },
+            }}
+          >
+            Jornadas
+          </Link>
+          <Typography 
+            color="text.primary"
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            Criar Jornada
+          </Typography>
+        </Breadcrumbs>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              fontSize: '2rem',
+              background: 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              mb: 0.5,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Cadastrar Jornada
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: '0.875rem',
+              mt: 0.5,
+            }}
+          >
+            Crie uma nova jornada e defina suas fases
+          </Typography>
+        </Box>
 
         {erro && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
@@ -276,6 +405,86 @@ const CriarJornada: React.FC = () => {
                 placeholder="Ex: Jornada de Capacitação 2024"
                 inputProps={{ maxLength: 80 }}
               />
+
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="body2" sx={{ mb: 1.5, color: '#6b7280', fontWeight: 500 }}>
+                  Logo/Imagem de Capa da Jornada
+                </Typography>
+                {previewImagem ? (
+                  <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                    <Box
+                      component="img"
+                      src={previewImagem}
+                      alt="Preview"
+                      sx={{
+                        maxWidth: '100%',
+                        maxHeight: 300,
+                        borderRadius: 2,
+                        border: '2px solid #e0e0e0',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleRemoverImagem}
+                      disabled={salvando}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        minWidth: 'auto',
+                        p: 0.5,
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      border: '2px dashed #e0e0e0',
+                      borderRadius: 2,
+                      p: 3,
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        borderColor: '#ff2c19',
+                        bgcolor: 'rgba(255, 44, 25, 0.02)',
+                      },
+                    }}
+                  >
+                    <input
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      id="upload-imagem-capa"
+                      type="file"
+                      onChange={handleImagemChange}
+                      disabled={salvando}
+                    />
+                    <label htmlFor="upload-imagem-capa">
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <CloudUploadIcon sx={{ fontSize: 48, color: '#6b7280', mb: 1 }} />
+                        <Typography variant="body2" sx={{ color: '#6b7280', mb: 0.5 }}>
+                          Clique para fazer upload ou arraste a imagem aqui
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#9e9e9e' }}>
+                          PNG, JPG ou GIF (máx. 5MB)
+                        </Typography>
+                      </Box>
+                    </label>
+                  </Box>
+                )}
+              </Box>
 
               <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                 <Button

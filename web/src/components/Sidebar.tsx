@@ -119,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         location.pathname === '/admin/jornadas' ||
         /^\/admin\/jornadas\/\d+$/.test(location.pathname) || // /admin/jornadas/:id
         /^\/admin\/jornadas\/\d+\//.test(location.pathname); // /admin/jornadas/:id/...
-      if (isJornadasPath) {
+      if (isJornadasPath && !location.pathname.includes('/fases')) {
         return true;
       }
     }

@@ -3,12 +3,10 @@ import logger from '../config/logger';
 import { CustomError } from '../middleware/errorHandler';
 
 export class JornadaService {
-  async listarJornadas() {
+  async listarJornadas(apenasAtivas: boolean = true) {
     try {
       const jornadas = await prisma.jornada.findMany({
-        where: {
-          ativo: true,
-        },
+        where: apenasAtivas ? { ativo: true } : undefined,
         include: {
           _count: {
             select: {
@@ -69,10 +67,10 @@ export class JornadaService {
     }
   }
 
-  async buscarPorId(id: number) {
+  async buscarPorId(id: number, apenasAtiva: boolean = true) {
     try {
       const jornada = await prisma.jornada.findUnique({
-        where: { id },
+        where: apenasAtiva ? { id, ativo: true } : { id },
         include: {
           fases: {
             include: {
@@ -123,10 +121,10 @@ export class JornadaService {
     }
   }
 
-  async buscarFasesPorJornada(jornadaId: number, usuarioId?: number) {
+  async buscarFasesPorJornada(jornadaId: number, usuarioId?: number, apenasAtiva: boolean = true) {
     try {
       const jornada = await prisma.jornada.findUnique({
-        where: { id: jornadaId },
+        where: apenasAtiva ? { id: jornadaId, ativo: true } : { id: jornadaId },
         select: {
           id: true,
           titulo: true,
@@ -227,8 +225,13 @@ export class JornadaService {
         if (jornadaTemDesbloqueio) {
           // Se tem sequência de desbloqueio, verificar se está desbloqueada
           if (fase.dataDesbloqueio) {
+            const agora = new Date();
             // Verificar se a data de desbloqueio já passou
-            estaDesbloqueada = new Date(fase.dataDesbloqueio) <= new Date();
+            const desbloqueada = new Date(fase.dataDesbloqueio) <= agora;
+            // Verificar se a data de bloqueio já passou (se existir)
+            const bloqueada = fase.dataBloqueio ? new Date(fase.dataBloqueio) <= agora : false;
+            // Está desbloqueada se passou a data de desbloqueio E não passou a data de bloqueio
+            estaDesbloqueada = desbloqueada && !bloqueada;
           } else {
             // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
             estaDesbloqueada = !!desbloqueio;
@@ -270,6 +273,8 @@ export class JornadaService {
       titulo: string;
       descricao?: string;
       ordem: number;
+      dataDesbloqueio?: string | null;
+      dataBloqueio?: string | null;
     }>;
   }) {
     try {
@@ -286,6 +291,8 @@ export class JornadaService {
                   titulo: fase.titulo,
                   descricao: fase.descricao,
                   ordem: fase.ordem,
+                  dataDesbloqueio: fase.dataDesbloqueio ? new Date(fase.dataDesbloqueio) : null,
+                  dataBloqueio: fase.dataBloqueio ? new Date(fase.dataBloqueio) : null,
                   criadoPor: dados.criadoPor,
                   quizzes: {
                     create: {
@@ -520,6 +527,26 @@ export class JornadaService {
         ? Math.round((totalAcertosJornada / totalPerguntasJornada) * 100)
         : 0;
 
+      // Verificar se alguma fase tem dataDesbloqueio
+      const temFaseComDataDesbloqueio = jornada.fases.some((f: any) => f.dataDesbloqueio !== null);
+      
+      // Encontrar fase atual (primeira fase com ordem >= 1)
+      const faseAtual = jornada.fases.find((f: any) => f.ordem >= 1) || jornada.fases[0] || null;
+      
+      // Encontrar próxima fase (primeira fase após a fase atual com dataDesbloqueio)
+      // Se todas as fases não têm dataDesbloqueio, não há próxima fase com data de desbloqueio
+      let proximaFase = null;
+      if (temFaseComDataDesbloqueio) {
+        if (faseAtual) {
+          const fasesOrdenadas = jornada.fases.filter((f: any) => f.ordem > faseAtual.ordem).sort((a: any, b: any) => a.ordem - b.ordem);
+          proximaFase = fasesOrdenadas.find((f: any) => f.dataDesbloqueio !== null) || null;
+        } else {
+          // Se não há fase atual, a próxima é a primeira fase com dataDesbloqueio
+          proximaFase = jornada.fases.find((f: any) => f.dataDesbloqueio !== null) || null;
+        }
+      }
+      // Se não tem nenhuma fase com dataDesbloqueio, todas estão abertas, então não há próxima fase para desbloquear
+
       return {
         jornada: {
           id: jornada.id,
@@ -529,6 +556,17 @@ export class JornadaService {
           ativo: jornada.ativo,
           totalFases: jornada.fases.length,
         },
+        faseAtual: faseAtual ? {
+          id: faseAtual.id,
+          titulo: faseAtual.titulo,
+          ordem: faseAtual.ordem,
+        } : null,
+        proximaFase: proximaFase ? {
+          id: proximaFase.id,
+          titulo: proximaFase.titulo,
+          ordem: proximaFase.ordem,
+          dataDesbloqueio: proximaFase.dataDesbloqueio,
+        } : null,
         estatisticasGerais: {
           totalFases: jornada.fases.length,
           totalQuizzes: jornada.fases.reduce((sum, f) => sum + f._count.quizzes, 0),
@@ -562,7 +600,9 @@ export class JornadaService {
               titulo: true,
               ordem: true,
               dataDesbloqueio: true,
+              dataBloqueio: true,
               pontuacao: true,
+              ativo: true,
             },
           },
         },
@@ -583,7 +623,9 @@ export class JornadaService {
           titulo: fase.titulo,
           ordem: fase.ordem,
           dataDesbloqueio: fase.dataDesbloqueio,
+          dataBloqueio: fase.dataBloqueio,
           pontuacao: fase.pontuacao,
+          ativo: fase.ativo,
         })),
         configuracao: {
           ativo: jornada.ativo,
@@ -606,8 +648,11 @@ export class JornadaService {
     dados: {
       fases?: Array<{
         faseId: number;
+        ordem?: number;
         dataDesbloqueio: string | null;
+        dataBloqueio: string | null;
         pontuacao: number;
+        ativo?: boolean;
       }>;
       configuracao?: {
         ativo?: boolean;
@@ -617,12 +662,22 @@ export class JornadaService {
         mostrarRanking?: boolean;
         permitirTentativasIlimitadas?: boolean;
         tempoLimitePorQuestao?: number | null;
+        status?: string; // Status da jornada: 'Ativa', 'Inativa', 'Fechada', 'Bloqueada'
       };
     }
   ) {
     try {
       // Atualizar configurações da jornada
       if (dados.configuracao) {
+        // Log do status se fornecido
+        if (dados.configuracao.status) {
+          logger.info('Status da jornada recebido', {
+            jornadaId: id,
+            status: dados.configuracao.status,
+            ativo: dados.configuracao.ativo,
+          });
+        }
+
         await prisma.jornada.update({
           where: { id },
           data: {
@@ -640,17 +695,32 @@ export class JornadaService {
       // Atualizar fases
       if (dados.fases && dados.fases.length > 0) {
         await Promise.all(
-          dados.fases.map((faseData) =>
-            prisma.fase.update({
+          dados.fases.map((faseData) => {
+            const updateData: any = {
+              dataDesbloqueio: faseData.dataDesbloqueio
+                ? new Date(faseData.dataDesbloqueio)
+                : null,
+              dataBloqueio: faseData.dataBloqueio
+                ? new Date(faseData.dataBloqueio)
+                : null,
+              pontuacao: faseData.pontuacao,
+            };
+            
+            // Atualizar ordem apenas se fornecida
+            if (faseData.ordem !== undefined) {
+              updateData.ordem = faseData.ordem;
+            }
+            
+            // Atualizar ativo se fornecido
+            if (faseData.ativo !== undefined) {
+              updateData.ativo = faseData.ativo;
+            }
+            
+            return prisma.fase.update({
               where: { id: faseData.faseId },
-              data: {
-                dataDesbloqueio: faseData.dataDesbloqueio
-                  ? new Date(faseData.dataDesbloqueio)
-                  : null,
-                pontuacao: faseData.pontuacao,
-              },
-            })
-          )
+              data: updateData,
+            });
+          })
         );
       }
 

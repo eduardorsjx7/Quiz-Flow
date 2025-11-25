@@ -15,6 +15,16 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -23,9 +33,23 @@ import {
   Home as HomeIcon,
   ArrowBack as ArrowBackIcon,
   Cancel as CancelIcon,
+  Edit as EditIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DroppableProvided,
+  DraggableProvided,
+} from '@hello-pangea/dnd';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { LoadingScreen } from '../../components/LoadingScreen';
+import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import { useNavigation } from '../../contexts/NavigationContext';
+import { useToast } from '../../contexts/ToastContext';
 
 interface Alternativa {
   id?: number;
@@ -63,20 +87,33 @@ interface Fase {
 const AdminPerguntasFase: React.FC = () => {
   const navigate = useNavigate();
   const { faseId } = useParams<{ faseId: string }>();
+  const { confirm } = useConfirmDialog();
+  const { registerInterceptor } = useNavigation();
+  const { showError } = useToast();
   const [fase, setFase] = useState<Fase | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
+  const [perguntasIniciais, setPerguntasIniciais] = useState<Pergunta[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
   const [errosCampos, setErrosCampos] = useState<{ perguntas?: string }>({});
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
+  const [perguntaTemporaria, setPerguntaTemporaria] = useState<Pergunta>({
+    texto: '',
+    tempoSegundos: 30,
+    alternativas: [
+      { texto: '', correta: false },
+      { texto: '', correta: false },
+    ],
+  });
 
   const carregarDados = useCallback(async () => {
     if (!faseId) return;
 
     try {
       setLoading(true);
-      setErro('');
 
       const [faseRes, quizRes] = await Promise.all([
         api.get(`/fases/${faseId}`),
@@ -89,88 +126,265 @@ const AdminPerguntasFase: React.FC = () => {
       if (quizRes && quizRes.data.success) {
         const quizData = quizRes.data.data;
         setQuiz(quizData);
-        setPerguntas(
-          quizData.perguntas.map((p: any) => ({
-            id: p.id,
-            texto: p.texto,
-            tempoSegundos: p.tempoSegundos,
-            ordem: p.ordem,
-            alternativas: p.alternativas.map((a: any) => ({
-              id: a.id,
-              texto: a.texto,
-              correta: a.correta,
-              ordem: a.ordem,
-            })),
-          }))
-        );
+        const perguntasCarregadas = quizData.perguntas.map((p: any) => ({
+          id: p.id,
+          texto: p.texto,
+          tempoSegundos: p.tempoSegundos,
+          ordem: p.ordem,
+          alternativas: p.alternativas.map((a: any) => ({
+            id: a.id,
+            texto: a.texto,
+            correta: a.correta,
+            ordem: a.ordem,
+          })),
+        }));
+        setPerguntas(perguntasCarregadas);
+        setPerguntasIniciais(JSON.parse(JSON.stringify(perguntasCarregadas))); // Deep copy
       } else {
         // Quiz ainda não existe, começar com array vazio
         setPerguntas([]);
+        setPerguntasIniciais([]);
       }
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
-      setErro(error.response?.data?.error || 'Erro ao carregar dados');
+      const mensagemErro = error.response?.data?.error || 'Erro ao carregar dados';
+      showError(mensagemErro, 'Erro ao carregar');
     } finally {
       setLoading(false);
     }
-  }, [faseId]);
+  }, [faseId, showError]);
 
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
 
-  const adicionarPergunta = () => {
-    setPerguntas([
-      ...perguntas,
-      {
-        texto: '',
-        tempoSegundos: 30, // Valor padrão, será definido pela jornada
-        alternativas: [
-          { texto: '', correta: false },
-          { texto: '', correta: false },
-        ],
-      },
-    ]);
-    setErrosCampos({ ...errosCampos, perguntas: undefined });
+  // Registrar interceptor de navegação
+  useEffect(() => {
+    const interceptor = async (path: string): Promise<boolean> => {
+      // Se está tentando navegar para a mesma página, permitir
+      if (path.includes(`/admin/fases/${faseId}/perguntas`)) {
+        return true;
+      }
+
+      // Se há alterações, mostrar confirmação
+      if (houveAlteracoes()) {
+        const confirmado = await confirm({
+          title: 'Alterações não salvas',
+          message: 'Você tem alterações não salvas. Se sair agora, todas as informações preenchidas serão perdidas. Deseja realmente sair?',
+          confirmText: 'Sair sem salvar',
+          cancelText: 'Cancelar',
+          type: 'warning',
+        });
+        return confirmado;
+      }
+      return true;
+    };
+
+    registerInterceptor(interceptor);
+
+    // Limpar interceptor ao desmontar
+    return () => {
+      registerInterceptor(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faseId, confirm, registerInterceptor, perguntas, perguntasIniciais]);
+
+  const abrirModalAdicionarPergunta = () => {
+    setEditandoIndex(null);
+    setPerguntaTemporaria({
+      texto: '',
+      tempoSegundos: 30,
+      alternativas: [
+        { texto: '', correta: false },
+        { texto: '', correta: false },
+      ],
+    });
+    setModalAberto(true);
   };
 
-  const removerPergunta = (index: number) => {
-    setPerguntas(perguntas.filter((_, i) => i !== index));
+  const abrirModalEditarPergunta = (index: number) => {
+    setEditandoIndex(index);
+    setPerguntaTemporaria({
+      ...perguntas[index],
+      alternativas: [...perguntas[index].alternativas],
+    });
+    setModalAberto(true);
   };
 
-  const atualizarPergunta = (index: number, campo: keyof Pergunta, valor: any) => {
-    const novasPerguntas = [...perguntas];
-    novasPerguntas[index] = { ...novasPerguntas[index], [campo]: valor };
-    setPerguntas(novasPerguntas);
+  const fecharModal = () => {
+    setModalAberto(false);
   };
 
-  const adicionarAlternativa = (perguntaIndex: number) => {
-    const novasPerguntas = [...perguntas];
-    novasPerguntas[perguntaIndex].alternativas.push({ texto: '', correta: false });
-    setPerguntas(novasPerguntas);
+  const adicionarAlternativaNoModal = () => {
+    setPerguntaTemporaria({
+      ...perguntaTemporaria,
+      alternativas: [
+        ...perguntaTemporaria.alternativas,
+        { texto: '', correta: false },
+      ],
+    });
   };
 
-  const removerAlternativa = (perguntaIndex: number, altIndex: number) => {
-    const novasPerguntas = [...perguntas];
-    novasPerguntas[perguntaIndex].alternativas = novasPerguntas[perguntaIndex].alternativas.filter(
-      (_, i) => i !== altIndex
-    );
-    setPerguntas(novasPerguntas);
+  const removerAlternativaNoModal = (index: number) => {
+    if (perguntaTemporaria.alternativas.length > 2) {
+      setPerguntaTemporaria({
+        ...perguntaTemporaria,
+        alternativas: perguntaTemporaria.alternativas.filter((_: Alternativa, i: number) => i !== index),
+      });
+    }
   };
 
-  const atualizarAlternativa = (
-    perguntaIndex: number,
-    altIndex: number,
-    campo: keyof Alternativa,
-    valor: any
-  ) => {
-    const novasPerguntas = [...perguntas];
-    novasPerguntas[perguntaIndex].alternativas[altIndex] = {
-      ...novasPerguntas[perguntaIndex].alternativas[altIndex],
+  const atualizarAlternativaNoModal = (index: number, campo: keyof Alternativa, valor: any) => {
+    const novasAlternativas = [...perguntaTemporaria.alternativas];
+    novasAlternativas[index] = {
+      ...novasAlternativas[index],
       [campo]: valor,
     };
-    setPerguntas(novasPerguntas);
+
+    // Se está marcando uma alternativa como correta, desmarcar todas as outras
+    if (campo === 'correta' && valor === true) {
+      novasAlternativas.forEach((alt: Alternativa, i: number) => {
+        if (i !== index) {
+          alt.correta = false;
+        }
+      });
+    }
+
+    setPerguntaTemporaria({
+      ...perguntaTemporaria,
+      alternativas: novasAlternativas,
+    });
   };
+
+  const validarPerguntaModal = (): boolean => {
+    if (!perguntaTemporaria.texto.trim()) {
+      showError('O texto da pergunta é obrigatório', 'Erro de validação');
+      return false;
+    }
+    if (perguntaTemporaria.alternativas.length < 2) {
+      showError('É necessário pelo menos 2 alternativas', 'Erro de validação');
+      return false;
+    }
+    const alternativasCorretas = perguntaTemporaria.alternativas.filter((a: Alternativa) => a.correta).length;
+    if (alternativasCorretas === 0) {
+      showError('É necessário marcar uma alternativa como correta', 'Erro de validação');
+      return false;
+    }
+    if (alternativasCorretas > 1) {
+      showError('Apenas uma alternativa pode ser marcada como correta', 'Erro de validação');
+      return false;
+    }
+    if (perguntaTemporaria.alternativas.some((a: Alternativa) => !a.texto.trim())) {
+      showError('Todas as alternativas devem ter texto', 'Erro de validação');
+      return false;
+    }
+    return true;
+  };
+
+  const confirmarAdicionarPergunta = () => {
+    if (!validarPerguntaModal()) {
+      return;
+    }
+
+    if (editandoIndex !== null) {
+      // Editar pergunta existente
+      const novasPerguntas = [...perguntas];
+      novasPerguntas[editandoIndex] = perguntaTemporaria;
+      setPerguntas(novasPerguntas);
+    } else {
+      // Adicionar nova pergunta
+      setPerguntas([...perguntas, perguntaTemporaria]);
+    }
+    setErrosCampos({ ...errosCampos, perguntas: undefined });
+    fecharModal();
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const reordered = Array.from(perguntas);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    setPerguntas(reordered);
+  };
+
+  const getPerguntaKey = (pergunta: Pergunta, index: number) =>
+    pergunta.id ? `pergunta-${pergunta.id}` : `pergunta-temp-${index}`;
+
+  const removerPergunta = (index: number) => {
+    setPerguntas(perguntas.filter((_: Pergunta, i: number) => i !== index));
+  };
+
+  // Função para verificar se houve alterações
+  const houveAlteracoes = (): boolean => {
+    if (perguntas.length !== perguntasIniciais.length) {
+      return true;
+    }
+
+    // Comparar cada pergunta
+    for (let i = 0; i < perguntas.length; i++) {
+      const atual = perguntas[i];
+      const inicial = perguntasIniciais[i];
+
+      // Se não existe pergunta inicial correspondente, houve alteração
+      if (!inicial) {
+        return true;
+      }
+
+      // Comparar texto
+      if (atual.texto.trim() !== inicial.texto.trim()) {
+        return true;
+      }
+
+      // Comparar tempo
+      if (atual.tempoSegundos !== inicial.tempoSegundos) {
+        return true;
+      }
+
+      // Comparar alternativas
+      if (atual.alternativas.length !== inicial.alternativas.length) {
+        return true;
+      }
+
+      for (let j = 0; j < atual.alternativas.length; j++) {
+        const altAtual = atual.alternativas[j];
+        const altInicial = inicial.alternativas[j];
+
+        if (!altInicial) {
+          return true;
+        }
+
+        if (altAtual.texto.trim() !== altInicial.texto.trim() || 
+            altAtual.correta !== altInicial.correta) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Função para interceptar navegação
+  const handleNavegacao = async (destino: () => void) => {
+    if (houveAlteracoes()) {
+      const confirmado = await confirm({
+        title: 'Alterações não salvas',
+        message: 'Você tem alterações não salvas. Se sair agora, todas as informações preenchidas serão perdidas. Deseja realmente sair?',
+        confirmText: 'Sair sem salvar',
+        cancelText: 'Cancelar',
+        type: 'warning',
+      });
+
+      if (confirmado) {
+        destino();
+      }
+    } else {
+      destino();
+    }
+  };
+
 
   const validarFormulario = (): boolean => {
     const novosErros: { perguntas?: string } = {};
@@ -189,14 +403,18 @@ const AdminPerguntasFase: React.FC = () => {
         novosErros.perguntas = `Pergunta ${i + 1}: é necessário pelo menos 2 alternativas`;
         break;
       }
-      if (!p.alternativas.some((a) => a.correta)) {
+      if (!p.alternativas.some((a: Alternativa) => a.correta)) {
         novosErros.perguntas = `Pergunta ${i + 1}: é necessário marcar uma alternativa como correta`;
         break;
       }
-      if (p.alternativas.some((a) => !a.texto.trim())) {
+      if (p.alternativas.some((a: Alternativa) => !a.texto.trim())) {
         novosErros.perguntas = `Pergunta ${i + 1}: todas as alternativas devem ter texto`;
         break;
       }
+    }
+
+    if (Object.keys(novosErros).length > 0 && novosErros.perguntas) {
+      showError(novosErros.perguntas, 'Erro de validação');
     }
 
     setErrosCampos(novosErros);
@@ -204,7 +422,6 @@ const AdminPerguntasFase: React.FC = () => {
   };
 
   const handleSalvar = async () => {
-    setErro('');
     setErrosCampos({});
 
     if (!validarFormulario()) {
@@ -212,7 +429,7 @@ const AdminPerguntasFase: React.FC = () => {
     }
 
     if (!faseId) {
-      setErro('ID da fase não encontrado');
+      showError('ID da fase não encontrado', 'Erro');
       return;
     }
 
@@ -227,7 +444,7 @@ const AdminPerguntasFase: React.FC = () => {
             await api.post(`/quizzes/${quiz.id}/perguntas`, {
               texto: pergunta.texto.trim(),
               tempoSegundos: pergunta.tempoSegundos,
-              alternativas: pergunta.alternativas.map((a) => ({
+              alternativas: pergunta.alternativas.map((a: Alternativa) => ({
                 texto: a.texto.trim(),
                 correta: a.correta,
               })),
@@ -241,10 +458,10 @@ const AdminPerguntasFase: React.FC = () => {
           descricao: fase?.descricao,
           faseId: Number(faseId),
           pontosBase: 100,
-          perguntas: perguntas.map((p) => ({
+          perguntas: perguntas.map((p: Pergunta) => ({
             texto: p.texto.trim(),
             tempoSegundos: p.tempoSegundos,
-            alternativas: p.alternativas.map((a) => ({
+            alternativas: p.alternativas.map((a: Alternativa) => ({
               texto: a.texto.trim(),
               correta: a.correta,
             })),
@@ -254,9 +471,19 @@ const AdminPerguntasFase: React.FC = () => {
 
       // Recarregar dados para atualizar
       await carregarDados();
+
+      setRedirecting(true);
+      setTimeout(() => {
+        if (fase?.jornada) {
+          navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+        } else {
+          navigate('/admin/fases');
+        }
+      }, 1200);
     } catch (error: any) {
       console.error('Erro ao salvar perguntas:', error);
-      setErro(error.response?.data?.error || 'Erro ao salvar perguntas');
+      const mensagemErro = error.response?.data?.error || 'Erro ao salvar perguntas';
+      showError(mensagemErro, 'Erro ao salvar');
     } finally {
       setSalvando(false);
     }
@@ -270,6 +497,10 @@ const AdminPerguntasFase: React.FC = () => {
         </Box>
       </Container>
     );
+  }
+
+  if (redirecting) {
+    return <LoadingScreen message="Salvando perguntas e retornando..." />;
   }
 
   return (
@@ -286,7 +517,7 @@ const AdminPerguntasFase: React.FC = () => {
         >
           <Link
             component="button"
-            onClick={() => navigate('/admin')}
+            onClick={() => handleNavegacao(() => navigate('/admin'))}
             sx={{ 
               cursor: 'pointer', 
               display: 'flex', 
@@ -306,7 +537,7 @@ const AdminPerguntasFase: React.FC = () => {
           </Link>
           <Link
             component="button"
-            onClick={() => navigate('/admin/jornadas')}
+            onClick={() => handleNavegacao(() => navigate('/admin/jornadas'))}
             sx={{ 
               cursor: 'pointer', 
               textDecoration: 'none',
@@ -330,7 +561,8 @@ const AdminPerguntasFase: React.FC = () => {
               component="button"
               onClick={() => {
                 if (fase?.jornada?.id) {
-                  navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+                  const jornadaId = fase.jornada.id;
+                  handleNavegacao(() => navigate(`/admin/jornadas/${jornadaId}/fases`));
                 }
               }}
               sx={{ 
@@ -363,19 +595,15 @@ const AdminPerguntasFase: React.FC = () => {
           </Typography>
         </Breadcrumbs>
 
-        {erro && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
-            {erro}
-          </Alert>
-        )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
           <IconButton 
             onClick={() => {
               if (fase?.jornada) {
-                navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+                const jornadaId = fase.jornada.id;
+                handleNavegacao(() => navigate(`/admin/jornadas/${jornadaId}/fases`));
               } else {
-                navigate('/admin/fases');
+                handleNavegacao(() => navigate('/admin/fases'));
               }
             }} 
             sx={{
@@ -408,55 +636,166 @@ const AdminPerguntasFase: React.FC = () => {
           <Alert severity="info" sx={{ mb: 3 }}>
             Nenhuma pergunta cadastrada. Adicione a primeira pergunta abaixo.
           </Alert>
-        ) : null}
+        ) : (
+          <TableContainer component={Paper} sx={{ mb: 3, borderRadius: 2 }}>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="perguntas">
+                {(provided: DroppableProvided) => (
+                  <Table ref={provided.innerRef} {...provided.droppableProps}>
+                    <TableHead>
+                      <TableRow
+                        sx={{
+                          bgcolor: 'rgba(1, 27, 73, 0.05)',
+                          '& .MuiTableCell-root': {
+                            textAlign: 'center',
+                          },
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600, color: '#011b49' }}>#</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#011b49' }}>Pergunta</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#011b49' }}>Alternativas</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#011b49' }}>Ações</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {perguntas.map((pergunta: Pergunta, pIndex: number) => (
+                        <Draggable key={getPerguntaKey(pergunta, pIndex)} draggableId={getPerguntaKey(pergunta, pIndex)} index={pIndex}>
+                          {(dragProvided: DraggableProvided) => (
+                            <TableRow
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              sx={{
+                                '&:hover': {
+                                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                },
+                              }}
+                            >
+                              <TableCell sx={{ fontWeight: 500, textAlign: 'center' }}>{pIndex + 1}</TableCell>
+                              <TableCell sx={{ textAlign: 'justify' }}>
+                                <Typography
+                                  sx={{
+                                    maxWidth: 500,
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                  }}
+                                  title={pergunta.texto}
+                                >
+                                  {pergunta.texto || '(Sem texto)'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ textAlign: 'center' }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  {pergunta.alternativas.length} alternativa{pergunta.alternativas.length !== 1 ? 's' : ''}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ textAlign: 'center' }}>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                  <IconButton
+                                    {...dragProvided.dragHandleProps}
+                                    sx={{
+                                      cursor: 'grab',
+                                      '&:hover': {
+                                        bgcolor: 'rgba(1, 27, 73, 0.08)',
+                                      },
+                                    }}
+                                  >
+                                    <DragIndicatorIcon />
+                                  </IconButton>
+                                  <IconButton
+                                    color="primary"
+                                    onClick={() => abrirModalEditarPergunta(pIndex)}
+                                    disabled={salvando}
+                                    sx={{
+                                      '&:hover': {
+                                        bgcolor: 'rgba(1, 27, 73, 0.1)',
+                                      },
+                                    }}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                  <IconButton
+                                    color="error"
+                                    onClick={() => removerPergunta(pIndex)}
+                                    disabled={salvando}
+                                    sx={{
+                                      '&:hover': {
+                                        bgcolor: 'rgba(244, 67, 54, 0.1)',
+                                      },
+                                    }}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </TableBody>
+                  </Table>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </TableContainer>
+        )}
 
-        {perguntas.map((pergunta, pIndex) => (
-          <Paper 
-            key={pIndex} 
-            sx={{ 
-              p: 3, 
-              mb: 3,
+
+        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={abrirModalAdicionarPergunta}
+            disabled={salvando}
+            sx={{
               borderRadius: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              border: '1px solid',
-              borderColor: 'divider',
+              textTransform: 'none',
+              fontWeight: 500,
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: '#011b49',
-                  fontSize: '1.25rem',
-                }}
-              >
-                Pergunta {pIndex + 1}
-              </Typography>
-              <IconButton 
-                color="error" 
-                onClick={() => removerPergunta(pIndex)} 
-                disabled={salvando}
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'rgba(244, 67, 54, 0.1)',
-                  },
-                }}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
+            Adicionar Pergunta
+          </Button>
+        </Box>
+
+        {/* Modal para adicionar pergunta */}
+        <Dialog
+          open={modalAberto}
+          onClose={fecharModal}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              fontWeight: 600,
+              color: '#011b49',
+              fontSize: '1.5rem',
+              pb: 1,
+            }}
+          >
+            {editandoIndex !== null ? 'Editar Pergunta' : 'Adicionar Nova Pergunta'}
+          </DialogTitle>
+          <DialogContent>
 
             <TextField
               fullWidth
               label="Texto da Pergunta"
-              value={pergunta.texto}
-              onChange={(e) => atualizarPergunta(pIndex, 'texto', e.target.value)}
+              value={perguntaTemporaria.texto}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPerguntaTemporaria({ ...perguntaTemporaria, texto: e.target.value })
+              }
               margin="normal"
               required
               multiline
-              rows={2}
-              disabled={salvando}
+              rows={3}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   bgcolor: '#ffffff',
@@ -467,9 +806,9 @@ const AdminPerguntasFase: React.FC = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
+            <Typography
+              variant="subtitle1"
+              sx={{
                 fontWeight: 600,
                 color: '#011b49',
                 mb: 2,
@@ -479,12 +818,12 @@ const AdminPerguntasFase: React.FC = () => {
               Alternativas
             </Typography>
 
-            {pergunta.alternativas.map((alt, aIndex) => (
-              <Box 
-                key={aIndex} 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+            {perguntaTemporaria.alternativas.map((alt: Alternativa, aIndex: number) => (
+              <Box
+                key={aIndex}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
                   mb: 1.5,
                   gap: 1,
                   p: 1.5,
@@ -500,10 +839,11 @@ const AdminPerguntasFase: React.FC = () => {
                   fullWidth
                   label={`Alternativa ${aIndex + 1}`}
                   value={alt.texto}
-                  onChange={(e) => atualizarAlternativa(pIndex, aIndex, 'texto', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    atualizarAlternativaNoModal(aIndex, 'texto', e.target.value)
+                  }
                   margin="normal"
                   required
-                  disabled={salvando}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       bgcolor: '#ffffff',
@@ -514,8 +854,9 @@ const AdminPerguntasFase: React.FC = () => {
                   control={
                     <Checkbox
                       checked={alt.correta}
-                      onChange={(e) => atualizarAlternativa(pIndex, aIndex, 'correta', e.target.checked)}
-                      disabled={salvando}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        atualizarAlternativaNoModal(aIndex, 'correta', e.target.checked)
+                      }
                       sx={{
                         color: alt.correta ? '#4caf50' : 'inherit',
                         '&.Mui-checked': {
@@ -525,16 +866,15 @@ const AdminPerguntasFase: React.FC = () => {
                     />
                   }
                   label="Correta"
-                  sx={{ 
+                  sx={{
                     ml: 1,
                     minWidth: 100,
                   }}
                 />
-                {pergunta.alternativas.length > 2 && (
+                {perguntaTemporaria.alternativas.length > 2 && (
                   <IconButton
                     color="error"
-                    onClick={() => removerAlternativa(pIndex, aIndex)}
-                    disabled={salvando}
+                    onClick={() => removerAlternativaNoModal(aIndex)}
                     sx={{
                       ml: 'auto',
                       '&:hover': {
@@ -551,41 +891,52 @@ const AdminPerguntasFase: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
-              onClick={() => adicionarAlternativa(pIndex)}
-              sx={{ 
+              onClick={adicionarAlternativaNoModal}
+              sx={{
                 mt: 2,
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 500,
               }}
-              disabled={salvando}
             >
               Adicionar Alternativa
             </Button>
-          </Paper>
-        ))}
-
-        {errosCampos.perguntas && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {errosCampos.perguntas}
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={adicionarPergunta}
-            disabled={salvando}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-            }}
-          >
-            Adicionar Pergunta
-          </Button>
-        </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 2 }}>
+            <Button
+              onClick={fecharModal}
+              variant="outlined"
+              color="inherit"
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                borderColor: 'grey.300',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  bgcolor: 'grey.50',
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmarAdicionarPergunta}
+              variant="contained"
+              sx={{
+                bgcolor: '#ff2c19',
+                '&:hover': {
+                  bgcolor: '#e62816',
+                },
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              {editandoIndex !== null ? 'Salvar Alterações' : 'Adicionar Pergunta'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button 
@@ -593,9 +944,10 @@ const AdminPerguntasFase: React.FC = () => {
             color="inherit"
             onClick={() => {
               if (fase?.jornada) {
-                navigate(`/admin/jornadas/${fase.jornada.id}/fases`);
+                const jornadaId = fase.jornada.id;
+                handleNavegacao(() => navigate(`/admin/jornadas/${jornadaId}/fases`));
               } else {
-                navigate('/admin/fases');
+                handleNavegacao(() => navigate('/admin/fases'));
               }
             }} 
             disabled={salvando}

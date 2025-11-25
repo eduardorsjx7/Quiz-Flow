@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmDialogProvider } from './contexts/ConfirmDialogContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminFases from './pages/admin/Fases';
@@ -29,7 +30,8 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <ConfirmDialogProvider>
-          <Routes>
+          <NavigationProvider>
+            <Routes>
         <Route path="/login" element={<Login />} />
         <Route
           path="/dashboard"
@@ -164,6 +166,7 @@ function App() {
         />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
+          </NavigationProvider>
         </ConfirmDialogProvider>
       </ToastProvider>
     </AuthProvider>

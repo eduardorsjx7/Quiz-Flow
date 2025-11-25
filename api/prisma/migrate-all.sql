@@ -12,8 +12,9 @@ ALTER TABLE jornadas ADD COLUMN IF NOT EXISTS "mostrarRanking" BOOLEAN DEFAULT t
 ALTER TABLE jornadas ADD COLUMN IF NOT EXISTS "permitirTentativasIlimitadas" BOOLEAN DEFAULT false;
 ALTER TABLE jornadas ADD COLUMN IF NOT EXISTS "tempoLimitePorQuestao" INTEGER;
 
--- 3. Adicionar campos de desbloqueio e pontuação à tabela fases
+-- 3. Adicionar campos de desbloqueio, bloqueio e pontuação à tabela fases
 ALTER TABLE fases ADD COLUMN IF NOT EXISTS "dataDesbloqueio" TIMESTAMP;
+ALTER TABLE fases ADD COLUMN IF NOT EXISTS "dataBloqueio" TIMESTAMP;
 ALTER TABLE fases ADD COLUMN IF NOT EXISTS "pontuacao" INTEGER DEFAULT 0;
 
 -- Verificar se as colunas foram criadas
@@ -32,6 +33,6 @@ SELECT
     column_default
 FROM information_schema.columns 
 WHERE table_name = 'fases' 
-    AND column_name IN ('dataDesbloqueio', 'pontuacao')
+    AND column_name IN ('dataDesbloqueio', 'dataBloqueio', 'pontuacao')
 ORDER BY column_name;
 

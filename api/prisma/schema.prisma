@@ -62,6 +62,7 @@ model Fase {
   ordem       Int      @default(0)
   ativo       Boolean  @default(true)
   dataDesbloqueio DateTime? // Data e hora de desbloqueio da fase
+  dataBloqueio DateTime? // Data e hora de bloqueio da fase
   pontuacao   Int      @default(0) // Pontuação da fase
   criadoPor   Int?
   createdAt   DateTime @default(now())

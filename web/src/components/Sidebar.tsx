@@ -22,6 +22,7 @@ import {
   AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 import { MenuItem } from '../config/menuConfig';
+import { useNavigation } from '../contexts/NavigationContext';
 
 interface SidebarProps {
   open: boolean;
@@ -45,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { checkNavigation } = useNavigation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -83,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, []);
 
-  const handleItemClick = (item: MenuItem) => {
+  const handleItemClick = async (item: MenuItem) => {
     if (item.children && item.children.length > 0) {
       const newExpanded = new Set(expandedItems);
       if (newExpanded.has(item.id)) {
@@ -93,9 +95,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
       setExpandedItems(newExpanded);
     } else if (item.path) {
-      navigate(item.path);
-      if (isMobile) {
-        onClose();
+      // Verificar se há interceptação de navegação
+      const canNavigate = await checkNavigation(item.path);
+      if (canNavigate) {
+        navigate(item.path);
+        if (isMobile) {
+          onClose();
+        }
       }
     } else if (item.onClick) {
       item.onClick();
@@ -106,13 +112,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (item: MenuItem): boolean => {
-    if (!item.path) return false;
-    
-    // Se o item tem filhos, não deve ser marcado como ativo diretamente
-    // Apenas seus filhos devem ser marcados
-    if (item.children && item.children.length > 0) {
-      return false;
+    // Caso especial: item "Jornadas" (id: 'jornadas') deve estar ativo para rotas relacionadas a jornadas
+    // Incluindo /admin/jornadas/:id (detalhes), mas não /admin/jornadas/novo
+    if (item.id === 'jornadas') {
+      const isJornadasPath =
+        location.pathname === '/admin/jornadas' ||
+        /^\/admin\/jornadas\/\d+$/.test(location.pathname) || // /admin/jornadas/:id
+        /^\/admin\/jornadas\/\d+\//.test(location.pathname); // /admin/jornadas/:id/...
+      if (isJornadasPath) {
+        return true;
+      }
     }
+    
+    if (!item.path) return false;
     
     // Verificação exata primeiro
     if (location.pathname === item.path) {
@@ -127,8 +139,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     // Caso especial: /admin/fases deve estar ativo para rotas relacionadas a fases
     if (item.path === '/admin/fases') {
-      return location.pathname === '/admin/fases' || 
-             location.pathname.startsWith('/admin/fases/');
+      const isFasesPath =
+        location.pathname === '/admin/fases' ||
+        location.pathname.startsWith('/admin/fases/') ||
+        /^\/admin\/jornadas\/[^/]+\/fases/.test(location.pathname);
+      return isFasesPath;
+    }
+    
+    // Se o item tem filhos, verificar se algum filho está ativo
+    if (item.children && item.children.length > 0) {
+      return hasActiveChild(item);
     }
     
     // Para outros paths, verificar se o pathname começa com o path + '/'

@@ -39,7 +39,9 @@ export const upload = multer({
 });
 
 export const listarJornadas = asyncHandler(async (req: Request, res: Response) => {
-  const jornadas = await jornadaService.listarJornadas();
+  // Se não for admin, filtrar apenas jornadas ativas
+  const isAdmin = (req as any).userTipo === 'ADMINISTRADOR';
+  const jornadas = await jornadaService.listarJornadas(!isAdmin);
   res.json({
     success: true,
     data: jornadas,
@@ -48,7 +50,9 @@ export const listarJornadas = asyncHandler(async (req: Request, res: Response) =
 
 export const buscarJornadaPorId = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const jornada = await jornadaService.buscarPorId(Number(id));
+  // Se não for admin, filtrar apenas jornadas ativas
+  const isAdmin = (req as any).userTipo === 'ADMINISTRADOR';
+  const jornada = await jornadaService.buscarPorId(Number(id), !isAdmin);
   res.json({
     success: true,
     data: jornada,
@@ -58,7 +62,9 @@ export const buscarJornadaPorId = asyncHandler(async (req: Request, res: Respons
 export const buscarFasesPorJornada = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const usuarioId = req.userId;
-  const resultado = await jornadaService.buscarFasesPorJornada(Number(id), usuarioId);
+  // Se não for admin, filtrar apenas jornadas ativas
+  const isAdmin = (req as any).userTipo === 'ADMINISTRADOR';
+  const resultado = await jornadaService.buscarFasesPorJornada(Number(id), usuarioId, !isAdmin);
   res.json({
     success: true,
     data: resultado,

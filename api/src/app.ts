@@ -39,13 +39,31 @@ app.use(express.urlencoded({ extended: true }));
 // Servir arquivos estáticos (imagens)
 app.use('/uploads', express.static('uploads'));
 
-// Rate limiting
+// Rate limiting - mais permissivo em desenvolvimento
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo de 100 requisições por IP
+  max: config.NODE_ENV === 'development' ? 1000 : 100, // 1000 em dev, 100 em produção
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Em desenvolvimento, pular rate limiting para requisições de health check
+    return config.NODE_ENV === 'development' && req.path === '/health';
+  },
+  handler: (req, res) => {
+    logger.warn('Rate limit exceeded', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      userAgent: req.get('user-agent'),
+    });
+    res.status(429).json({
+      success: false,
+      error: {
+        message: 'Muitas requisições. Aguarde alguns instantes e tente novamente.',
+      },
+    });
+  },
 });
 
 app.use('/api/', limiter);

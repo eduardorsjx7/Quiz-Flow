@@ -44,18 +44,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       verificandoRef.current = true;
       setIsLoading(true);
-      // Delay mínimo de 2.5 segundos para melhorar a experiência
-      const [response] = await Promise.all([
-        api.get('/auth/me'),
-        new Promise<void>((resolve) => setTimeout(() => resolve(), 2500))
-      ]);
+      
+      const response = await api.get('/auth/me');
       // A resposta vem como { success: true, data: usuario }
       const usuario = response.data.data || response.data;
       setUsuario(usuario);
     } catch (error: any) {
       if (error.response?.status === 429) {
-        // Não limpar token em caso de 429, apenas aguardar
+        // Não limpar token em caso de 429, apenas aguardar e não tentar novamente
         console.warn('Muitas requisições. Aguardando...');
+        // Aguardar antes de permitir nova tentativa
+        await new Promise(resolve => setTimeout(resolve, 5000));
         return;
       }
       localStorage.removeItem('token');
@@ -69,14 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, senha: string) => {
     try {
-      // Delay mínimo de 2.5 segundos para melhorar a experiência de login
-      const [response] = await Promise.all([
-        api.post('/auth/login', {
-          email,
-          senha
-        }),
-        new Promise<void>((resolve) => setTimeout(() => resolve(), 2500))
-      ]);
+      const response = await api.post('/auth/login', {
+        email,
+        senha
+      });
 
       // A resposta vem como { success: true, data: { token, usuario } }
       const { token: newToken, usuario: newUsuario } = response.data.data || response.data;
@@ -91,9 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       // Tratar erro 429 (Too Many Requests)
       if (error.response?.status === 429) {
-        const customError: any = new Error('Muitas tentativas de login. Aguarde alguns instantes e tente novamente.');
+        const retryAfter = error.response.headers['retry-after'] || 15;
+        const customError: any = new Error(`Muitas tentativas de login. Aguarde ${retryAfter} segundos e tente novamente.`);
         customError.response = error.response;
         customError.isNetworkError = false;
+        customError.retryAfter = retryAfter;
         throw customError;
       }
       // A API retorna erros no formato: { success: false, error: { message: "..." } }

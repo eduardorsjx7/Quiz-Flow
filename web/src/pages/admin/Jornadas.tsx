@@ -348,11 +348,37 @@ const AdminJornadas: React.FC = () => {
                       <Chip label={jornada._count.fases} size="small" color="default" />
                     </TableCell>
                     <TableCell align="center">
-                      <Chip
-                        label={jornada.ativo ? 'Ativa' : 'Inativa'}
-                        color={jornada.ativo ? 'success' : 'default'}
-                        size="small"
-                      />
+                      {(() => {
+                        // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
+                        const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
+                        // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
+                        const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
+                        
+                        let label = 'Ativa';
+                        let color: 'success' | 'default' | 'warning' | 'error' = 'success';
+                        
+                        if (estaFechada) {
+                          label = 'Fechada';
+                          color = 'default';
+                        } else if (estaBloqueada) {
+                          label = 'Bloqueada';
+                          color = 'error';
+                        } else if (jornada.ativo) {
+                          label = 'Ativa';
+                          color = 'success';
+                        } else {
+                          label = 'Inativa';
+                          color = 'default';
+                        }
+                        
+                        return (
+                          <Chip
+                            label={label}
+                            color={color}
+                            size="small"
+                          />
+                        );
+                      })()}
                     </TableCell>
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
@@ -490,18 +516,45 @@ const AdminJornadas: React.FC = () => {
                         >
                           {jornada.titulo}
                         </Typography>
-                        <Chip
-                          icon={jornada.ativo ? <CheckCircleIcon /> : undefined}
-                          label={jornada.ativo ? 'Ativa' : 'Inativa'}
-                          color={jornada.ativo ? 'success' : 'default'}
-                          size="small"
-                          sx={{
-                            fontWeight: 500,
-                            ml: 1,
-                            fontSize: '0.7rem',
-                            height: 24,
-                          }}
-                        />
+                        {(() => {
+                          // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
+                          const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
+                          // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
+                          const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
+                          
+                          let label = 'Ativa';
+                          let color: 'success' | 'default' | 'warning' | 'error' = 'success';
+                          const temIcone = jornada.ativo && !estaFechada && !estaBloqueada;
+                          
+                          if (estaFechada) {
+                            label = 'Fechada';
+                            color = 'default';
+                          } else if (estaBloqueada) {
+                            label = 'Bloqueada';
+                            color = 'error';
+                          } else if (jornada.ativo) {
+                            label = 'Ativa';
+                            color = 'success';
+                          } else {
+                            label = 'Inativa';
+                            color = 'default';
+                          }
+                          
+                          return (
+                            <Chip
+                              {...(temIcone && { icon: <CheckCircleIcon /> })}
+                              label={label}
+                              color={color}
+                              size="small"
+                              sx={{
+                                fontWeight: 500,
+                                ml: 1,
+                                fontSize: '0.7rem',
+                                height: 24,
+                              }}
+                            />
+                          );
+                        })()}
                       </Box>
                       
                       <Box 

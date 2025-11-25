@@ -21,6 +21,8 @@ import {
   Divider,
   Breadcrumbs,
   Link,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   EmojiEvents as EmojiEventsIcon,
@@ -29,8 +31,12 @@ import {
   Assessment as AssessmentIcon,
   TrendingUp as TrendingUpIcon,
   Home as HomeIcon,
+  Settings as SettingsIcon,
+  School as SchoolIcon,
+  PlayArrow as PlayArrowIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 
@@ -70,6 +76,17 @@ interface EstatisticasCompletas {
     ativo: boolean;
     totalFases: number;
   };
+  faseAtual?: {
+    id: number;
+    titulo: string;
+    ordem: number;
+  } | null;
+  proximaFase?: {
+    id: number;
+    titulo: string;
+    ordem: number;
+    dataDesbloqueio: string | null;
+  } | null;
   estatisticasGerais: {
     totalFases: number;
     totalQuizzes: number;
@@ -131,7 +148,7 @@ const DetalhesJornada: React.FC = () => {
     );
   }
 
-  const { jornada, estatisticasGerais, estatisticasPorFase, ranking } = dados;
+  const { jornada, faseAtual, proximaFase, estatisticasGerais, estatisticasPorFase, ranking } = dados;
 
   // Preparar dados para gráfico de acertos por fase
   const dadosGraficoAcertos = estatisticasPorFase.map((fase) => ({
@@ -214,7 +231,7 @@ const DetalhesJornada: React.FC = () => {
         {/* Cabeçalho */}
         <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Box>
+            <Box sx={{ flex: 1 }}>
               <Typography 
                 variant="h4" 
                 gutterBottom 
@@ -232,16 +249,100 @@ const DetalhesJornada: React.FC = () => {
                 {jornada.titulo}
               </Typography>
               {jornada.descricao && (
-                <Typography variant="body1" color="text.secondary" sx={{ color: '#6b7280' }}>
+                <Typography variant="body1" color="text.secondary" sx={{ color: '#6b7280', mb: 2 }}>
                   {jornada.descricao}
                 </Typography>
               )}
+              
+              {/* Informações de Fase Atual e Próxima Fase */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+                {proximaFase && proximaFase.dataDesbloqueio ? (
+                  <>
+                    {faseAtual && (
+                      <Chip
+                        icon={<PlayArrowIcon />}
+                        label={`Fase Atual: ${faseAtual.ordem}ª - ${faseAtual.titulo}`}
+                        color="primary"
+                        sx={{ 
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          height: 'auto',
+                          py: 1,
+                        }}
+                      />
+                    )}
+                    <Chip
+                      icon={<ScheduleIcon />}
+                      label={`Próxima Fase: ${proximaFase.ordem}ª - ${proximaFase.titulo} - ${new Date(proximaFase.dataDesbloqueio).toLocaleDateString('pt-BR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}`}
+                      color="secondary"
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        height: 'auto',
+                        py: 1,
+                      }}
+                    />
+                  </>
+                ) : !proximaFase && (
+                  <Chip
+                    icon={<PlayArrowIcon />}
+                    label="Todas as fases estão abertas"
+                    color="success"
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      height: 'auto',
+                      py: 1,
+                    }}
+                  />
+                )}
+              </Box>
             </Box>
-            <Chip
-              label={jornada.ativo ? 'Ativa' : 'Inativa'}
-              color={jornada.ativo ? 'success' : 'default'}
-              sx={{ fontWeight: 600 }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, ml: 2 }}>
+              <Chip
+                label={jornada.ativo ? 'Ativa' : 'Inativa'}
+                color={jornada.ativo ? 'success' : 'default'}
+                sx={{ fontWeight: 600 }}
+              />
+              <Tooltip title="Configurar Jornada">
+                <IconButton
+                  onClick={() => navigate(`/admin/jornadas/${id}/configurar`)}
+                  sx={{
+                    color: '#011b49',
+                    '&:hover': {
+                      backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      color: '#e62816',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                  aria-label="Configurar jornada"
+                >
+                  <SettingsIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Gerenciar Fases">
+                <IconButton
+                  onClick={() => navigate(`/admin/jornadas/${id}/fases`)}
+                  sx={{
+                    color: '#011b49',
+                    '&:hover': {
+                      backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      color: '#e62816',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                  aria-label="Gerenciar fases"
+                >
+                  <SchoolIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         </Paper>
 
@@ -324,7 +425,7 @@ const DetalhesJornada: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="nome" tick={{ fill: '#011b49' }} />
                   <YAxis tick={{ fill: '#011b49' }} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       backgroundColor: '#fff', 
                       border: '1px solid rgba(255, 44, 25, 0.2)',
@@ -348,7 +449,7 @@ const DetalhesJornada: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="nome" tick={{ fill: '#011b49' }} />
                   <YAxis tick={{ fill: '#011b49' }} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       backgroundColor: '#fff', 
                       border: '1px solid rgba(255, 44, 25, 0.2)',

@@ -43,44 +43,112 @@ import {
   DraggableProvided,
   DraggableStateSnapshot,
 } from '@hello-pangea/dnd';
+import { FormControlLabel, Switch, Grid } from '@mui/material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { useToast } from '../../contexts/ToastContext';
 
 interface Fase {
   id: string;      // id interno só para o DnD
   titulo: string;
   ordem: number;
+  faseAberta: boolean;
+  dataDesbloqueio: Date | null;
+  dataBloqueio: Date | null;
 }
 
 interface AddPhaseDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (titulo: string) => void;
+  onSave: (fase: Omit<Fase, 'id' | 'ordem'>) => void;
 }
 
 const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }) => {
+  const { showError } = useToast();
   const [titulo, setTitulo] = useState('');
+  const [faseAberta, setFaseAberta] = useState(true);
+  const [dataDesbloqueio, setDataDesbloqueio] = useState<Date | null>(null);
+  const [dataDesbloqueioStr, setDataDesbloqueioStr] = useState('');
+  const [horaDesbloqueioStr, setHoraDesbloqueioStr] = useState('');
+  const [dataBloqueioStr, setDataBloqueioStr] = useState('');
+  const [horaBloqueioStr, setHoraBloqueioStr] = useState('');
   const [erro, setErro] = useState('');
 
+  const combineDateAndTime = (dateStr: string, timeStr: string): Date | null => {
+    if (!dateStr) return null;
+    if (!timeStr) {
+      return new Date(`${dateStr}T00:00`);
+    }
+    return new Date(`${dateStr}T${timeStr}`);
+  };
+
+  const validarDatas = (): boolean => {
+    if (faseAberta) return true;
+    
+    if (!dataDesbloqueioStr) {
+      setErro('Data de desbloqueio é obrigatória quando a fase não está aberta');
+      return false;
+    }
+
+    const dataDesbloqueio = combineDateAndTime(dataDesbloqueioStr, horaDesbloqueioStr || '00:00');
+    const dataBloqueio = dataBloqueioStr ? combineDateAndTime(dataBloqueioStr, horaBloqueioStr || '00:00') : null;
+
+    if (dataBloqueio && dataDesbloqueio && dataDesbloqueio.getTime() >= dataBloqueio.getTime()) {
+      setErro('A data de desbloqueio deve ser anterior à data de bloqueio');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleConfirmar = () => {
+    setErro('');
+    
     if (!titulo.trim()) {
       setErro('Informe o nome da fase');
       return;
     }
-    onSave(titulo.trim());
+
+    if (!validarDatas()) {
+      return;
+    }
+
+    const dataDesbloqueioFinal = faseAberta ? null : combineDateAndTime(dataDesbloqueioStr, horaDesbloqueioStr || '00:00');
+    const dataBloqueioFinal = faseAberta ? null : (dataBloqueioStr ? combineDateAndTime(dataBloqueioStr, horaBloqueioStr || '00:00') : null);
+
+    onSave({
+      titulo: titulo.trim(),
+      faseAberta,
+      dataDesbloqueio: dataDesbloqueioFinal,
+      dataBloqueio: dataBloqueioFinal,
+    });
+    
+    // Resetar campos
     setTitulo('');
+    setFaseAberta(true);
+    setDataDesbloqueio(null);
+    setDataDesbloqueioStr('');
+    setHoraDesbloqueioStr('');
+    setDataBloqueioStr('');
+    setHoraBloqueioStr('');
     setErro('');
     onClose();
   };
 
   const handleClose = () => {
     setTitulo('');
+    setFaseAberta(true);
+    setDataDesbloqueio(null);
+    setDataDesbloqueioStr('');
+    setHoraDesbloqueioStr('');
+    setDataBloqueioStr('');
+    setHoraBloqueioStr('');
     setErro('');
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>Adicionar fase da jornada</DialogTitle>
       <DialogContent dividers>
         {erro && (
@@ -97,6 +165,114 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
           required
           placeholder="Ex: Setor Fiscal, Setor Comercial, Sucesso do Cliente"
         />
+        
+        <Box sx={{ mt: 2, mb: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={faseAberta}
+                onChange={(e) => {
+                  setFaseAberta(e.target.checked);
+                  if (e.target.checked) {
+                    setDataDesbloqueioStr('');
+                    setHoraDesbloqueioStr('');
+                    setDataBloqueioStr('');
+                    setHoraBloqueioStr('');
+                    setDataDesbloqueio(null);
+                  }
+                }}
+                color="primary"
+              />
+            }
+            label="Fase Aberta (sem data de desbloqueio/bloqueio)"
+          />
+        </Box>
+
+        {!faseAberta && (
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Data de Desbloqueio"
+                type="date"
+                value={dataDesbloqueioStr}
+                onChange={(e) => {
+                  setDataDesbloqueioStr(e.target.value);
+                  if (e.target.value) {
+                    const newDate = combineDateAndTime(e.target.value, horaDesbloqueioStr || '00:00');
+                    setDataDesbloqueio(newDate);
+                  } else {
+                    setDataDesbloqueio(null);
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+                required
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hora de Desbloqueio"
+                type="time"
+                value={horaDesbloqueioStr}
+                onChange={(e) => {
+                  setHoraDesbloqueioStr(e.target.value);
+                  if (dataDesbloqueioStr) {
+                    const newDate = combineDateAndTime(dataDesbloqueioStr, e.target.value || '00:00');
+                    setDataDesbloqueio(newDate);
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+                disabled={!dataDesbloqueioStr}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Data de Bloqueio"
+                type="date"
+                value={dataBloqueioStr}
+                onChange={(e) => {
+                  setDataBloqueioStr(e.target.value);
+                  if (e.target.value) {
+                    const newDate = combineDateAndTime(e.target.value, horaBloqueioStr || '00:00');
+                    
+                    // Validar se dataDesbloqueio < dataBloqueio
+                    if (dataDesbloqueio && newDate && dataDesbloqueio.getTime() >= newDate.getTime()) {
+                      showError('A data de desbloqueio deve ser anterior à data de bloqueio', 'Data inválida');
+                    }
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Hora de Bloqueio"
+                type="time"
+                value={horaBloqueioStr}
+                onChange={(e) => {
+                  setHoraBloqueioStr(e.target.value);
+                  if (dataBloqueioStr) {
+                    const newDate = combineDateAndTime(dataBloqueioStr, e.target.value || '00:00');
+                    
+                    // Validar se dataDesbloqueio < dataBloqueio
+                    if (dataDesbloqueio && newDate && dataDesbloqueio.getTime() >= newDate.getTime()) {
+                      showError('A data de desbloqueio deve ser anterior à data de bloqueio', 'Data inválida');
+                    }
+                  }
+                }}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+                disabled={!dataBloqueioStr}
+              />
+            </Grid>
+          </Grid>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} color="inherit">
@@ -165,13 +341,51 @@ const CriarJornada: React.FC = () => {
     setStep(1);
   };
 
-  const handleAddFase = (tituloFase: string) => {
+  const ordenarFasesPorDataDesbloqueio = (fasesArray: Fase[]): Fase[] => {
+    return [...fasesArray].sort((a, b) => {
+      // Fases abertas vão para o final
+      if (a.faseAberta && b.faseAberta) return a.ordem - b.ordem;
+      if (a.faseAberta) return 1;
+      if (b.faseAberta) return -1;
+      
+      // Fases sem data de desbloqueio vão para o final
+      if (!a.dataDesbloqueio && !b.dataDesbloqueio) return a.ordem - b.ordem;
+      if (!a.dataDesbloqueio) return 1;
+      if (!b.dataDesbloqueio) return -1;
+      
+      // Ordenar por data de desbloqueio
+      const timeA = a.dataDesbloqueio.getTime();
+      const timeB = b.dataDesbloqueio.getTime();
+      
+      if (timeA !== timeB) {
+        return timeA - timeB;
+      }
+      
+      // Se as datas forem iguais, manter a ordem original
+      return a.ordem - b.ordem;
+    }).map((fase, index) => ({
+      ...fase,
+      ordem: index + 1
+    }));
+  };
+
+  const handleAddFase = (faseData: Omit<Fase, 'id' | 'ordem'>) => {
     const novaFase: Fase = {
       id: `${Date.now()}-${Math.random()}`,
-      titulo: tituloFase,
+      ...faseData,
       ordem: fases.length + 1,
     };
-    setFases((prev) => [...prev, novaFase]);
+    
+    const novasFases = [...fases, novaFase];
+    
+    // Se a fase não está aberta, ordenar automaticamente por data de desbloqueio
+    if (!faseData.faseAberta) {
+      const fasesOrdenadas = ordenarFasesPorDataDesbloqueio(novasFases);
+      setFases(fasesOrdenadas);
+    } else {
+      setFases(novasFases);
+    }
+    
     setErrosCampos((prev) => ({ ...prev, fases: undefined }));
   };
 
@@ -192,7 +406,16 @@ const CriarJornada: React.FC = () => {
 
     if (origemIndex === destinoIndex) return;
 
-    const novasFases = Array.from(fases);
+    // Ordenar fases antes de processar o drag
+    const fasesOrdenadas = [...fases].sort((a, b) => a.ordem - b.ordem);
+    
+    // Verificar se a fase que está sendo arrastada está aberta
+    const faseArrastada = fasesOrdenadas[origemIndex];
+    if (!faseArrastada.faseAberta) {
+      return; // Não permite arrastar se a fase não estiver aberta
+    }
+
+    const novasFases = Array.from(fasesOrdenadas);
     const [removida] = novasFases.splice(origemIndex, 1);
     novasFases.splice(destinoIndex, 0, removida);
 
@@ -202,6 +425,17 @@ const CriarJornada: React.FC = () => {
     }));
 
     setFases(fasesReordenadas);
+  };
+
+  const formatDateTimeDisplay = (date: Date | null): string => {
+    if (!date) return 'Não definida';
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
   };
 
   const handleImagemChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,10 +488,14 @@ const CriarJornada: React.FC = () => {
       if (imagemCapa) {
         formData.append('imagemCapa', imagemCapa);
       }
+      // Ordenar fases por ordem antes de enviar
+      const fasesOrdenadas = [...fases].sort((a, b) => a.ordem - b.ordem);
       formData.append('fases', JSON.stringify(
-        fases.map((f) => ({
+        fasesOrdenadas.map((f) => ({
           titulo: f.titulo,
           ordem: f.ordem,
+          dataDesbloqueio: f.dataDesbloqueio?.toISOString() || null,
+          dataBloqueio: f.dataBloqueio?.toISOString() || null,
         }))
       ));
 
@@ -587,20 +825,23 @@ const CriarJornada: React.FC = () => {
                               <TableCell width={40} />
                               <TableCell>Ordem</TableCell>
                               <TableCell>Nome da fase</TableCell>
+                              <TableCell align="center">Desbloqueio</TableCell>
+                              <TableCell align="center">Bloqueio</TableCell>
                               <TableCell align="right">Ações</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {fases.map((fase, index) => (
+                            {[...fases].sort((a, b) => a.ordem - b.ordem).map((fase, index) => (
                               <Draggable
                                 key={fase.id}
                                 draggableId={fase.id}
                                 index={index}
+                                isDragDisabled={!fase.faseAberta}
                               >
                                 {(dragProvided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
                                   <TableRow
                                     ref={dragProvided.innerRef}
-                                    {...dragProvided.draggableProps}
+                                    {...(fase.faseAberta ? dragProvided.draggableProps : {})}
                                     sx={{
                                       bgcolor: snapshot.isDragging
                                         ? 'grey.100'
@@ -608,10 +849,12 @@ const CriarJornada: React.FC = () => {
                                     }}
                                   >
                                     <TableCell
-                                      {...dragProvided.dragHandleProps}
-                                      sx={{ cursor: 'grab' }}
+                                      {...(fase.faseAberta ? dragProvided.dragHandleProps : {})}
+                                      sx={{ cursor: fase.faseAberta ? 'grab' : 'default' }}
                                     >
-                                      <DragIndicatorIcon fontSize="small" color="disabled" />
+                                      {fase.faseAberta && (
+                                        <DragIndicatorIcon fontSize="small" color="disabled" />
+                                      )}
                                     </TableCell>
                                     <TableCell>
                                       <Chip
@@ -625,6 +868,38 @@ const CriarJornada: React.FC = () => {
                                       <Typography variant="body2" fontWeight={600}>
                                         {fase.titulo}
                                       </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      {fase.faseAberta ? (
+                                        <Chip
+                                          label="Aberta"
+                                          color="success"
+                                          size="small"
+                                        />
+                                      ) : fase.dataDesbloqueio ? (
+                                        <Typography variant="body2">
+                                          {formatDateTimeDisplay(fase.dataDesbloqueio)}
+                                        </Typography>
+                                      ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                          Não definida
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      {fase.faseAberta ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                          -
+                                        </Typography>
+                                      ) : fase.dataBloqueio ? (
+                                        <Typography variant="body2" color="error">
+                                          {formatDateTimeDisplay(fase.dataBloqueio)}
+                                        </Typography>
+                                      ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                          Não definida
+                                        </Typography>
+                                      )}
                                     </TableCell>
                                     <TableCell align="right">
                                       <IconButton

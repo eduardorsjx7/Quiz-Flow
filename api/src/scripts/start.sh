@@ -20,6 +20,8 @@ rm -f prisma/schema.temp.prisma
 # Criar tabelas via SQL
 PGPASSWORD=quizpassword psql -h postgres -U quizuser -d quizflow -f prisma/init.sql > /dev/null 2>&1
 [ -f "prisma/update-enums.sql" ] && PGPASSWORD=quizpassword psql -h postgres -U quizuser -d quizflow -f prisma/update-enums.sql > /dev/null 2>&1 || true
+# Executar migrations para adicionar colunas que podem não existir em bancos antigos
+[ -f "prisma/migrate-all.sql" ] && PGPASSWORD=quizpassword psql -h postgres -U quizuser -d quizflow -f prisma/migrate-all.sql > /dev/null 2>&1 || true
 
 # Inicializar banco (criar admin se não existir)
 npm run init-db > /dev/null 2>&1 || true

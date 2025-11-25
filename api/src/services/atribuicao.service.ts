@@ -187,12 +187,19 @@ export class AtribuicaoService {
               id: true,
               jornadaId: true,
               dataDesbloqueio: true,
+              dataBloqueio: true,
+              ativo: true,
             },
           },
         },
       });
 
       if (!quiz || !quiz.fase) {
+        return false;
+      }
+
+      // Se a fase não está ativa, o usuário não tem acesso
+      if (!quiz.fase.ativo) {
         return false;
       }
 
@@ -216,9 +223,13 @@ export class AtribuicaoService {
 
       // Se tem sequência de desbloqueio, verificar se a fase está desbloqueada
       if (quiz.fase.dataDesbloqueio) {
+        const agora = new Date();
         // Verificar se a data de desbloqueio já passou
-        const estaDesbloqueada = new Date(quiz.fase.dataDesbloqueio) <= new Date();
-        if (estaDesbloqueada) {
+        const desbloqueada = new Date(quiz.fase.dataDesbloqueio) <= agora;
+        // Verificar se a data de bloqueio já passou (se existir)
+        const bloqueada = quiz.fase.dataBloqueio ? new Date(quiz.fase.dataBloqueio) <= agora : false;
+        // Está desbloqueada se passou a data de desbloqueio E não passou a data de bloqueio
+        if (desbloqueada && !bloqueada) {
           return true;
         }
       }

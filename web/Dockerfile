@@ -15,12 +15,15 @@ RUN npm install --legacy-peer-deps
 # Limpar cache de build
 RUN rm -rf node_modules/.cache
 
+# Copiar script de entrada primeiro (antes de copiar tudo)
+COPY docker-entrypoint.sh /tmp/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /tmp/docker-entrypoint.sh && \
+    cp /tmp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh && \
+    rm /tmp/docker-entrypoint.sh
+
 # Copiar o resto dos arquivos
 COPY . .
-
-# Copiar e configurar script de entrada
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3000
 

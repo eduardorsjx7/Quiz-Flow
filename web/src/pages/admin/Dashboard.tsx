@@ -133,10 +133,13 @@ const AdminDashboard: React.FC = () => {
       setJornadas(jornadasArray);
       setJornadasFiltradas(jornadasArray);
       
-      // Carregar ranking e métricas usando os dados já obtidos
+      // Filtrar apenas jornadas ativas para ranking e métricas
+      const jornadasAtivas = jornadasArray.filter((j: Jornada) => j.ativo);
+      
+      // Carregar ranking e métricas usando apenas jornadas ativas
       await Promise.all([
-        carregarRankingGeral(jornadasArray),
-        carregarMetricasGerais(jornadasArray),
+        carregarRankingGeral(jornadasAtivas),
+        carregarMetricasGerais(jornadasAtivas),
       ]);
     } catch (error: any) {
       // Tratar erro 429 (Too Many Requests)
@@ -861,32 +864,6 @@ const AdminDashboard: React.FC = () => {
                   >
                     Adicione uma nova jornada de capacitação ao sistema
                   </Typography>
-
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/admin/jornadas/novo');
-                    }}
-                    sx={{
-                      fontWeight: 'bold',
-                      py: 1,
-                      px: 2,
-                      borderRadius: 2,
-                      fontSize: '0.85rem',
-                      background: 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #e62816 0%, #ff2c19 100%)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 16px rgba(255, 44, 25, 0.3)',
-                      },
-                      transition: 'all 0.3s ease-in-out',
-                    }}
-                    aria-label="Criar nova jornada"
-                  >
-                    Criar Jornada
-                  </Button>
                 </Paper>
               </Box>
               </Slider>

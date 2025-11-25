@@ -87,8 +87,13 @@ export class FaseService extends BaseService {
           if (jornadaTemDesbloqueio) {
             // Se tem sequência de desbloqueio, verificar se está desbloqueada
             if (fase.dataDesbloqueio) {
+              const agora = new Date();
               // Verificar se a data de desbloqueio já passou
-              estaDesbloqueada = new Date(fase.dataDesbloqueio) <= new Date();
+              const desbloqueada = new Date(fase.dataDesbloqueio) <= agora;
+              // Verificar se a data de bloqueio já passou (se existir)
+              const bloqueada = fase.dataBloqueio ? new Date(fase.dataBloqueio) <= agora : false;
+              // Está desbloqueada se passou a data de desbloqueio E não passou a data de bloqueio
+              estaDesbloqueada = desbloqueada && !bloqueada;
             } else {
               // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
               estaDesbloqueada = !!desbloqueio;
@@ -148,6 +153,7 @@ export class FaseService extends BaseService {
         },
         select: {
           dataDesbloqueio: true,
+          dataBloqueio: true,
         },
       });
 
@@ -155,9 +161,17 @@ export class FaseService extends BaseService {
       const desbloqueio = (fase as any).desbloqueios?.[0];
       
       // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas
-      const estaDesbloqueada = jornadaTemDesbloqueio 
-        ? !!desbloqueio || ((fase as any).dataDesbloqueio && new Date((fase as any).dataDesbloqueio) <= new Date())
-        : true; // Todas desbloqueadas se não houver sequência de desbloqueio
+      let estaDesbloqueada = true;
+      if (jornadaTemDesbloqueio) {
+        if ((fase as any).dataDesbloqueio) {
+          const agora = new Date();
+          const desbloqueada = new Date((fase as any).dataDesbloqueio) <= agora;
+          const bloqueada = (fase as any).dataBloqueio ? new Date((fase as any).dataBloqueio) <= agora : false;
+          estaDesbloqueada = desbloqueada && !bloqueada;
+        } else {
+          estaDesbloqueada = !!desbloqueio;
+        }
+      }
 
       return {
         ...fase,

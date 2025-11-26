@@ -1,7 +1,5 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
-import { QuestionIconFloating } from './QuestionIconFloating';
-import './animated-background.css';
 
 interface FaseTabuleiro {
   id: number;
@@ -37,8 +35,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const marginBottom = 120;
   const rowGap = 140;
 
-  const phaseStepY = 40;
-  const circleRadius = 40;
+  const phaseStepY = 50;
+  const circleRadius = 55;
 
   const total = fasesOrdenadas.length;
   const groups = Math.ceil(total / 3);
@@ -67,29 +65,78 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
     return { x, y };
   };
 
+  // Calcula o ponto na borda do círculo baseado no ângulo
+  const calcularPontoNaBorda = (
+    centro: { x: number; y: number },
+    outroPonto: { x: number; y: number },
+    raio: number
+  ) => {
+    const dx = outroPonto.x - centro.x;
+    const dy = outroPonto.y - centro.y;
+    const angulo = Math.atan2(dy, dx);
+    
+    return {
+      x: centro.x + Math.cos(angulo) * raio,
+      y: centro.y + Math.sin(angulo) * raio,
+    };
+  };
+
   const calcularCurva = (
     pos1: { x: number; y: number },
     pos2: { x: number; y: number },
-    curvaParaCima: boolean
+    curvaParaCima: boolean,
+    doCentroParaBaixo: boolean = false
   ) => {
-    const dx = pos2.x - pos1.x;
+    let pontoInicio: { x: number; y: number };
+    let pontoFim: { x: number; y: number };
 
-    const amplitudeUp = 40;
-    const amplitudeDown = 80;
+    if (doCentroParaBaixo) {
+      // Começa do centro da fase 1 e termina na parte inferior da fase 2
+      pontoInicio = pos1; // Centro
+      pontoFim = {
+        x: pos2.x,
+        y: pos2.y + circleRadius, // Parte inferior do círculo
+      };
+    } else {
+      // Calcular pontos na borda dos círculos
+      pontoInicio = calcularPontoNaBorda(pos1, pos2, circleRadius);
+      pontoFim = calcularPontoNaBorda(pos2, pos1, circleRadius);
+    }
 
-    const amplitude = curvaParaCima ? amplitudeUp : amplitudeDown;
+    const dx = pontoFim.x - pontoInicio.x;
 
-    const midY = (pos1.y + pos2.y) / 2;
-    const controlY = curvaParaCima ? midY - amplitude : midY + amplitude;
+    let amplitudeUp = 40;
+    let amplitudeDown = 80;
+    let c1x: number;
+    let c2x: number;
+    let controlY1: number;
+    let controlY2: number;
 
-    const c1x = pos1.x + dx * 0.25;
-    const c2x = pos1.x + dx * 0.75;
+    if (doCentroParaBaixo) {
+      // Curva mais acentuada no final, direcionando para a direita
+      amplitudeDown = 100;
+      const midY = (pontoInicio.y + pontoFim.y) / 2;
+      controlY1 = midY + amplitudeDown * 0.6;
+      controlY2 = midY + amplitudeDown;
+      
+      // Segundo ponto de controle mais próximo do final e mais à direita
+      c1x = pontoInicio.x + dx * 0.3;
+      c2x = pontoInicio.x + dx * 0.85; // Mais próximo do final
+    } else {
+      const amplitude = curvaParaCima ? amplitudeUp : amplitudeDown;
+      const midY = (pontoInicio.y + pontoFim.y) / 2;
+      controlY1 = curvaParaCima ? midY - amplitude : midY + amplitude;
+      controlY2 = controlY1;
+      
+      c1x = pontoInicio.x + dx * 0.25;
+      c2x = pontoInicio.x + dx * 0.75;
+    }
 
     return `
-      M ${pos1.x} ${pos1.y}
-      C ${c1x} ${controlY},
-        ${c2x} ${controlY},
-        ${pos2.x} ${pos2.y}
+      M ${pontoInicio.x} ${pontoInicio.y}
+      C ${c1x} ${controlY1},
+        ${c2x} ${controlY2},
+        ${pontoFim.x} ${pontoFim.y}
     `;
   };
 
@@ -119,42 +166,9 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
     };
   };
 
-  const getConnectionColor = (statusProx: string) => {
-    if (statusProx === 'bloqueada') return 'rgba(148, 163, 184, 0.7)';
-    if (statusProx === 'finalizada') return '#16a34a';
-    if (statusProx === 'desbloqueada') return '#ff2c19';
-    return 'rgba(15, 23, 42, 0.6)';
+  const getConnectionColor = () => {
+    return '#011b49'; // Cor azul escura da aplicação
   };
-
-  // Interrogações para o tabuleiro (18 interrogações)
-  const questionsReduced = useMemo(() => [
-    // Cantos
-    { color: "#2196F3", width: 100, top: "5%", left: "5%", rotate: -15 },
-    { color: "#E62816", width: 120, top: "8%", left: "92%", rotate: 10 },
-    { color: "#4CAF50", width: 110, top: "92%", left: "5%", rotate: -8 },
-    { color: "#FFC107", width: 125, top: "95%", left: "90%", rotate: -10 },
-    // Bordas laterais
-    { color: "#2196F3", width: 95, top: "20%", left: "3%", rotate: -12 },
-    { color: "#E62816", width: 110, top: "40%", left: "2%", rotate: 14 },
-    { color: "#4CAF50", width: 100, top: "60%", left: "3%", rotate: -9 },
-    { color: "#FFC107", width: 115, top: "80%", left: "2%", rotate: 8 },
-    { color: "#2196F3", width: 95, top: "25%", left: "97%", rotate: -12 },
-    { color: "#E62816", width: 110, top: "45%", left: "98%", rotate: 14 },
-    { color: "#4CAF50", width: 100, top: "65%", left: "97%", rotate: -9 },
-    { color: "#FFC107", width: 115, top: "85%", left: "98%", rotate: 8 },
-    // Bordas superior e inferior
-    { color: "#2196F3", width: 105, top: "2%", left: "30%", rotate: -5 },
-    { color: "#E62816", width: 115, top: "2%", left: "70%", rotate: 7 },
-    { color: "#4CAF50", width: 100, top: "98%", left: "30%", rotate: -5 },
-    { color: "#FFC107", width: 110, top: "98%", left: "70%", rotate: 7 },
-    // Centro
-    { color: "#2196F3", width: 90, top: "50%", left: "25%", rotate: -6 },
-    { color: "#E62816", width: 105, top: "50%", left: "75%", rotate: 9 },
-  ].map((q, i) => ({
-    ...q,
-    delay: Math.random() * 3,
-    duration: Math.random() * 1.5 + 5.5,
-  })), []);
 
   return (
     <Box
@@ -169,64 +183,14 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
       <Box
         sx={{
           position: 'relative',
-          borderRadius: 3,
-          padding: '3px',
-          background: 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
-          boxShadow: '0 2px 12px rgba(1, 27, 73, 0.08)',
-          transition: 'all 0.3s ease-in-out',
           width: '100%',
           maxWidth: '95%',
-          '&:hover': {
-            boxShadow: '0 8px 24px rgba(1, 27, 73, 0.12)',
-          },
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
-        <Box
-          sx={{
-            position: 'relative',
-            borderRadius: 2.5,
-            padding: 4,
-            background: '#ffffff',
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Fundo animado com interrogações (reduzido e desfocado) */}
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 0,
-              pointerEvents: 'none',
-              filter: 'blur(3px)',
-              opacity: 0.4,
-            }}
-          >
-            <div className="animated-background">
-              {/* Gradiente de fundo */}
-              <div className="bg-gradient" />
-              
-              {/* Interrogações (18 interrogações) */}
-              {questionsReduced.map((q, i) => (
-                <QuestionIconFloating
-                  key={`question-${i}`}
-                  color={q.color}
-                  width={q.width}
-                  top={q.top}
-                  left={q.left}
-                  duration={q.duration}
-                  delay={q.delay}
-                  rotate={q.rotate}
-                />
-              ))}
-            </div>
-          </Box>
-
-          <svg
+        <svg
             width="100%"
             height={svgHeight}
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -258,24 +222,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                 </feMerge>
               </filter>
 
-              <marker
-                id="arrow"
-                viewBox="0 0 12 12"
-                markerWidth="6"
-                markerHeight="6"
-                refY="6"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path
-                  d="M1,1 L11,6 L1,11"
-                  fill="none"
-                  stroke="#12263a"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </marker>
+
 
               {/* Gradiente para borda - cor primária da aplicação */}
               <linearGradient
@@ -312,28 +259,14 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                     const faseProx = fasesOrdenadas[j];
 
                     const pos1 = calcularPosicao(i);
-                    const pos2Centro = calcularPosicao(j);
+                    const pos2 = calcularPosicao(j);
 
-                    let pontoFinal: { x: number; y: number };
-                    let curvaParaCima: boolean;
+                    const curvaParaCima = offset === 0;
+                    // Para a conexão 2->3 (offset === 1), sair do centro e terminar na parte inferior
+                    const doCentroParaBaixo = offset === 1;
 
-                    if (offset === 0) {
-                      pontoFinal = {
-                        x: pos2Centro.x - 60,
-                        y: pos2Centro.y,
-                      };
-                      curvaParaCima = true;
-                    } else {
-                      pontoFinal = {
-                        x: pos2Centro.x,
-                        y: pos2Centro.y + circleRadius + 40,
-                      };
-                      curvaParaCima = false;
-                    }
-
-                    const d = calcularCurva(pos1, pontoFinal, curvaParaCima);
-                    const statusProx = getStatusFase(faseProx);
-                    const connectionColor = getConnectionColor(statusProx);
+                    const d = calcularCurva(pos1, pos2, curvaParaCima, doCentroParaBaixo);
+                    const connectionColor = getConnectionColor();
 
                     return (
                       <path
@@ -341,15 +274,9 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                         d={d}
                         fill="none"
                         stroke={connectionColor}
-                        strokeWidth="2"
-                        strokeDasharray={
-                          statusProx === 'desbloqueada' ||
-                          statusProx === 'finalizada'
-                            ? '0'
-                            : '8 4'
-                        }
+                        strokeWidth="4"
+                        strokeDasharray="12 6"
                         strokeLinecap="round"
-                        markerEnd="url(#arrow)"
                         opacity="0.9"
                       />
                     );
@@ -372,7 +299,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   <circle
                     cx={pos.x + 1}
                     cy={pos.y + 1}
-                    r={40}
+                    r={circleRadius}
                     fill="rgba(0,0,0,0.05)"
                     opacity={opacity * 0.3}
                   />
@@ -381,7 +308,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r={40}
+                    r={circleRadius}
                     fill={fill}
                     stroke={stroke}
                     strokeWidth="3"
@@ -397,50 +324,132 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                     }
                     onMouseEnter={(e) => {
                       if (clicavel) {
-                        e.currentTarget.setAttribute('r', '42');
+                        e.currentTarget.setAttribute('r', String(circleRadius + 2));
                         e.currentTarget.setAttribute('stroke-width', '3.5');
                         e.currentTarget.style.filter =
                           'drop-shadow(0 4px 12px rgba(255, 44, 25, 0.3))';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.setAttribute('r', '40');
+                      e.currentTarget.setAttribute('r', String(circleRadius));
                       e.currentTarget.setAttribute('stroke-width', '3');
                       e.currentTarget.style.filter = 'url(#shadow)';
                     }}
                   />
 
-                  {/* Número da fase */}
-                  <text
-                    x={pos.x}
-                    y={pos.y + 10}
-                    textAnchor="middle"
-                    fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
-                    fontSize="28"
-                    fontWeight="700"
-                    fill={
-                      status === 'bloqueada'
-                        ? '#6b7280'
-                        : status === 'finalizada'
-                        ? '#14532d'
-                        : '#011b49'
-                    }
-                    style={{
-                      pointerEvents: 'none',
-                      transition: 'all 0.25s ease-in-out',
-                    }}
-                  >
-                    {fase.ordem}
-                  </text>
+                  {/* Número da fase - oculto se bloqueada (mostra cadeado) */}
+                  {status !== 'bloqueada' && (
+                    <text
+                      x={pos.x}
+                      y={pos.y + 12}
+                      textAnchor="middle"
+                      fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
+                      fontSize="32"
+                      fontWeight="700"
+                      fill={
+                        status === 'finalizada'
+                          ? '#14532d'
+                          : '#011b49'
+                      }
+                      style={{
+                        pointerEvents: 'none',
+                        transition: 'all 0.25s ease-in-out',
+                      }}
+                    >
+                      {fase.ordem}
+                    </text>
+                  )}
+
+                  {/* Efeito de cadeado para fases bloqueadas */}
+                  {status === 'bloqueada' && (
+                    <g>
+                      {/* Cadeado SVG */}
+                      <path
+                        d={`M ${pos.x - 12} ${pos.y - 8} 
+                            L ${pos.x - 12} ${pos.y - 2}
+                            A 4 4 0 0 1 ${pos.x - 8} ${pos.y + 2}
+                            L ${pos.x + 8} ${pos.y + 2}
+                            A 4 4 0 0 1 ${pos.x + 12} ${pos.y - 2}
+                            L ${pos.x + 12} ${pos.y - 8}
+                            Z
+                            M ${pos.x - 8} ${pos.y - 8}
+                            L ${pos.x - 8} ${pos.y - 4}
+                            L ${pos.x + 8} ${pos.y - 4}
+                            L ${pos.x + 8} ${pos.y - 8}
+                            Z
+                            M ${pos.x} ${pos.y - 4}
+                            L ${pos.x} ${pos.y + 2}`}
+                        fill="#6b7280"
+                        stroke="#6b7280"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </g>
+                  )}
+
+                  {/* Efeito para fases que vão abrir (desbloqueadas mas não finalizadas) */}
+                  {status === 'desbloqueada' && !fase.finalizada && (
+                    <g>
+                      {/* Círculo pulsante ao redor - primeiro */}
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={circleRadius + 8}
+                        fill="none"
+                        stroke="#ff2c19"
+                        strokeWidth="2"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        <animate
+                          attributeName="opacity"
+                          values="0.3;0.7;0.3"
+                          dur="2s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="r"
+                          values={`${circleRadius + 8};${circleRadius + 12};${circleRadius + 8}`}
+                          dur="2s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                      {/* Círculo pulsante ao redor - segundo (delay) */}
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={circleRadius + 4}
+                        fill="none"
+                        stroke="#ff2c19"
+                        strokeWidth="2"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        <animate
+                          attributeName="opacity"
+                          values="0.5;0.8;0.5"
+                          dur="2s"
+                          repeatCount="indefinite"
+                          begin="0.5s"
+                        />
+                        <animate
+                          attributeName="r"
+                          values={`${circleRadius + 4};${circleRadius + 8};${circleRadius + 4}`}
+                          dur="2s"
+                          repeatCount="indefinite"
+                          begin="0.5s"
+                        />
+                      </circle>
+                    </g>
+                  )}
 
                   {/* Título da fase */}
                   {fase.titulo && (
                     <g>
                       <rect
-                        x={pos.x - 70}
-                        y={pos.y + 50}
-                        width="140"
-                        height="24"
+                        x={pos.x - 90}
+                        y={pos.y + circleRadius + 10}
+                        width="180"
+                        height="28"
                         rx={2}
                         fill="#ffffff"
                         stroke="rgba(1, 27, 73, 0.1)"
@@ -449,10 +458,10 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       />
                       <text
                         x={pos.x}
-                        y={pos.y + 66}
+                        y={pos.y + circleRadius + 28}
                         textAnchor="middle"
                         fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
-                        fontSize="11"
+                        fontSize="14"
                         fill={
                           status === 'bloqueada'
                             ? '#6b7280'
@@ -463,8 +472,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                         fontWeight="600"
                         style={{ pointerEvents: 'none' }}
                       >
-                        {fase.titulo.length > 22
-                          ? `${fase.titulo.substring(0, 22)}...`
+                        {fase.titulo.length > 25
+                          ? `${fase.titulo.substring(0, 25)}...`
                           : fase.titulo}
                       </text>
                     </g>
@@ -474,8 +483,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
               );
             })}
 
-          </svg>
-        </Box>
+        </svg>
       </Box>
     </Box>
   );

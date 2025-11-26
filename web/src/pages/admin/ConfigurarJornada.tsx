@@ -1559,4 +1559,3 @@ const ConfigurarJornada: React.FC = () => {
 };
 
 export default ConfigurarJornada;
-

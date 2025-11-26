@@ -4,26 +4,22 @@ import {
   Container,
   Typography,
   Button,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
   Box,
   CircularProgress,
   Alert,
-  Chip,
   Breadcrumbs,
   Link,
   IconButton,
 } from '@mui/material';
 import {
-  Quiz as QuizIcon,
   ArrowBack as ArrowBackIcon,
   Settings as SettingsIcon,
   Home as HomeIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import FasesTabuleiro from '../../components/FasesTabuleiro';
 
 interface Fase {
   id: number;
@@ -198,19 +194,48 @@ const FasesJornada: React.FC = () => {
               </Typography>
             </Box>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<SettingsIcon />}
-            onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar`)}
-            sx={{
-              bgcolor: '#ff2c19',
-              '&:hover': {
-                bgcolor: '#e62816',
-              },
-            }}
-          >
-            Configurar Jornada
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar?adicionarFase=true`)}
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: '#ff2c19',
+                color: '#ffffff',
+                border: '2px solid #e62816',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: '#e62816',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                },
+              }}
+              title="Adicionar Fase"
+            >
+              <AddIcon />
+            </IconButton>
+            <IconButton
+              onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar`)}
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: '#ff2c19',
+                color: '#ffffff',
+                border: '2px solid #e62816',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: '#e62816',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                },
+              }}
+              title="Configurar Jornada"
+            >
+              <SettingsIcon />
+            </IconButton>
+          </Box>
         </Box>
 
         {erro && (
@@ -224,63 +249,24 @@ const FasesJornada: React.FC = () => {
             Nenhuma fase cadastrada nesta jornada ainda.
           </Alert>
         ) : (
-          <Grid container spacing={3}>
-            {jornada.fases.map((fase) => (
-              <Grid item xs={12} md={6} lg={4} key={fase.id}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 4,
-                    },
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                      <Chip label={`${fase.ordem}º`} size="small" color="primary" />
-                    </Box>
-                    <Typography variant="h6" component="h2" gutterBottom>
-                      {fase.titulo}
-                    </Typography>
-                    {fase.descricao && (
-                      <Typography variant="body2" color="text.secondary" paragraph>
-                        {fase.descricao}
-                      </Typography>
-                    )}
-                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <QuizIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        {(fase.totalPerguntas || 0) > 0 
-                          ? `${fase.totalPerguntas} ${fase.totalPerguntas === 1 ? 'Pergunta' : 'Perguntas'}` 
-                          : 'Sem perguntas'}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                  <CardActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<QuizIcon />}
-                      onClick={() => navigate(`/admin/fases/${fase.id}/perguntas`)}
-                      fullWidth
-                      sx={{
-                        bgcolor: '#e62816',
-                        '&:hover': {
-                          bgcolor: '#c52214',
-                        },
-                      }}
-                    >
-                      Gerenciar Perguntas
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          <Box sx={{ mb: 3 }}>
+            <FasesTabuleiro
+              fases={jornada.fases.map((fase) => ({
+                id: fase.id,
+                ordem: fase.ordem,
+                titulo: fase.titulo,
+                desbloqueada: true,
+                bloqueada: false,
+                faseAberta: true,
+                ativo: true,
+              }))}
+              onFaseClick={(faseId) => {
+                navigate(`/admin/fases/${faseId}/perguntas`);
+              }}
+              isAdmin={true}
+              showConnections={true}
+            />
+          </Box>
         )}
       </Container>
     </AdminLayout>

@@ -3,31 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
   Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
   Box,
   CircularProgress,
   Alert,
-  Chip,
   Breadcrumbs,
   Link,
   IconButton,
 } from '@mui/material';
 import {
   Home as HomeIcon,
-  Lock as LockIcon,
-  LockOpen as LockOpenIcon,
   ArrowBack as ArrowBackIcon,
-  Quiz as QuizIcon,
-  AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import { useToast } from '../../contexts/ToastContext';
+import FasesTabuleiro from '../../components/FasesTabuleiro';
 
 interface Fase {
   id: number;
@@ -259,114 +250,28 @@ const FasesJornada: React.FC = () => {
             Nenhuma fase desbloqueada disponível nesta jornada no momento.
           </Alert>
         ) : (
-          <Grid container spacing={3}>
-            {fases.map((fase) => (
-              <Grid item xs={12} md={6} lg={4} key={fase.id}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    opacity: fase.finalizada ? 0.6 : fase.desbloqueada ? 1 : 0.6,
-                    backgroundColor: fase.finalizada ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': fase.desbloqueada && !fase.finalizada ? {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 4,
-                    } : {},
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                      <Chip 
-                        label={`${fase.ordem}º`} 
-                        size="small" 
-                        color={fase.finalizada ? 'default' : 'primary'}
-                        sx={{
-                          backgroundColor: fase.finalizada ? 'rgba(0, 0, 0, 0.2)' : undefined,
-                        }}
-                      />
-                      {fase.finalizada ? (
-                        <LockIcon color="disabled" />
-                      ) : fase.desbloqueada ? (
-                        <LockOpenIcon color="success" />
-                      ) : (
-                        <LockIcon color="disabled" />
-                      )}
-                    </Box>
-                    <Typography 
-                      variant="h6" 
-                      component="h2" 
-                      gutterBottom
-                      sx={{
-                        color: fase.finalizada ? 'text.disabled' : 'text.primary',
-                      }}
-                    >
-                      {fase.titulo}
-                    </Typography>
-                    {fase.descricao && (
-                      <Typography 
-                        variant="body2" 
-                        color={fase.finalizada ? 'text.disabled' : 'text.secondary'} 
-                        paragraph
-                      >
-                        {fase.descricao}
-                      </Typography>
-                    )}
-                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <QuizIcon fontSize="small" color={fase.finalizada ? 'disabled' : 'action'} />
-                      <Typography 
-                        variant="body2" 
-                        color={fase.finalizada ? 'text.disabled' : 'text.secondary'}
-                      >
-                        {(fase.totalPerguntas || 0) > 0 
-                          ? `${fase.totalPerguntas} ${fase.totalPerguntas === 1 ? 'Pergunta' : 'Perguntas'}` 
-                          : 'Sem perguntas'}
-                      </Typography>
-                    </Box>
-                    {fase.finalizada && (
-                      <Chip
-                        label="Finalizada"
-                        size="small"
-                        sx={{
-                          mt: 2,
-                          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                          color: 'text.secondary',
-                        }}
-                      />
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<AccessTimeIcon />}
-                      disabled={!fase.desbloqueada || fase.finalizada}
-                      onClick={() => fase.desbloqueada && !fase.finalizada && handleAbrirFase(fase.id)}
-                      fullWidth
-                      sx={{
-                        bgcolor: fase.finalizada ? 'rgba(0, 0, 0, 0.12)' : '#e62816',
-                        color: fase.finalizada ? 'rgba(0, 0, 0, 0.26)' : '#fff',
-                        '&:hover': {
-                          bgcolor: fase.finalizada ? 'rgba(0, 0, 0, 0.12)' : '#c52214',
-                        },
-                        '&:disabled': {
-                          bgcolor: 'rgba(0, 0, 0, 0.12)',
-                          color: 'rgba(0, 0, 0, 0.26)',
-                        },
-                      }}
-                    >
-                      {fase.finalizada 
-                        ? 'Fase Finalizada' 
-                        : fase.desbloqueada 
-                        ? 'Começar Fase' 
-                        : 'Bloqueada'}
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          <Box sx={{ mb: 3 }}>
+            <FasesTabuleiro
+              fases={fases.map((fase) => ({
+                id: fase.id,
+                ordem: fase.ordem,
+                titulo: fase.titulo,
+                desbloqueada: fase.desbloqueada,
+                bloqueada: !fase.desbloqueada,
+                finalizada: fase.finalizada,
+                faseAberta: fase.desbloqueada,
+                ativo: true,
+              }))}
+              onFaseClick={(faseId) => {
+                const fase = fases.find((f) => f.id === faseId);
+                if (fase && fase.desbloqueada && !fase.finalizada) {
+                  handleAbrirFase(faseId);
+                }
+              }}
+              isAdmin={false}
+              showConnections={true}
+            />
+          </Box>
         )}
       </Container>
     </ParticipantLayout>

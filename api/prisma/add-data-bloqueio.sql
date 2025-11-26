@@ -13,3 +13,4 @@ WHERE table_name = 'fases'
     AND column_name = 'dataBloqueio';
 
 
+

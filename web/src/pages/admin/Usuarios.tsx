@@ -79,8 +79,8 @@ const AdminUsuarios: React.FC = () => {
   return (
     <AdminLayout title="Usuários">
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box>
+        <Box sx={{ position: 'relative', mb: 4 }}>
+          <Box sx={{ textAlign: 'center' }}>
             <Typography 
               variant="h4" 
               sx={{ 
@@ -111,6 +111,12 @@ const AdminUsuarios: React.FC = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/admin/usuarios/novo')}
+            sx={{
+              position: 'absolute',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+            }}
           >
             Novo Usuário
           </Button>

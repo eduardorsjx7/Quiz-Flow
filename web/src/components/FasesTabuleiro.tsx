@@ -360,29 +360,37 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                     </text>
                   )}
 
-                  {/* Efeito de cadeado para fases bloqueadas */}
+                  {/* Efeito de cadeado para fases bloqueadas/fechadas */}
                   {status === 'bloqueada' && (
                     <g>
-                      {/* Cadeado SVG */}
-                      <path
-                        d={`M ${pos.x - 12} ${pos.y - 8} 
-                            L ${pos.x - 12} ${pos.y - 2}
-                            A 4 4 0 0 1 ${pos.x - 8} ${pos.y + 2}
-                            L ${pos.x + 8} ${pos.y + 2}
-                            A 4 4 0 0 1 ${pos.x + 12} ${pos.y - 2}
-                            L ${pos.x + 12} ${pos.y - 8}
-                            Z
-                            M ${pos.x - 8} ${pos.y - 8}
-                            L ${pos.x - 8} ${pos.y - 4}
-                            L ${pos.x + 8} ${pos.y - 4}
-                            L ${pos.x + 8} ${pos.y - 8}
-                            Z
-                            M ${pos.x} ${pos.y - 4}
-                            L ${pos.x} ${pos.y + 2}`}
+                      {/* Corpo do cadeado */}
+                      <rect
+                        x={pos.x - 14}
+                        y={pos.y - 2}
+                        width="28"
+                        height="20"
+                        rx="3"
                         fill="#6b7280"
-                        stroke="#6b7280"
+                        stroke="#4b5563"
                         strokeWidth="1.5"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      {/* Arco do cadeado */}
+                      <path
+                        d={`M ${pos.x - 14} ${pos.y - 2}
+                            Q ${pos.x} ${pos.y - 12} ${pos.x + 14} ${pos.y - 2}`}
+                        fill="none"
+                        stroke="#6b7280"
+                        strokeWidth="2.5"
                         strokeLinecap="round"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      {/* Furo da fechadura */}
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y + 6}
+                        r="3"
+                        fill="#ffffff"
                         style={{ pointerEvents: 'none' }}
                       />
                     </g>

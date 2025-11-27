@@ -230,8 +230,8 @@ const DetalhesJornada: React.FC = () => {
 
         {/* Cabeçalho */}
         <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Box sx={{ flex: 1 }}>
+          <Box sx={{ position: 'relative', mb: 2 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Typography 
                 variant="h4" 
                 gutterBottom 
@@ -255,7 +255,7 @@ const DetalhesJornada: React.FC = () => {
               )}
               
               {/* Informações de Fase Atual e Próxima Fase */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center', mt: 2 }}>
                 {proximaFase && proximaFase.dataDesbloqueio ? (
                   <>
                     {faseAtual && (
@@ -304,7 +304,7 @@ const DetalhesJornada: React.FC = () => {
                 )}
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, ml: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, position: 'absolute', right: 0, top: 0 }}>
               <Chip
                 label={jornada.ativo ? 'Ativa' : 'Inativa'}
                 color={jornada.ativo ? 'success' : 'default'}

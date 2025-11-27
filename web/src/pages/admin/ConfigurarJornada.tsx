@@ -549,80 +549,86 @@ const ConfigurarJornada: React.FC = () => {
   return (
     <AdminLayout title={`Configurar Jornada - ${jornada?.titulo || ''}`}>
         <Container maxWidth="lg">
-          <Breadcrumbs 
-            sx={{ 
-              mb: 3,
-              '& .MuiBreadcrumbs-separator': {
-                mx: 1.5,
-                color: 'text.disabled',
-              },
-            }}
-          >
-            <Link
-              component="button"
-              onClick={() => navigate('/admin')}
-              sx={{ 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center',
-                color: 'text.secondary',
-                transition: 'all 0.2s ease',
-                borderRadius: 1,
-                p: 0.5,
-                '&:hover': { 
-                  color: 'primary.main',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)',
-                },
-              }}
-              title="Dashboard"
-            >
-              <HomeIcon sx={{ fontSize: 20 }} />
-            </Link>
-            <Link
-              component="button"
-              onClick={() => navigate('/admin/jornadas')}
-              sx={{ 
-                cursor: 'pointer', 
-                textDecoration: 'none',
-                color: 'text.secondary',
-                transition: 'all 0.2s ease',
-                borderRadius: 1,
-                px: 0.75,
-                py: 0.5,
-                fontWeight: 400,
-                '&:hover': { 
-                  color: 'primary.main',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)',
-                  textDecoration: 'none',
-                },
-              }}
-            >
-              Jornadas
-            </Link>
-            <Typography 
-              color="text.primary"
-              sx={{
-                fontWeight: 500,
-                fontSize: '0.95rem',
-              }}
-            >
-              Configurar Jornada
-            </Typography>
-          </Breadcrumbs>
-
-          {/* Cabeçalho */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <Box sx={{ position: 'relative', mb: 3 }}>
             <IconButton 
-              onClick={() => navigate('/admin/jornadas')}
+              onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+              size="small"
               sx={{
+                position: 'absolute',
+                left: -56,
+                top: '50%',
+                transform: 'translateY(-50%)',
                 '&:hover': {
                   bgcolor: 'rgba(0, 0, 0, 0.04)',
                 },
               }}
+              title="Voltar"
             >
               <ArrowBackIcon />
             </IconButton>
-            <Box sx={{ flex: 1 }}>
+            <Breadcrumbs 
+              sx={{ 
+                '& .MuiBreadcrumbs-separator': {
+                  mx: 1.5,
+                  color: 'text.disabled',
+                },
+              }}
+            >
+              <Link
+                component="button"
+                onClick={() => navigate('/admin')}
+                sx={{ 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  p: 0.5,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  },
+                }}
+                title="Dashboard"
+              >
+                <HomeIcon sx={{ fontSize: 20 }} />
+              </Link>
+              <Link
+                component="button"
+                onClick={() => navigate('/admin/jornadas')}
+                sx={{ 
+                  cursor: 'pointer', 
+                  textDecoration: 'none',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.5,
+                  fontWeight: 400,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    textDecoration: 'none',
+                  },
+                }}
+              >
+                Jornadas
+              </Link>
+              <Typography 
+                color="text.primary"
+                sx={{
+                  fontWeight: 500,
+                  fontSize: '0.95rem',
+                }}
+              >
+                Configurar Jornada
+              </Typography>
+            </Breadcrumbs>
+          </Box>
+          {/* Cabeçalho */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Typography 
                 variant="h4" 
                 sx={{ 
@@ -638,7 +644,7 @@ const ConfigurarJornada: React.FC = () => {
               >
                 Configurar Jornada
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 0.5 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 

@@ -172,8 +172,8 @@ const AdminJornadas: React.FC = () => {
           </Typography>
         </Breadcrumbs>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box>
+        <Box sx={{ position: 'relative', mb: 4 }}>
+          <Box sx={{ textAlign: 'center' }}>
             <Typography 
               variant="h4" 
               sx={{ 
@@ -205,6 +205,10 @@ const AdminJornadas: React.FC = () => {
             startIcon={<AddIcon />}
             onClick={() => navigate('/admin/jornadas/novo')}
             sx={{
+              position: 'absolute',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
               bgcolor: '#ff2c19',
               '&:hover': {
                 bgcolor: '#e62816',

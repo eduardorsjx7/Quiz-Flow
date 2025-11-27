@@ -36,6 +36,8 @@ interface Jornada {
   id: number;
   titulo: string;
   imagemCapa?: string;
+  ativo?: boolean;
+  createdAt?: string;
   faseAtual?: {
     id: number;
     titulo: string;
@@ -76,7 +78,24 @@ const DashboardColaborador: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/jornadas');
-      setJornadas(response.data.data || response.data);
+      const dados = response.data.data || response.data;
+      const jornadasArray = Array.isArray(dados) ? dados : [];
+      
+      // Remover duplicatas baseado no ID
+      const jornadasUnicas = jornadasArray.filter((jornada: Jornada, index: number, self: Jornada[]) =>
+        index === self.findIndex((j: Jornada) => j.id === jornada.id)
+      );
+      
+      // Ordenar por data de criação (mais recentes primeiro)
+      const jornadasOrdenadas = jornadasUnicas.sort((a: Jornada, b: Jornada) => {
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        // Se não tiver data, ordenar por ID (mais recente = maior ID)
+        return b.id - a.id;
+      });
+      
+      setJornadas(jornadasOrdenadas);
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao carregar jornadas');
     } finally {
@@ -164,7 +183,7 @@ const DashboardColaborador: React.FC = () => {
 
   return (
     <ParticipantLayout title="Dashboard">
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ overflow: 'visible' }}>
         {/* Banner de boas-vindas */}
         <Box
           sx={{
@@ -359,6 +378,7 @@ const DashboardColaborador: React.FC = () => {
               position: 'relative', 
               width: '100%', 
               mb: 6,
+              px: { xs: 0, md: 4 },
               '& .slick-dots': {
                 bottom: '-45px',
                 '& li button:before': {
@@ -369,23 +389,32 @@ const DashboardColaborador: React.FC = () => {
                   color: '#e62816',
                 },
               },
+              '& .slick-slider': {
+                overflow: 'visible',
+              },
               '& .slick-prev, & .slick-next': {
-                zIndex: 2,
+                zIndex: 30,
                 width: '40px',
                 height: '40px',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
                 '&:before': {
                   color: '#e62816',
                   fontSize: '30px',
+                  opacity: 1,
                 },
                 '&:hover:before': {
                   color: '#c52214',
                 },
               },
               '& .slick-prev': {
-                left: '-45px',
+                left: { xs: '15px', md: '-60px' },
+                zIndex: 30,
               },
               '& .slick-next': {
-                right: '-45px',
+                right: { xs: '15px', md: '-60px' },
+                zIndex: 30,
               },
             }}
           >
@@ -395,7 +424,7 @@ const DashboardColaborador: React.FC = () => {
                 padding: '20px 0',
                 margin: '0 -10px',
                 '& .slick-list': {
-                  overflow: 'visible',
+                  overflow: 'hidden',
                   padding: '0 20px !important',
                 },
                 '& .slick-track': {
@@ -406,12 +435,11 @@ const DashboardColaborador: React.FC = () => {
             >
               <Slider
                 dots={true}
-                infinite={jornadasFiltradas.length > 3}
+                infinite={false}
                 speed={600}
                 slidesToShow={3.3}
                 slidesToScroll={1}
-                autoplay={true}
-                autoplaySpeed={4000}
+                autoplay={false}
                 pauseOnHover={true}
                 cssEase="ease-in-out"
                 arrows={true}
@@ -421,6 +449,7 @@ const DashboardColaborador: React.FC = () => {
                     settings: {
                       slidesToShow: 2.3,
                       arrows: true,
+                      infinite: false,
                     },
                   },
                   {
@@ -428,6 +457,7 @@ const DashboardColaborador: React.FC = () => {
                     settings: {
                       slidesToShow: 1.3,
                       arrows: false,
+                      infinite: false,
                     },
                   },
                 ]}
@@ -453,15 +483,21 @@ const DashboardColaborador: React.FC = () => {
                         borderRadius: 3,
                         transition: 'all 0.3s ease-in-out',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        backgroundColor: index % 2 === 0 ? '#fff' : '#fff9f5',
+                        backgroundColor: jornada.ativo === false 
+                          ? '#f5f5f5' 
+                          : index % 2 === 0 ? '#fff' : '#fff9f5',
                         display: 'flex',
                         flexDirection: 'column',
                         cursor: 'pointer',
                         position: 'relative',
                         overflow: 'hidden',
+                        filter: jornada.ativo === false ? 'grayscale(0.8)' : 'none',
+                        opacity: jornada.ativo === false ? 0.75 : 1,
                         '&:hover': {
-                          transform: 'translateY(-3px) scale(1.01)',
-                          boxShadow: '0 12px 30px rgba(255, 44, 25, 0.2)',
+                          transform: jornada.ativo !== false ? 'translateY(-3px) scale(1.01)' : 'none',
+                          boxShadow: jornada.ativo !== false 
+                            ? '0 12px 30px rgba(255, 44, 25, 0.2)' 
+                            : '0 2px 8px rgba(0,0,0,0.1)',
                         },
                       }}
                       onClick={() => handleAbrirJornada(jornada.id)}
@@ -512,12 +548,12 @@ const DashboardColaborador: React.FC = () => {
                           variant="h6" 
                           sx={{ 
                             fontWeight: 'bold', 
-                            color: '#011b49',
+                            color: jornada.ativo === false ? '#9e9e9e' : '#011b49',
                             flex: 1,
                             fontSize: '1rem',
                             cursor: 'pointer',
                             '&:hover': {
-                              color: '#e62816',
+                              color: jornada.ativo !== false ? '#e62816' : '#9e9e9e',
                             },
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -564,7 +600,7 @@ const DashboardColaborador: React.FC = () => {
                             justifyContent: 'center',
                             gap: 1,
                             color: '#fff',
-                            backgroundColor: '#e62816',
+                            backgroundColor: jornada.ativo === false ? '#9e9e9e' : '#e62816',
                             fontWeight: 600,
                             fontSize: '0.9rem',
                             padding: '10px 16px',
@@ -572,12 +608,20 @@ const DashboardColaborador: React.FC = () => {
                             border: 'none',
                             cursor: 'pointer',
                             transition: 'all 0.3s ease-in-out',
-                            background: 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
-                            boxShadow: '0 2px 8px rgba(230, 40, 22, 0.2)',
+                            background: jornada.ativo === false
+                              ? 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)'
+                              : 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
+                            boxShadow: jornada.ativo === false 
+                              ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
+                              : '0 2px 8px rgba(230, 40, 22, 0.2)',
                             '&:hover': {
-                              background: 'linear-gradient(135deg, #e62816 0%, #ff2c19 100%)',
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 6px 16px rgba(255, 44, 25, 0.3)',
+                              background: jornada.ativo === false
+                                ? 'linear-gradient(135deg, #757575 0%, #9e9e9e 100%)'
+                                : 'linear-gradient(135deg, #e62816 0%, #ff2c19 100%)',
+                              transform: jornada.ativo !== false ? 'translateY(-2px)' : 'none',
+                              boxShadow: jornada.ativo !== false 
+                                ? '0 6px 16px rgba(255, 44, 25, 0.3)' 
+                                : '0 2px 4px rgba(0, 0, 0, 0.2)',
                             },
                           }}
                         >

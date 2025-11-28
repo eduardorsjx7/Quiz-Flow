@@ -22,6 +22,7 @@ import {
   Chip,
   Breadcrumbs,
   Link,
+  InputAdornment,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -33,6 +34,8 @@ import {
   Cancel as CancelIcon,
   CloudUpload as CloudUploadIcon,
   Home as HomeIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import {
   DragDropContext,
@@ -55,6 +58,7 @@ interface Fase {
   faseAberta: boolean;
   dataDesbloqueio: Date | null;
   dataBloqueio: Date | null;
+  pontuacao?: number;
 }
 
 interface AddPhaseDialogProps {
@@ -68,11 +72,25 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
   const [titulo, setTitulo] = useState('');
   const [faseAberta, setFaseAberta] = useState(true);
   const [dataDesbloqueio, setDataDesbloqueio] = useState<Date | null>(null);
-  const [dataDesbloqueioStr, setDataDesbloqueioStr] = useState('');
-  const [horaDesbloqueioStr, setHoraDesbloqueioStr] = useState('');
-  const [dataBloqueioStr, setDataBloqueioStr] = useState('');
-  const [horaBloqueioStr, setHoraBloqueioStr] = useState('');
-  const [erro, setErro] = useState('');
+  const [dataBloqueio, setDataBloqueio] = useState<Date | null>(null);
+  const [pontuacao, setPontuacao] = useState(100);
+  const [salvando, setSalvando] = useState(false);
+
+  // Funções auxiliares de formatação de data
+  const formatDateForInput = (date: Date | null): string => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeForInput = (date: Date | null): string => {
+    if (!date) return '';
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
 
   const combineDateAndTime = (dateStr: string, timeStr: string): Date | null => {
     if (!dateStr) return null;
@@ -82,56 +100,47 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
     return new Date(`${dateStr}T${timeStr}`);
   };
 
-  const validarDatas = (): boolean => {
-    if (faseAberta) return true;
-    
-    if (!dataDesbloqueioStr) {
-      setErro('Data de desbloqueio é obrigatória quando a fase não está aberta');
-      return false;
+  const validarDatas = (dataDesbloqueio: Date | null, dataBloqueio: Date | null): boolean => {
+    if (dataDesbloqueio && dataBloqueio) {
+      if (dataDesbloqueio.getTime() > dataBloqueio.getTime()) {
+        showError('A data de bloqueio não pode ser anterior à data de desbloqueio', 'Data inválida');
+        return false;
+      }
     }
-
-    const dataDesbloqueio = combineDateAndTime(dataDesbloqueioStr, horaDesbloqueioStr || '00:00');
-    const dataBloqueio = dataBloqueioStr ? combineDateAndTime(dataBloqueioStr, horaBloqueioStr || '00:00') : null;
-
-    if (dataBloqueio && dataDesbloqueio && dataDesbloqueio.getTime() >= dataBloqueio.getTime()) {
-      setErro('A data de desbloqueio deve ser anterior à data de bloqueio');
-      return false;
-    }
-
     return true;
   };
 
   const handleConfirmar = () => {
-    setErro('');
-    
     if (!titulo.trim()) {
-      setErro('Informe o nome da fase');
+      showError('O nome da fase é obrigatório', 'Validação');
       return;
     }
 
-    if (!validarDatas()) {
-      return;
+    if (!faseAberta) {
+      if (!validarDatas(dataDesbloqueio, dataBloqueio)) {
+        return;
+      }
     }
 
-    const dataDesbloqueioFinal = faseAberta ? null : combineDateAndTime(dataDesbloqueioStr, horaDesbloqueioStr || '00:00');
-    const dataBloqueioFinal = faseAberta ? null : (dataBloqueioStr ? combineDateAndTime(dataBloqueioStr, horaBloqueioStr || '00:00') : null);
+    if (pontuacao < 0) {
+      showError('A pontuação deve ser um número positivo', 'Validação');
+      return;
+    }
 
     onSave({
       titulo: titulo.trim(),
       faseAberta,
-      dataDesbloqueio: dataDesbloqueioFinal,
-      dataBloqueio: dataBloqueioFinal,
+      dataDesbloqueio: faseAberta ? null : dataDesbloqueio,
+      dataBloqueio: faseAberta ? null : dataBloqueio,
+      pontuacao,
     });
     
     // Resetar campos
     setTitulo('');
     setFaseAberta(true);
     setDataDesbloqueio(null);
-    setDataDesbloqueioStr('');
-    setHoraDesbloqueioStr('');
-    setDataBloqueioStr('');
-    setHoraBloqueioStr('');
-    setErro('');
+    setDataBloqueio(null);
+    setPontuacao(100);
     onClose();
   };
 
@@ -139,147 +148,483 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
     setTitulo('');
     setFaseAberta(true);
     setDataDesbloqueio(null);
-    setDataDesbloqueioStr('');
-    setHoraDesbloqueioStr('');
-    setDataBloqueioStr('');
-    setHoraBloqueioStr('');
-    setErro('');
+    setDataBloqueio(null);
+    setPontuacao(100);
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-      <DialogTitle>Adicionar fase da jornada</DialogTitle>
-      <DialogContent dividers>
-        {erro && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
-            {erro}
-          </Alert>
-        )}
-        <TextField
-          fullWidth
-          label="Nome da fase"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          margin="normal"
-          required
-          placeholder="Ex: Setor Fiscal, Setor Comercial, Sucesso do Cliente"
-        />
-        
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={faseAberta}
-                onChange={(e) => {
-                  setFaseAberta(e.target.checked);
-                  if (e.target.checked) {
-                    setDataDesbloqueioStr('');
-                    setHoraDesbloqueioStr('');
-                    setDataBloqueioStr('');
-                    setHoraBloqueioStr('');
-                    setDataDesbloqueio(null);
-                  }
-                }}
-                color="primary"
-              />
-            }
-            label="Fase Aberta (sem data de desbloqueio/bloqueio)"
-          />
-        </Box>
-
-        {!faseAberta && (
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+        },
+      }}
+    >
+      <DialogTitle sx={{ fontWeight: 600, color: '#011b49', pb: 2 }}>
+        Criar Nova Fase
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          <Grid container spacing={3}>
+            {/* Campo de Nome da Fase */}
+            <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Data de Desbloqueio"
-                type="date"
-                value={dataDesbloqueioStr}
-                onChange={(e) => {
-                  setDataDesbloqueioStr(e.target.value);
-                  if (e.target.value) {
-                    const newDate = combineDateAndTime(e.target.value, horaDesbloqueioStr || '00:00');
-                    setDataDesbloqueio(newDate);
-                  } else {
-                    setDataDesbloqueio(null);
-                  }
-                }}
-                InputLabelProps={{ shrink: true }}
+                label="Nome da Fase"
+                value={titulo}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setTitulo(e.target.value)
+                }
                 required
-                margin="normal"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: '#ffffff',
+                    '& fieldset': {
+                      borderColor: '#e0e0e0',
+                      borderWidth: 2,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#ff2c19',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff2c19',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#6b7280',
+                    '&.Mui-focused': {
+                      color: '#ff2c19',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#011b49',
+                    fontSize: '1rem',
+                    padding: '14px',
+                  },
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+
+            {/* Campos de data/hora quando fase fechada */}
+            {!faseAberta && (
+              <>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Data de Desbloqueio"
+                    type="date"
+                    value={formatDateForInput(dataDesbloqueio)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const newDate = combineDateAndTime(
+                        e.target.value,
+                        formatTimeForInput(dataDesbloqueio)
+                      );
+                      
+                      if (newDate && dataBloqueio) {
+                        if (newDate.getTime() > dataBloqueio.getTime()) {
+                          showError('A data de bloqueio não pode ser anterior à data de desbloqueio', 'Data inválida');
+                          return;
+                        }
+                      }
+                      
+                      setDataDesbloqueio(newDate);
+                    }}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    InputProps={{
+                      endAdornment: dataDesbloqueio ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            onClick={() => {
+                              setDataDesbloqueio(null);
+                            }}
+                            sx={{ color: 'error.main' }}
+                            size="small"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: '#ffffff',
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                          borderWidth: 2,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#ff2c19',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#ff2c19',
+                          borderWidth: 2,
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#6b7280',
+                        '&.Mui-focused': {
+                          color: '#ff2c19',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: '#011b49',
+                        fontSize: '1rem',
+                        padding: '14px',
+                        cursor: 'pointer',
+                        '&::-webkit-calendar-picker-indicator': {
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          opacity: 0.7,
+                          '&:hover': {
+                            opacity: 1,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Hora de Desbloqueio"
+                    type="time"
+                    value={formatTimeForInput(dataDesbloqueio)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const currentDate = formatDateForInput(dataDesbloqueio);
+                      const newDate = combineDateAndTime(currentDate, e.target.value);
+                      
+                      if (newDate && dataBloqueio) {
+                        if (newDate.getTime() > dataBloqueio.getTime()) {
+                          showError('A data de bloqueio não pode ser anterior à data de desbloqueio', 'Data inválida');
+                          return;
+                        }
+                      }
+                      
+                      setDataDesbloqueio(newDate);
+                    }}
+                    disabled={!dataDesbloqueio}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: dataDesbloqueio ? '#ffffff' : '#f5f5f5',
+                        transition: 'all 0.3s ease',
+                        '& fieldset': {
+                          borderColor: dataDesbloqueio ? '#e0e0e0' : '#d0d0d0',
+                          borderWidth: 2,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: dataDesbloqueio ? '#ff2c19' : '#d0d0d0',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: dataDesbloqueio ? '#ff2c19' : '#d0d0d0',
+                          borderWidth: 2,
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: '#f5f5f5',
+                          '& fieldset': {
+                            borderColor: '#e0e0e0',
+                          },
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: dataDesbloqueio ? '#6b7280' : '#9e9e9e',
+                        '&.Mui-focused': {
+                          color: dataDesbloqueio ? '#ff2c19' : '#9e9e9e',
+                        },
+                        '&.Mui-disabled': {
+                          color: '#9e9e9e',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: dataDesbloqueio ? '#011b49' : '#9e9e9e',
+                        fontSize: '1rem',
+                        padding: '14px',
+                        cursor: dataDesbloqueio ? 'pointer' : 'not-allowed',
+                        '&::-webkit-calendar-picker-indicator': {
+                          cursor: dataDesbloqueio ? 'pointer' : 'not-allowed',
+                          fontSize: '18px',
+                          opacity: dataDesbloqueio ? 0.7 : 0.3,
+                          '&:hover': {
+                            opacity: dataDesbloqueio ? 1 : 0.3,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Data de Bloqueio"
+                    type="date"
+                    value={formatDateForInput(dataBloqueio)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const dataDesbloqueioStr = formatDateForInput(dataDesbloqueio);
+                      const dataBloqueioStr = e.target.value;
+                      const timeStr = (dataDesbloqueioStr === dataBloqueioStr) ? '00:00' : formatTimeForInput(dataBloqueio);
+                      
+                      const newDate = combineDateAndTime(
+                        e.target.value,
+                        timeStr
+                      );
+                      
+                      if (dataDesbloqueio && newDate) {
+                        if (dataDesbloqueio.getTime() > newDate.getTime()) {
+                          showError('A data de bloqueio não pode ser anterior à data de desbloqueio', 'Data inválida');
+                          return;
+                        }
+                      }
+                      
+                      setDataBloqueio(newDate);
+                    }}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    InputProps={{
+                      endAdornment: dataBloqueio ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            onClick={() => {
+                              setDataBloqueio(null);
+                            }}
+                            sx={{ color: 'error.main' }}
+                            size="small"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: '#ffffff',
+                        '& fieldset': {
+                          borderColor: '#e0e0e0',
+                          borderWidth: 2,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#ff2c19',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#ff2c19',
+                          borderWidth: 2,
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#6b7280',
+                        '&.Mui-focused': {
+                          color: '#ff2c19',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: '#011b49',
+                        fontSize: '1rem',
+                        padding: '14px',
+                        cursor: 'pointer',
+                        '&::-webkit-calendar-picker-indicator': {
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          opacity: 0.7,
+                          '&:hover': {
+                            opacity: 1,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Hora de Bloqueio"
+                    type="time"
+                    value={formatTimeForInput(dataBloqueio)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const currentDate = formatDateForInput(dataBloqueio);
+                      const newDate = combineDateAndTime(currentDate, e.target.value);
+                      
+                      if (dataDesbloqueio && newDate) {
+                        if (dataDesbloqueio.getTime() > newDate.getTime()) {
+                          showError('A data de bloqueio não pode ser anterior à data de desbloqueio', 'Data inválida');
+                          return;
+                        }
+                      }
+                      
+                      setDataBloqueio(newDate);
+                    }}
+                    disabled={!dataBloqueio}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: dataBloqueio ? '#ffffff' : '#f5f5f5',
+                        transition: 'all 0.3s ease',
+                        '& fieldset': {
+                          borderColor: dataBloqueio ? '#e0e0e0' : '#d0d0d0',
+                          borderWidth: 2,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: dataBloqueio ? '#ff2c19' : '#d0d0d0',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: dataBloqueio ? '#ff2c19' : '#d0d0d0',
+                          borderWidth: 2,
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: '#f5f5f5',
+                          '& fieldset': {
+                            borderColor: '#e0e0e0',
+                          },
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: dataBloqueio ? '#6b7280' : '#9e9e9e',
+                        '&.Mui-focused': {
+                          color: dataBloqueio ? '#ff2c19' : '#9e9e9e',
+                        },
+                        '&.Mui-disabled': {
+                          color: '#9e9e9e',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: dataBloqueio ? '#011b49' : '#9e9e9e',
+                        fontSize: '1rem',
+                        padding: '14px',
+                        cursor: dataBloqueio ? 'pointer' : 'not-allowed',
+                        '&::-webkit-calendar-picker-indicator': {
+                          cursor: dataBloqueio ? 'pointer' : 'not-allowed',
+                          fontSize: '18px',
+                          opacity: dataBloqueio ? 0.7 : 0.3,
+                          '&:hover': {
+                            opacity: dataBloqueio ? 1 : 0.3,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
+            
+            {/* Campo de Pontuação */}
+            <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Hora de Desbloqueio"
-                type="time"
-                value={horaDesbloqueioStr}
-                onChange={(e) => {
-                  setHoraDesbloqueioStr(e.target.value);
-                  if (dataDesbloqueioStr) {
-                    const newDate = combineDateAndTime(dataDesbloqueioStr, e.target.value || '00:00');
-                    setDataDesbloqueio(newDate);
-                  }
+                label="Pontuação da Fase"
+                type="number"
+                value={pontuacao}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPontuacao(parseInt(e.target.value) || 0)
+                }
+                inputProps={{ min: 0 }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: '#ffffff',
+                    '& fieldset': {
+                      borderColor: '#e0e0e0',
+                      borderWidth: 2,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#ff2c19',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff2c19',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#6b7280',
+                    '&.Mui-focused': {
+                      color: '#ff2c19',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#011b49',
+                    fontSize: '1rem',
+                    padding: '14px',
+                  },
                 }}
-                InputLabelProps={{ shrink: true }}
-                margin="normal"
-                disabled={!dataDesbloqueioStr}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Data de Bloqueio"
-                type="date"
-                value={dataBloqueioStr}
-                onChange={(e) => {
-                  setDataBloqueioStr(e.target.value);
-                  if (e.target.value) {
-                    const newDate = combineDateAndTime(e.target.value, horaBloqueioStr || '00:00');
-                    
-                    // Validar se dataDesbloqueio < dataBloqueio
-                    if (dataDesbloqueio && newDate && dataDesbloqueio.getTime() >= newDate.getTime()) {
-                      showError('A data de desbloqueio deve ser anterior à data de bloqueio', 'Data inválida');
-                    }
-                  }
-                }}
-                InputLabelProps={{ shrink: true }}
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Hora de Bloqueio"
-                type="time"
-                value={horaBloqueioStr}
-                onChange={(e) => {
-                  setHoraBloqueioStr(e.target.value);
-                  if (dataBloqueioStr) {
-                    const newDate = combineDateAndTime(dataBloqueioStr, e.target.value || '00:00');
-                    
-                    // Validar se dataDesbloqueio < dataBloqueio
-                    if (dataDesbloqueio && newDate && dataDesbloqueio.getTime() >= newDate.getTime()) {
-                      showError('A data de desbloqueio deve ser anterior à data de bloqueio', 'Data inválida');
-                    }
-                  }
-                }}
-                InputLabelProps={{ shrink: true }}
-                margin="normal"
-                disabled={!dataBloqueioStr}
               />
             </Grid>
           </Grid>
-        )}
+        </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} color="inherit">
+      <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 'auto' }}>
+          <Switch
+            checked={faseAberta}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setFaseAberta(e.target.checked);
+              if (e.target.checked) {
+                setDataDesbloqueio(null);
+                setDataBloqueio(null);
+              }
+            }}
+            color="primary"
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {faseAberta ? (
+              <LockOpenIcon 
+                sx={{ 
+                  fontSize: 20, 
+                  color: '#4caf50',
+                }} 
+              />
+            ) : (
+              <LockIcon 
+                sx={{ 
+                  fontSize: 20, 
+                  color: '#f44336',
+                }} 
+              />
+            )}
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                fontWeight: 300,
+                color: '#011b49',
+              }}
+            >
+              {faseAberta ? 'Fase Aberta' : 'Fase Fechada'}
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ flex: 1 }} />
+        <Button onClick={handleClose} color="inherit" size="medium" disabled={salvando}>
           Cancelar
         </Button>
-        <Button variant="contained" onClick={handleConfirmar}>
-          Adicionar
+        <Button
+          onClick={handleConfirmar}
+          variant="contained"
+          size="medium"
+          disabled={salvando}
+          sx={{
+            bgcolor: '#ff2c19',
+            '&:hover': {
+              bgcolor: '#e62816',
+            },
+          }}
+        >
+          {salvando ? 'Salvando...' : 'Salvar'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -768,11 +1113,43 @@ const CriarJornada: React.FC = () => {
 
           {step === 2 && (
             <>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 1 }}>
-                <IconButton onClick={handleBackStep} size="small">
-                  <ArrowBackIcon fontSize="small" />
-                </IconButton>
-                <Typography variant="h6">Fases da Jornada</Typography>
+              <Box sx={{ position: 'relative', mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton onClick={handleBackStep} size="small">
+                    <ArrowBackIcon fontSize="small" />
+                  </IconButton>
+                  <Typography variant="h6">Fases da Jornada</Typography>
+                </Box>
+                
+                {/* Botão de adicionar fase - posição absoluta à direita */}
+                <Box sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}>
+                  <IconButton
+                    onClick={() => setAbrirModalFase(true)}
+                    disabled={salvando}
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      bgcolor: '#ff2c19',
+                      color: '#ffffff',
+                      border: '2px solid #e62816',
+                      borderRadius: '50%',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        bgcolor: '#e62816',
+                        transform: 'scale(1.1)',
+                        boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'grey.300',
+                        borderColor: 'grey.300',
+                        opacity: 0.6,
+                      },
+                    }}
+                    title="Adicionar Fase"
+                  >
+                    <AddIcon />
+                  </IconButton>
+                </Box>
               </Box>
 
               {errosCampos.fases && (
@@ -780,17 +1157,6 @@ const CriarJornada: React.FC = () => {
                   {errosCampos.fases}
                 </Alert>
               )}
-
-              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAbrirModalFase(true)}
-                  disabled={salvando}
-                >
-                  Adicionar fase
-                </Button>
-              </Box>
 
               {fases.length === 0 && (
                 <Box

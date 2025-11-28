@@ -13,7 +13,12 @@ import {
   Chip,
   Breadcrumbs,
   Link,
+  Button,
+  Pagination,
+  Stack,
   IconButton,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   Route as RouteIcon,
@@ -21,6 +26,9 @@ import {
   Visibility as ViewIcon,
   Settings as SettingsIcon,
   CheckCircle as CheckCircleIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -46,6 +54,9 @@ const AdminFases: React.FC = () => {
   const [jornadas, setJornadas] = useState<Jornada[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [pesquisa, setPesquisa] = useState('');
+  const itensPorPagina = 6;
 
   useEffect(() => {
     carregarJornadas();
@@ -57,12 +68,34 @@ const AdminFases: React.FC = () => {
       const response = await api.get('/jornadas');
       const dados = response.data.data || response.data;
       setJornadas(Array.isArray(dados) ? dados : []);
+      setPaginaAtual(1); // Resetar para primeira página ao carregar
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao carregar jornadas');
       setJornadas([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filtrar jornadas por pesquisa
+  const jornadasFiltradas = jornadas.filter((jornada: Jornada) =>
+    jornada.titulo.toLowerCase().includes(pesquisa.toLowerCase())
+  );
+
+  // Calcular jornadas paginadas - sempre no máximo 6 cards por página
+  const indiceInicio = (paginaAtual - 1) * itensPorPagina;
+  const indiceFim = indiceInicio + itensPorPagina;
+  const jornadasPaginadas = jornadasFiltradas.slice(indiceInicio, Math.min(indiceFim, jornadasFiltradas.length));
+  const totalPaginas = Math.ceil(jornadasFiltradas.length / itensPorPagina);
+
+  // Resetar página quando pesquisa mudar
+  React.useEffect(() => {
+    setPaginaAtual(1);
+  }, [pesquisa]);
+
+  const handleMudarPagina = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPaginaAtual(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
 
@@ -160,12 +193,100 @@ const AdminFases: React.FC = () => {
             Nenhuma jornada cadastrada. Crie uma jornada primeiro para cadastrar fases e perguntas.
           </Alert>
         ) : (
-          <Grid container spacing={3}>
-            {jornadas.map((jornada: Jornada) => (
-              <Grid item xs={12} sm={6} md={4} key={jornada.id}>
+          <>
+          {/* Barra de pesquisa */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 2,
+            }}
+          >
+            <TextField
+              placeholder="Pesquisar jornadas..."
+              value={pesquisa}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPesquisa(e.target.value)}
+              size="small"
+              sx={{
+                width: { xs: '100%', sm: '300px' },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: '#fff',
+                  '&:hover fieldset': {
+                    borderColor: '#ff2c19',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ff2c19',
+                  },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#6b7280' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+          <Box
+            sx={{
+              p: { xs: 2, sm: 3 },
+              borderRadius: 4,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+              bgcolor: 'rgba(255, 255, 255, 0.8)',
+              border: '1px solid',
+              borderColor: 'rgba(0, 0, 0, 0.08)',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+              height: 'calc(100vh - 240px)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Grid 
+              container 
+              spacing={2}
+              sx={{
+                width: '100%',
+                margin: 0,
+                boxSizing: 'border-box',
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: 'rgba(0, 0, 0, 0.3)',
+                  },
+                },
+              }}
+            >
+              {jornadasPaginadas.map((jornada: Jornada) => (
+              <Grid 
+                item 
+                xs={12} 
+                sm={6} 
+                md={4} 
+                key={jornada.id}
+                sx={{
+                  display: 'flex',
+                }}
+              >
                 <Card
                   sx={{
-                    height: '100%',
+                    width: '100%',
+                    height: 250,
                     display: 'flex',
                     flexDirection: 'column',
                     borderRadius: 3,
@@ -174,10 +295,14 @@ const AdminFases: React.FC = () => {
                     border: '1px solid',
                     borderColor: 'divider',
                     overflow: 'hidden',
+                    filter: !jornada.ativo ? 'grayscale(0.8)' : 'none',
+                    opacity: !jornada.ativo ? 0.7 : 1,
                     '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                      borderColor: '#ff2c19',
+                      transform: jornada.ativo ? 'translateY(-4px)' : 'none',
+                      boxShadow: jornada.ativo 
+                        ? '0 6px 20px rgba(0,0,0,0.15)' 
+                        : '0 2px 8px rgba(0,0,0,0.1)',
+                      borderColor: jornada.ativo ? '#ff2c19' : 'divider',
                     },
                   }}
                 >
@@ -188,11 +313,12 @@ const AdminFases: React.FC = () => {
                       alt={jornada.titulo}
                       sx={{
                         width: '100%',
-                        height: 140,
+                        height: 90,
                         objectFit: 'cover',
                         transition: 'transform 0.3s ease',
+                        flexShrink: 0,
                         '&:hover': {
-                          transform: 'scale(1.05)',
+                          transform: jornada.ativo ? 'scale(1.03)' : 'none',
                         },
                       }}
                     />
@@ -200,12 +326,13 @@ const AdminFases: React.FC = () => {
                     <Box
                       sx={{
                         width: '100%',
-                        height: 140,
+                        height: 135,
                         background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         position: 'relative',
+                        flexShrink: 0,
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -217,19 +344,24 @@ const AdminFases: React.FC = () => {
                         },
                       }}
                     >
-                      <RouteIcon sx={{ color: '#ff2c19', fontSize: 48, position: 'relative', zIndex: 1 }} />
+                      <RouteIcon sx={{ color: '#ff2c19', fontSize: 32, position: 'relative', zIndex: 1 }} />
                     </Box>
                   )}
-                  <CardContent sx={{ flexGrow: 1, p: 1.5 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                  <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, minHeight: 0 }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
                           fontWeight: 600, 
                           color: '#011b49', 
                           flex: 1,
-                          fontSize: '1rem',
+                          fontSize: '0.875rem',
                           lineHeight: 1.3,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                         }}
                       >
                         {jornada.titulo}
@@ -240,11 +372,12 @@ const AdminFases: React.FC = () => {
                       sx={{ 
                         display: 'flex', 
                         flexDirection: 'column', 
-                        gap: 1, 
+                        gap: 0.5, 
                         mb: 0.5,
-                        p: 1,
+                        p: 0.75,
                         borderRadius: 2,
                         bgcolor: 'rgba(0, 0, 0, 0.02)',
+                        flexShrink: 0,
                       }}
                     >
                       <Box 
@@ -298,20 +431,26 @@ const AdminFases: React.FC = () => {
                       </Box>
                     </Box>
                   </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', p: 1.5, pt: 1, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.5 }}>
-                    <IconButton
+                  <CardActions sx={{ justifyContent: 'center', p: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.75, flexShrink: 0 }}>
+                    <Button
                       size="small"
                       onClick={() => navigate(`/admin/jornadas/${jornada.id}/fases`)}
-                      title="Ver Fases"
+                      startIcon={<ViewIcon />}
                       sx={{
                         color: '#2196F3',
                         bgcolor: 'rgba(33, 150, 243, 0.08)',
                         border: '1px solid',
                         borderColor: 'rgba(33, 150, 243, 0.2)',
                         borderRadius: 1.5,
-                        width: 36,
-                        height: 36,
+                        px: 1.25,
+                        py: 0.5,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& .MuiSvgIcon-root': {
+                          fontSize: 18,
+                        },
                         '&:hover': {
                           backgroundColor: '#2196F3',
                           color: '#fff',
@@ -321,21 +460,27 @@ const AdminFases: React.FC = () => {
                         },
                       }}
                     >
-                      <ViewIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                    <IconButton
+                      Ver Fases
+                    </Button>
+                    <Button
                       size="small"
                       onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
-                      title="Configurar Jornada"
+                      startIcon={<SettingsIcon />}
                       sx={{
                         color: '#FF9800',
                         bgcolor: 'rgba(255, 152, 0, 0.08)',
                         border: '1px solid',
                         borderColor: 'rgba(255, 152, 0, 0.2)',
                         borderRadius: 1.5,
-                        width: 36,
-                        height: 36,
+                        px: 1.25,
+                        py: 0.5,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& .MuiSvgIcon-root': {
+                          fontSize: 18,
+                        },
                         '&:hover': {
                           backgroundColor: '#FF9800',
                           color: '#fff',
@@ -345,13 +490,95 @@ const AdminFases: React.FC = () => {
                         },
                       }}
                     >
-                      <SettingsIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
+                      Configurar
+                    </Button>
                   </CardActions>
                 </Card>
               </Grid>
             ))}
           </Grid>
+          
+          {/* Barra de paginação tipo footer - sempre visível */}
+          <Box
+            sx={{
+              mt: 'auto',
+              paddingTop: '11px',
+              borderTop: '1px solid',
+              borderColor: 'rgba(0, 0, 0, 0.12)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Stack spacing={2.5} alignItems="center" sx={{ width: '100%' }}>
+              {jornadas.length > itensPorPagina && totalPaginas > 1 ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <IconButton
+                    onClick={() => handleMudarPagina({} as React.ChangeEvent<unknown>, paginaAtual - 1)}
+                    disabled={paginaAtual === 1}
+                    sx={{
+                      color: '#011b49',
+                      '&:hover': {
+                        backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      },
+                      '&.Mui-disabled': {
+                        opacity: 0.3,
+                      },
+                    }}
+                  >
+                    <ChevronLeftIcon sx={{ fontSize: '1.5rem' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 400,
+                      color: '#6b7280',
+                      fontSize: '0.875rem',
+                      minWidth: '80px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Página {paginaAtual} de {totalPaginas}
+                  </Typography>
+                  <IconButton
+                    onClick={() => handleMudarPagina({} as React.ChangeEvent<unknown>, paginaAtual + 1)}
+                    disabled={paginaAtual === totalPaginas}
+                    sx={{
+                      color: '#011b49',
+                      '&:hover': {
+                        backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      },
+                      '&.Mui-disabled': {
+                        opacity: 0.3,
+                      },
+                    }}
+                  >
+                    <ChevronRightIcon sx={{ fontSize: '1.5rem' }} />
+                  </IconButton>
+                </Box>
+              ) : totalPaginas === 1 && jornadas.length > 0 ? (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 400,
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Página 1 de 1
+                </Typography>
+              ) : null}
+            </Stack>
+          </Box>
+          </Box>
+          </>
         )}
       </Container>
     </AdminLayout>

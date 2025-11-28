@@ -35,7 +35,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const colSpacing = (svgWidth - marginX * 2) / (cols - 1);
 
   const marginBottom = 120;
-  const marginTop = -80; // controle do espaço SUPERIOR (linha do topo) - reduzido para aproximar do título
+  const marginTop = -60; // controle do espaço SUPERIOR (linha do topo) - reduzido para aproximar do título
 
   const phaseStepY = 50;
   const circleRadius = 55;

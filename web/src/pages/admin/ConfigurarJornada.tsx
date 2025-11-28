@@ -51,6 +51,7 @@ import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 interface FaseConfig {
   id: number;
@@ -547,7 +548,12 @@ const ConfigurarJornada: React.FC = () => {
   };
 
   return (
-    <AdminLayout title={`Configurar Jornada - ${jornada?.titulo || ''}`}>
+    <>
+      <LoadingOverlay 
+        open={saving} 
+        messages={['Salvando configurações', 'Atualizando fases', 'Processando dados', 'Finalizando']}
+      />
+      <AdminLayout title={`Configurar Jornada - ${jornada?.titulo || ''}`}>
         <Container maxWidth="lg">
           <Box sx={{ position: 'relative', mb: 3 }}>
             <IconButton 
@@ -1561,7 +1567,8 @@ const ConfigurarJornada: React.FC = () => {
           </Box>
         </Container>
       </AdminLayout>
-    );
+    </>
+  );
 };
 
 export default ConfigurarJornada;

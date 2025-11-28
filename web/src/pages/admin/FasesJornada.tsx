@@ -32,6 +32,7 @@ import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import FasesTabuleiro from '../../components/FasesTabuleiro';
 import { useToast } from '../../contexts/ToastContext';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 interface Fase {
   id: number;
@@ -231,8 +232,13 @@ const FasesJornada: React.FC = () => {
   }
 
   return (
-    <AdminLayout title={`Fases - ${jornada.titulo}`}>
-      <Container maxWidth="lg">
+    <>
+      <LoadingOverlay 
+        open={salvando} 
+        messages={['Criando fase', 'Salvando dados', 'Processando', 'Finalizando']}
+      />
+      <AdminLayout title={`Fases - ${jornada.titulo}`}>
+        <Container maxWidth="lg">
         <Box sx={{ position: 'relative', mb: 3 }}>
           <IconButton 
             onClick={() => navigate('/admin/fases')} 
@@ -921,6 +927,7 @@ const FasesJornada: React.FC = () => {
         </Dialog>
       </Container>
     </AdminLayout>
+    </>
   );
 };
 

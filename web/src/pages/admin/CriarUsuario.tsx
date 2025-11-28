@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 const CriarUsuario: React.FC = () => {
   const navigate = useNavigate();
@@ -96,8 +97,13 @@ const CriarUsuario: React.FC = () => {
   };
 
   return (
-    <AdminLayout title="Criar Usuário">
-      <Container maxWidth="md">
+    <>
+      <LoadingOverlay 
+        open={salvando} 
+        messages={['Criando usuário', 'Validando dados', 'Processando', 'Finalizando']}
+      />
+      <AdminLayout title="Criar Usuário">
+        <Container maxWidth="md">
         {erro && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
             {erro}
@@ -212,6 +218,7 @@ const CriarUsuario: React.FC = () => {
         </Paper>
       </Container>
     </AdminLayout>
+    </>
   );
 };
 

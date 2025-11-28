@@ -50,6 +50,7 @@ import { FormControlLabel, Switch, Grid } from '@mui/material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 interface Fase {
   id: string;      // id interno só para o DnD
@@ -868,8 +869,13 @@ const CriarJornada: React.FC = () => {
   };
 
   return (
-    <AdminLayout title="Criar Jornada">
-      <Container maxWidth="md" sx={{ py: 4 }}>
+    <>
+      <LoadingOverlay 
+        open={salvando} 
+        messages={['Salvando jornada', 'Criando fases', 'Processando dados', 'Finalizando']}
+      />
+      <AdminLayout title="Criar Jornada">
+        <Container maxWidth="md" sx={{ py: 4 }}>
         <Breadcrumbs 
           sx={{ 
             mb: 3,
@@ -1346,6 +1352,7 @@ const CriarJornada: React.FC = () => {
         />
       </Container>
     </AdminLayout>
+    </>
   );
 };
 

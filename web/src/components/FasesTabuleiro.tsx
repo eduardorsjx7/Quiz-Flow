@@ -35,10 +35,13 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const colSpacing = (svgWidth - marginX * 2) / (cols - 1);
 
   const marginBottom = 120;
-  const marginTop = -60; // controle do espaço SUPERIOR (linha do topo) - reduzido para aproximar do título
-
   const phaseStepY = 50;
   const circleRadius = 55;
+  
+  // Ajuste do marginTop para incluir espaço da fase mais alta (indexInGroup === 2)
+  // A fase mais alta precisa de: phaseStepY + 2 * circleRadius acima do baseY
+  const espacoFaseAlta = phaseStepY + 2 * circleRadius;
+  const marginTop = -60 + espacoFaseAlta; // Adiciona espaço para fase mais alta
 
   // Altura real de um grupo (do círculo mais baixo ao mais alto)
   const groupHeight = phaseStepY + 2 * circleRadius;
@@ -53,11 +56,13 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const groups = Math.ceil(total / cols);
 
   // Altura do SVG considerando:
-  // - topo: marginTop
+  // - topo: marginTop (já inclui espaço para fase mais alta)
   // - grupos: (groups - 1) * rowGap + groupHeight
-  // - rodapé: marginBottom
+  // - rodapé: marginBottom + espaço para label da fase mais baixa
+  // O label abaixo da fase mais baixa precisa de: circleRadius + 10 (padding) + 28 (altura do label)
+  const espacoLabel = circleRadius + 10 + 28;
   const svgHeight =
-    marginTop + groupHeight + rowGap * (groups - 1) + marginBottom;
+    marginTop + groupHeight + rowGap * (groups - 1) + marginBottom + espacoLabel;
 
   const calcularPosicao = (index: number) => {
     const groupIndex = Math.floor(index / cols);

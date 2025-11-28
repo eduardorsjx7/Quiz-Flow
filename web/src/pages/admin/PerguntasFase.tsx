@@ -47,6 +47,7 @@ import {
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -504,8 +505,13 @@ const AdminPerguntasFase: React.FC = () => {
   }
 
   return (
-    <AdminLayout title={`Gerenciar Perguntas - ${fase?.titulo || 'Fase'}`}>
-      <Container maxWidth="md">
+    <>
+      <LoadingOverlay 
+        open={salvando} 
+        messages={['Salvando perguntas', 'Processando alternativas', 'Validando dados', 'Finalizando']}
+      />
+      <AdminLayout title={`Gerenciar Perguntas - ${fase?.titulo || 'Fase'}`}>
+        <Container maxWidth="md">
         <Box sx={{ position: 'relative', mb: 3 }}>
           <IconButton 
             onClick={() => {
@@ -989,6 +995,7 @@ const AdminPerguntasFase: React.FC = () => {
         </Box>
       </Container>
     </AdminLayout>
+    </>
   );
 };
 

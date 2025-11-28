@@ -33,6 +33,7 @@ import AdminLayout from '../../components/AdminLayout';
 import FasesTabuleiro from '../../components/FasesTabuleiro';
 import { useToast } from '../../contexts/ToastContext';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
+import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 
 interface Fase {
   id: number;
@@ -63,6 +64,7 @@ const FasesJornada: React.FC = () => {
   const { jornadaId } = useParams<{ jornadaId: string }>();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const { confirm } = useConfirmDialog();
   const [jornada, setJornada] = useState<Jornada | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -201,6 +203,37 @@ const FasesJornada: React.FC = () => {
         || 'Erro ao criar fase';
       setErro(mensagemErro);
       showError(mensagemErro, 'Erro ao criar fase');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleEditarFase = (faseId: number) => {
+    navigate(`/admin/fases/${faseId}/perguntas`);
+  };
+
+  const handleExcluirFase = async (faseId: number) => {
+    const fase = jornada?.fases.find((f) => f.id === faseId);
+    if (!fase) return;
+
+    const confirmed = await confirm({
+      title: 'Excluir Fase',
+      message: `Tem certeza que deseja excluir a fase "${fase.titulo}"? Esta ação não pode ser desfeita.`,
+      type: 'delete',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setSalvando(true);
+      await api.delete(`/fases/${faseId}`);
+      showSuccess('Fase excluída com sucesso!', 'Sucesso');
+      await carregarFasesJornada();
+    } catch (error: any) {
+      const mensagemErro = error.response?.data?.error?.message 
+        || error.response?.data?.error 
+        || 'Erro ao excluir fase';
+      showError(mensagemErro, 'Erro ao excluir fase');
     } finally {
       setSalvando(false);
     }
@@ -419,6 +452,8 @@ const FasesJornada: React.FC = () => {
               }}
               isAdmin={true}
               showConnections={true}
+              onEditFase={handleEditarFase}
+              onDeleteFase={handleExcluirFase}
             />
           </Box>
         )}

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box } from '@mui/material';
+import { Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
 import { QuestionIconFloating } from './QuestionIconFloating';
 import './animated-background.css';
 
@@ -19,6 +20,8 @@ interface FasesTabuleiroProps {
   onFaseClick?: (faseId: number) => void;
   isAdmin?: boolean;
   showConnections?: boolean;
+  onEditFase?: (faseId: number) => void;
+  onDeleteFase?: (faseId: number) => void;
 }
 
 const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
@@ -26,6 +29,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   onFaseClick,
   isAdmin = false,
   showConnections = true,
+  onEditFase,
+  onDeleteFase,
 }) => {
   const fasesOrdenadas = [...fases].sort((a, b) => a.ordem - b.ordem);
 
@@ -34,15 +39,11 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const marginX = 120;
   const colSpacing = (svgWidth - marginX * 2) / (cols - 1);
 
-  const marginBottom = 120;
-  const phaseStepY = 50;
+  // Margem padrão entre bordas e círculos
+  const margemPadrao = -100;
+  const phaseStepY = 0;
   const circleRadius = 55;
   
-  // Ajuste do marginTop para incluir espaço da fase mais alta (indexInGroup === 2)
-  // A fase mais alta precisa de: phaseStepY + 2 * circleRadius acima do baseY
-  const espacoFaseAlta = phaseStepY + 2 * circleRadius;
-  const marginTop = -60 + espacoFaseAlta; // Adiciona espaço para fase mais alta
-
   // Altura real de um grupo (do círculo mais baixo ao mais alto)
   const groupHeight = phaseStepY + 2 * circleRadius;
 
@@ -50,19 +51,104 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const groupGap = 300;
 
   // Espaçamento vertical entre "fundos" dos grupos
-  const rowGap = groupHeight + groupGap;
+  
 
   const total = fasesOrdenadas.length;
+
+  const rowGap = total === 1 ? 0 : groupHeight + groupGap;
+
   const groups = Math.ceil(total / cols);
 
-  // Altura do SVG considerando:
-  // - topo: marginTop (já inclui espaço para fase mais alta)
-  // - grupos: (groups - 1) * rowGap + groupHeight
-  // - rodapé: marginBottom + espaço para label da fase mais baixa
-  // O label abaixo da fase mais baixa precisa de: circleRadius + 10 (padding) + 28 (altura do label)
-  const espacoLabel = circleRadius + 10 + 28;
-  const svgHeight =
-    marginTop + groupHeight + rowGap * (groups - 1) + marginBottom + espacoLabel;
+  // Recalcular Y e encontrar o círculo mais alto e mais baixo em um único loop
+  // Função auxiliar movida para dentro do useMemo para evitar problemas de dependências
+  const { posicaoYCirculoMaisAlto, posicaoYCirculoMaisBaixo } = useMemo(() => {
+    // Função auxiliar otimizada para calcular Y de cada círculo individualmente
+    // Usa EXATAMENTE a mesma lógica de calcularPosicao, mas sem marginTop
+    const calcularY = (index: number) => {
+      const groupIndex = Math.floor(index / cols);
+      const indexInGroup = index % cols;
+    
+      // Calcular a posição relativa do grupo, mas se houver apenas um elemento, ajustamos para a posição esperada
+      const baseYRelativa = groupHeight + rowGap * (groups - 1 - groupIndex);
+    
+      if (total === 1) {
+        // Se houver apenas um elemento, ajusta a baseYRelativa para garantir que o círculo fique na posição certa
+        return baseYRelativa;
+      }
+    
+      // Lógica normal de cálculo de Y
+      if (indexInGroup === 0) {
+        return baseYRelativa;
+      } else if (indexInGroup === 1) {
+        return baseYRelativa - phaseStepY;
+      } else {
+        const y2 = baseYRelativa - phaseStepY;
+        return y2 - 2 * circleRadius;
+      }
+    };
+
+    // Inicializar as variáveis para calcular o círculo mais alto e mais baixo
+    let menorY = calcularY(0);  // Calcular o Y do primeiro círculo para inicializar
+    let maiorY = menorY;
+
+    // Loop otimizado: calcular Y e encontrar menor/maior Y (círculo mais alto/baixo) em uma única iteração
+    for (let i = 1; i < total; i++) {
+      const y = calcularY(i);
+      
+      // Atualizar o círculo mais alto (menor Y)
+      if (y < menorY) {
+        menorY = y;
+      }
+      // Atualizar o círculo mais baixo (maior Y)
+      if (y > maiorY) {
+        maiorY = y;
+      }
+    }
+
+    return {
+      posicaoYCirculoMaisAlto: menorY,
+      posicaoYCirculoMaisBaixo: maiorY,
+    };
+  }, [total, groupHeight, phaseStepY, circleRadius, cols, groups, rowGap]);
+
+  // Calculando o topo e fundo com base nos círculos mais alto e mais baixo
+  // topoCirculoMaisAlto = posição do topo do círculo mais alto (sem marginTop)
+  // Quando aplicamos marginTop, o topo final será: marginTop + topoCirculoMaisAlto
+  const topoCirculoMaisAlto = posicaoYCirculoMaisAlto - circleRadius;
+  const fundoCirculoMaisBaixo = posicaoYCirculoMaisBaixo + circleRadius;
+
+  // Calcular marginTop para garantir que o topo do círculo mais alto fique exatamente na margem padrão
+  // A posição final do topo do círculo será: marginTop + topoCirculoMaisAlto
+  // Queremos que isso seja igual a margemPadrao: marginTop + topoCirculoMaisAlto = margemPadrao
+  // Portanto: marginTop = margemPadrao - topoCirculoMaisAlto
+  const marginTop = useMemo(() => {
+    if (total === 1) {
+      // Para um único círculo, garantir que fique na margem padrão
+      const topoUnico = posicaoYCirculoMaisAlto - circleRadius;
+      return margemPadrao - topoUnico;
+    }
+    // marginTop deve garantir que o topo do círculo mais alto fique exatamente em margemPadrao
+    // Exemplo: se topoCirculoMaisAlto = -50 e margemPadrao = 0, então marginTop = 0 - (-50) = 50
+    // O topo final será: 50 + (-50) = 0 (exatamente na margem padrão)
+    return margemPadrao - topoCirculoMaisAlto;
+  }, [topoCirculoMaisAlto, margemPadrao, total, posicaoYCirculoMaisAlto, circleRadius]);
+
+  // Calcular altura do SVG garantindo margens iguais superior e inferior
+  // Altura = marginTop + (distância do topo do círculo mais alto ao fundo do círculo mais baixo) + margem inferior + espaço para label
+  // A margem inferior deve ser igual à margem superior (margemPadrao)
+  const svgHeight = useMemo(() => {
+    const espacoLabel = circleRadius + 10 + 28;
+    const alturaEntreCirculos = total > 0 
+      ? (fundoCirculoMaisBaixo - topoCirculoMaisAlto)
+      : 0;
+    
+    // marginTop já garante a margem superior
+    // Adicionamos margemPadrao para garantir a margem inferior igual
+    const alturaCalculada = marginTop + alturaEntreCirculos + margemPadrao + espacoLabel;
+    
+    return Math.max(200, alturaCalculada); // altura mínima de 200px
+  }, [marginTop, topoCirculoMaisAlto, fundoCirculoMaisBaixo, total, circleRadius, margemPadrao]);
+  
 
   const calcularPosicao = (index: number) => {
     const groupIndex = Math.floor(index / cols);
@@ -76,9 +162,9 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
       ? cols - 1 - indexInGroup
       : indexInGroup;
 
-    // baseY do grupo (círculo de baixo)
-    const baseY =
-      marginTop + groupHeight + rowGap * (groups - 1 - groupIndex);
+    // baseY do grupo (círculo de baixo) - usar posição relativa + marginTop
+    const baseYRelativa = groupHeight + rowGap * (groups - 1 - groupIndex);
+    const baseY = marginTop + baseYRelativa;
 
     let y: number;
     // 0 = baixo, 1 = meio, 2 = alto
@@ -160,7 +246,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
     }
 
     const dx = pontoFim.x - pontoInicio.x;
-    const dy = pontoFim.y - pontoInicio.y;
 
     const amplitudeUp = 40;
     const amplitudeDown = 80;
@@ -211,7 +296,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
     };
 
     const dx = p1.x - p0.x;
-    const dy = p1.y - p0.y;
 
     const phi = (1 + Math.sqrt(5)) / 2;
     const t1 = 1 / (phi * phi); // ≈ 0.382
@@ -757,6 +841,106 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                         ? `${fase.titulo.substring(0, 25)}...`
                         : fase.titulo}
                     </text>
+                  </g>
+                )}
+
+                {isAdmin && (
+                  <g>
+                    {/* Círculo de Editar */}
+                    <circle
+                      cx={pos.x - 20}
+                      cy={pos.y + circleRadius + 65}
+                      r="16"
+                      fill="#2196F3"
+                      stroke="#1976D2"
+                      strokeWidth="2"
+                      style={{
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.stopPropagation();
+                        if (onEditFase) {
+                          onEditFase(fase.id);
+                        }
+                      }}
+                      onMouseEnter={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.currentTarget.setAttribute('r', '18');
+                        e.currentTarget.setAttribute('fill', '#1976D2');
+                      }}
+                      onMouseLeave={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.currentTarget.setAttribute('r', '16');
+                        e.currentTarget.setAttribute('fill', '#2196F3');
+                      }}
+                    />
+                    <foreignObject
+                      x={pos.x - 30}
+                      y={pos.y + circleRadius + 55}
+                      width="20"
+                      height="20"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          color: '#ffffff',
+                        }}
+                      >
+                        <EditIcon sx={{ fontSize: '18px' }} />
+                      </Box>
+                    </foreignObject>
+
+                    {/* Círculo de Excluir */}
+                    <circle
+                      cx={pos.x + 20}
+                      cy={pos.y + circleRadius + 65}
+                      r="16"
+                      fill="#f44336"
+                      stroke="#d32f2f"
+                      strokeWidth="2"
+                      style={{
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.stopPropagation();
+                        if (onDeleteFase) {
+                          onDeleteFase(fase.id);
+                        }
+                      }}
+                      onMouseEnter={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.currentTarget.setAttribute('r', '18');
+                        e.currentTarget.setAttribute('fill', '#d32f2f');
+                      }}
+                      onMouseLeave={(e: React.MouseEvent<SVGCircleElement>) => {
+                        e.currentTarget.setAttribute('r', '16');
+                        e.currentTarget.setAttribute('fill', '#f44336');
+                      }}
+                    />
+                    <foreignObject
+                      x={pos.x + 10}
+                      y={pos.y + circleRadius + 55}
+                      width="20"
+                      height="20"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          color: '#ffffff',
+                        }}
+                      >
+                        <CloseIcon sx={{ fontSize: '18px' }} />
+                      </Box>
+                    </foreignObject>
                   </g>
                 )}
               </g>

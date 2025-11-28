@@ -41,6 +41,9 @@ interface Fase {
   descricao?: string;
   ordem: number;
   totalPerguntas?: number;
+  ativo?: boolean;
+  dataDesbloqueio?: string | Date | null;
+  dataBloqueio?: string | Date | null;
   _count: {
     quizzes: number;
   };
@@ -438,15 +441,46 @@ const FasesJornada: React.FC = () => {
         ) : (
           <Box sx={{ mb: 3 }}>
             <FasesTabuleiro
-              fases={jornada.fases.map((fase: Fase) => ({
-                id: fase.id,
-                ordem: fase.ordem,
-                titulo: fase.titulo,
-                desbloqueada: true,
-                bloqueada: false,
-                faseAberta: true,
-                ativo: true,
-              }))}
+              fases={jornada.fases.map((fase: Fase) => {
+                // Calcular se a fase está bloqueada baseado em dataDesbloqueio, dataBloqueio e ativo
+                const agora = new Date();
+                let estaDesbloqueada = true;
+                let estaBloqueada = false;
+                
+                // Se a fase não está ativa, está bloqueada
+                if (fase.ativo === false) {
+                  estaBloqueada = true;
+                  estaDesbloqueada = false;
+                } else {
+                  // Verificar datas de desbloqueio e bloqueio
+                  if (fase.dataDesbloqueio) {
+                    const dataDesbloqueio = new Date(fase.dataDesbloqueio);
+                    // Só está desbloqueada se a data de desbloqueio já passou
+                    estaDesbloqueada = dataDesbloqueio <= agora;
+                  }
+                  
+                  if (fase.dataBloqueio) {
+                    const dataBloqueio = new Date(fase.dataBloqueio);
+                    // Está bloqueada se a data de bloqueio já passou
+                    estaBloqueada = dataBloqueio <= agora;
+                  }
+                  
+                  // Se está bloqueada por data, não pode estar desbloqueada
+                  if (estaBloqueada) {
+                    estaDesbloqueada = false;
+                  }
+                }
+                
+                return {
+                  id: fase.id,
+                  ordem: fase.ordem,
+                  titulo: fase.titulo,
+                  desbloqueada: estaDesbloqueada,
+                  bloqueada: estaBloqueada,
+                  faseAberta: estaDesbloqueada && !estaBloqueada,
+                  ativo: fase.ativo !== false,
+                };
+              })}
               onFaseClick={(faseId: number) => {
                 navigate(`/admin/fases/${faseId}/perguntas`);
               }}

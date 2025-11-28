@@ -732,6 +732,7 @@ const ConfigurarJornada: React.FC = () => {
                     sx={{
                       maxHeight: '350px', // Altura para aproximadamente 5 linhas (53px cada + header ~57px)
                       overflowY: 'auto',
+                      overflowX: 'hidden', // Remove rolagem lateral
                       '&::-webkit-scrollbar': {
                         width: '8px',
                       },
@@ -754,17 +755,17 @@ const ConfigurarJornada: React.FC = () => {
                       setMostrarSeta(hasScroll && !isScrolledToBottom);
                     }}
                   >
-                    <Table stickyHeader>
+                    <Table stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 600, width: 50 }}></TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Ordem</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Título</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600 }}>Desbloqueio</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600 }}>Bloqueio</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Pontuação</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600 }}>Ações</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: 80 }}>Ordem</TableCell>
+                        <TableCell sx={{ fontWeight: 600, minWidth: 150, maxWidth: 200 }}>Título</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 150 }}>Desbloqueio</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 150 }}>Bloqueio</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 120 }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: 100 }}>Pontuação</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, width: 80 }}>Ações</TableCell>
                       </TableRow>
                     </TableHead>
                     <Droppable droppableId="fases">
@@ -808,7 +809,16 @@ const ConfigurarJornada: React.FC = () => {
                                       <Chip label={`${fase.ordem}ª`} color="primary" size="small" />
                                     </TableCell>
                                     <TableCell>
-                                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                      <Typography 
+                                        variant="body1" 
+                                        sx={{ 
+                                          fontWeight: 500,
+                                          wordBreak: 'break-word',
+                                          whiteSpace: 'normal',
+                                          overflowWrap: 'break-word',
+                                          maxWidth: '200px',
+                                        }}
+                                      >
                                         {fase.titulo}
                                       </Typography>
                                     </TableCell>

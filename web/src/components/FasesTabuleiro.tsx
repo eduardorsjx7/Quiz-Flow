@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box } from '@mui/material';
-import { Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Close as CloseIcon, Lock as LockIcon } from '@mui/icons-material';
 import { QuestionIconFloating } from './QuestionIconFloating';
 import './animated-background.css';
 
@@ -40,7 +40,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   const colSpacing = (svgWidth - marginX * 2) / (cols - 1);
 
   // Margem padrão entre bordas e círculos
-  const margemPadrao = -100;
+  const margemPadrao = 0;
   const phaseStepY = 0;
   const circleRadius = 55;
   
@@ -538,6 +538,18 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
               </feMerge>
             </filter>
 
+            <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
+            </filter>
+            
+            <filter id="blurRed" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+            </filter>
+            
+            <filter id="redOverlay" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
+            </filter>
+
             <linearGradient
               id="circleBorderGradient"
               x1="0%"
@@ -660,11 +672,19 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
             const pos = calcularPosicao(index);
             const status = getStatusFase(fase);
             const clicavel = podeClicarFase(fase);
-            const opacity = status === 'bloqueada' ? 0.5 : 1;
+            const opacity = status === 'bloqueada' ? 1 : 1;
             const { fill, stroke } = getCircleAppearance(status);
 
             return (
               <g key={fase.id}>
+                {/* Definir clipPath para limitar blur apenas dentro do círculo */}
+                <defs>
+                  <clipPath id={`circleClip-${fase.id}`}>
+                    <circle cx={pos.x} cy={pos.y} r={circleRadius} />
+                  </clipPath>
+                </defs>
+
+                {/* Círculo de sombra de fundo - sem efeitos */}
                 <circle
                   cx={pos.x + 1}
                   cy={pos.y + 1}
@@ -673,6 +693,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   opacity={opacity * 0.3}
                 />
 
+                {/* Círculo principal - 100% de opacidade, sem blur - na frente das linhas */}
                 <circle
                   cx={pos.x}
                   cy={pos.y}
@@ -681,7 +702,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   stroke={stroke}
                   strokeWidth="3"
                   strokeDasharray={status === 'bloqueada' ? '8 6' : '0'}
-                  opacity={opacity}
+                  opacity={1}
                   filter="url(#shadow)"
                   style={{
                     cursor: clicavel ? 'pointer' : 'default',
@@ -707,57 +728,41 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   }}
                 />
 
-                {status !== 'bloqueada' && (
-                  <text
-                    x={pos.x}
-                    y={pos.y + 12}
-                    textAnchor="middle"
-                    fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
-                    fontSize="32"
-                    fontWeight="700"
-                    fill={status === 'finalizada' ? '#14532d' : '#011b49'}
-                    style={{
-                      pointerEvents: 'none',
-                      transition: 'all 0.25s ease-in-out',
-                    }}
-                  >
-                    {fase.ordem}
-                  </text>
-                )}
-
+                {/* Blur vermelho mais forte e transparente sobre o círculo branco quando bloqueada */}
                 {status === 'bloqueada' && (
-                  <g>
-                    <rect
-                      x={pos.x - 14}
-                      y={pos.y - 2}
-                      width="28"
-                      height="20"
-                      rx="3"
-                      fill="#6b7280"
-                      stroke="#4b5563"
-                      strokeWidth="1.5"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <path
-                      d={`M ${pos.x - 14} ${pos.y - 2}
-                          Q ${pos.x} ${pos.y - 12} ${pos.x + 14} ${pos.y - 2}`}
-                      fill="none"
-                      stroke="#6b7280"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y + 6}
-                      r="3"
-                      fill="#ffffff"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  </g>
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={circleRadius}
+                    fill="rgba(220, 38, 38, 0.8)"
+                    filter="url(#blurRed)"
+                    opacity={0.6}
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  />
                 )}
 
-                {status === 'desbloqueada' && !fase.finalizada && (
+                {/* Número da fase - 100% de opacidade, sem blur */}
+                <text
+                  x={pos.x}
+                  y={pos.y + 12}
+                  textAnchor="middle"
+                  fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
+                  fontSize="32"
+                  fontWeight="700"
+                  fill={status === 'finalizada' ? '#14532d' : status === 'bloqueada' ? '#6b7280' : '#011b49'}
+                  opacity={1}
+                  style={{
+                    pointerEvents: 'none',
+                    transition: 'all 0.25s ease-in-out',
+                  }}
+                >
+                  {fase.ordem}
+                </text>
+
+                {/* Círculo pulsante - aparece sempre que não está finalizada */}
+                {!fase.finalizada && (
                   <g>
                     <circle
                       cx={pos.x}
@@ -940,6 +945,30 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       >
                         <CloseIcon sx={{ fontSize: '18px' }} />
                       </Box>
+                    </foreignObject>
+                  </g>
+                )}
+
+                {/* Ícone de cadeado transparente e maior - aparece por cima de tudo quando bloqueada */}
+                {status === 'bloqueada' && (
+                  <g>
+                    <foreignObject
+                      x={pos.x - 16}
+                      y={pos.y - 16}
+                      width="32"
+                      height="32"
+                      style={{ 
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <LockIcon 
+                        sx={{ 
+                          fontSize: '32px',
+                          color: '#ffffff',
+                          opacity: 0.8,
+                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4))',
+                        }} 
+                      />
                     </foreignObject>
                   </g>
                 )}

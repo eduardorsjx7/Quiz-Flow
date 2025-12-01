@@ -11,7 +11,11 @@ export class TentativaService {
         where: { id: quizId },
         include: {
           perguntas: {
-            include: {
+            select: {
+              id: true,
+              texto: true,
+              tempoSegundos: true,
+              ordem: true,
               alternativas: {
                 select: {
                   id: true,
@@ -91,7 +95,11 @@ export class TentativaService {
                 },
               },
               perguntas: {
-                include: {
+                select: {
+                  id: true,
+                  texto: true,
+                  tempoSegundos: true,
+                  ordem: true,
                   alternativas: {
                     select: {
                       id: true,
@@ -148,7 +156,11 @@ export class TentativaService {
                 },
               },
               perguntas: {
-                include: {
+                select: {
+                  id: true,
+                  texto: true,
+                  tempoSegundos: true,
+                  ordem: true,
                   alternativas: {
                     select: {
                       id: true,

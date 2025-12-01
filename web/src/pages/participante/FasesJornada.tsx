@@ -29,6 +29,9 @@ interface Fase {
   faseAtual?: boolean;
   totalPerguntas?: number;
   finalizada?: boolean;
+  ativo?: boolean;
+  dataDesbloqueio?: string | Date | null;
+  dataBloqueio?: string | Date | null;
 }
 
 interface Jornada {
@@ -247,25 +250,42 @@ const FasesJornada: React.FC = () => {
 
         {fases.length === 0 ? (
           <Alert severity="info">
-            Nenhuma fase desbloqueada disponível nesta jornada no momento.
+            Nenhuma fase disponível nesta jornada no momento.
           </Alert>
         ) : (
           <Box sx={{ mb: 3 }}>
             <FasesTabuleiro
-              fases={fases.map((fase) => ({
-                id: fase.id,
-                ordem: fase.ordem,
-                titulo: fase.titulo,
-                desbloqueada: fase.desbloqueada,
-                bloqueada: !fase.desbloqueada,
-                finalizada: fase.finalizada,
-                faseAberta: fase.desbloqueada,
-                ativo: true,
-              }))}
+              fases={fases.map((fase) => {
+                // Usar o valor desbloqueada que vem do backend (já calculado corretamente)
+                // O backend já considera: dataDesbloqueio, dataBloqueio, e desbloqueio manual
+                const estaDesbloqueada = fase.desbloqueada;
+                
+                // Calcular bloqueada: apenas se não está ativa (o backend já calculou desbloqueada corretamente)
+                // Se o backend diz que está desbloqueada, confiamos nisso
+                const estaBloqueada = fase.ativo === false;
+                
+                return {
+                  id: fase.id,
+                  ordem: fase.ordem,
+                  titulo: fase.titulo,
+                  desbloqueada: estaDesbloqueada,
+                  bloqueada: estaBloqueada,
+                  finalizada: fase.finalizada,
+                  faseAberta: estaDesbloqueada && !estaBloqueada,
+                  ativo: fase.ativo !== false,
+                };
+              })}
               onFaseClick={(faseId) => {
                 const fase = fases.find((f) => f.id === faseId);
-                if (fase && fase.desbloqueada && !fase.finalizada) {
-                  handleAbrirFase(faseId);
+                if (fase) {
+                  // Usar o valor desbloqueada do backend (já calculado corretamente)
+                  const estaDesbloqueada = fase.desbloqueada;
+                  const estaBloqueada = fase.ativo === false;
+                  
+                  // Só permite abrir se estiver desbloqueada, não bloqueada e não finalizada
+                  if (estaDesbloqueada && !estaBloqueada && !fase.finalizada) {
+                    handleAbrirFase(faseId);
+                  }
                 }
               }}
               isAdmin={false}

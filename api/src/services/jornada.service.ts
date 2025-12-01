@@ -137,11 +137,10 @@ export class JornadaService {
         throw new CustomError('Jornada não encontrada', 404);
       }
 
-      // Buscar todas as fases da jornada
+      // Buscar todas as fases da jornada (incluindo inativas para mostrar o status completo)
       const fases = await prisma.fase.findMany({
         where: {
           jornadaId,
-          ativo: true,
         },
         include: {
           _count: {
@@ -248,14 +247,11 @@ export class JornadaService {
         };
       });
 
-      // Filtrar apenas fases desbloqueadas se for participante
-      const fasesFiltradas = usuarioId 
-        ? fasesComStatus.filter((fase: { desbloqueada: boolean }) => fase.desbloqueada)
-        : fasesComStatus;
-
+      // Retornar todas as fases (bloqueadas e desbloqueadas) para mostrar o progresso completo
+      // O frontend será responsável por mostrar visualmente quais estão bloqueadas
       return {
         jornada,
-        fases: fasesFiltradas,
+        fases: fasesComStatus,
       };
     } catch (error) {
       logger.error('Error finding phases by journey', { error, jornadaId });

@@ -19,14 +19,15 @@ import {
 } from '@mui/material';
 import {
   Home as HomeIcon,
-  AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface Pergunta {
   id: number;
   texto: string;
+  tempoSegundos?: number;
   alternativas: {
     id: number;
     texto: string;
@@ -63,6 +64,7 @@ const ParticipanteQuiz: React.FC = () => {
   const [feedback, setFeedback] = useState<{ acertou: boolean; pontuacao: number; tempoEsgotado: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [mostrarDialogoTempoEsgotado, setMostrarDialogoTempoEsgotado] = useState(false);
   const carregandoRef = useRef(false);
   const intervaloRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -122,7 +124,10 @@ const ParticipanteQuiz: React.FC = () => {
     if (respondida || !tentativaId) return;
 
     const pergunta = perguntas[perguntaAtualIndex];
-    const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
+    // Usar tempoSegundos da pergunta individual, ou tempoLimitePorQuestao da jornada como fallback
+    const tempoLimitePergunta = pergunta?.tempoSegundos;
+    const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
+    const tempoLimite = tempoLimitePergunta || tempoLimiteJornada || 0;
     const tempoGasto = tempoLimite > 0 ? Math.max(0, tempoLimite - tempoRestante) : 0;
 
     setRespondida(true);
@@ -199,7 +204,11 @@ const ParticipanteQuiz: React.FC = () => {
       return;
     }
 
-    const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
+    // Usar tempoSegundos da pergunta atual, ou tempoLimitePorQuestao da jornada como fallback
+    const perguntaAtual = perguntas[perguntaAtualIndex];
+    const tempoLimitePergunta = perguntaAtual?.tempoSegundos;
+    const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
+    const tempoLimite = tempoLimitePergunta || tempoLimiteJornada;
     
     if (tempoLimite && tempoLimite > 0 && !respondida) {
       setTempoRestante(tempoLimite);
@@ -213,9 +222,9 @@ const ParticipanteQuiz: React.FC = () => {
               clearInterval(intervaloRef.current);
               intervaloRef.current = null;
             }
-            // Tempo esgotou - enviar resposta em branco (null)
+            // Tempo esgotou - mostrar diálogo
             if (!respondida) {
-              enviarResposta(null, true);
+              setMostrarDialogoTempoEsgotado(true);
             }
             return 0;
           }
@@ -245,6 +254,30 @@ const ParticipanteQuiz: React.FC = () => {
     }
   };
 
+  const handleConfirmarTempoEsgotado = () => {
+    setMostrarDialogoTempoEsgotado(false);
+    // Enviar resposta em branco (null) quando tempo esgotar
+    enviarResposta(null, true);
+  };
+
+  // Calcular tempo limite e progresso antes dos early returns (regra dos hooks)
+  const pergunta = perguntas[perguntaAtualIndex] || null;
+  const tempoLimitePergunta = pergunta?.tempoSegundos;
+  const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
+  const tempoLimite = tempoLimitePergunta || tempoLimiteJornada || 0;
+  
+  // Calcular porcentagem de tempo decorrido (0% no início, 100% no final)
+  // tempoRestante começa em tempoLimite e vai até 0
+  // tempoDecorrido = (tempoLimite - tempoRestante) / tempoLimite * 100
+  const tempoDecorrido = React.useMemo(() => {
+    if (!tempoLimite || tempoLimite <= 0) return 0;
+    if (tempoRestante <= 0) return 100;
+    const decorrido = ((tempoLimite - tempoRestante) / tempoLimite) * 100;
+    return Math.min(100, Math.max(0, decorrido)); // Garantir que está entre 0 e 100
+  }, [tempoLimite, tempoRestante]);
+  
+  const jornadaId = tentativa?.quiz?.fase?.jornada?.id;
+
   if (loading) {
     return (
       <ParticipantLayout>
@@ -270,14 +303,9 @@ const ParticipanteQuiz: React.FC = () => {
     );
   }
 
-  const pergunta = perguntas[perguntaAtualIndex];
-  const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
-  const progresso = tempoLimite > 0 ? (tempoRestante / tempoLimite) * 100 : 0;
-  const jornadaId = tentativa?.quiz?.fase?.jornada?.id;
-
   return (
     <>
-      {/* Barra de Tempo Restante - Ocupa toda a largura abaixo do header */}
+      {/* Barra de Carregamento - Cresce conforme o tempo passa */}
       {tempoLimite > 0 && (
         <Box
           sx={{
@@ -286,43 +314,25 @@ const ParticipanteQuiz: React.FC = () => {
             left: { xs: 0, sm: '80px' }, // Sidebar colapsado por padrão (80px)
             right: 0,
             zIndex: (theme) => theme.zIndex.appBar - 1,
-            backgroundColor: '#fff',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           }}
         >
-          <Box sx={{ px: 3, py: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <AccessTimeIcon sx={{ mr: 1, fontSize: 18, color: '#ff2c19' }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#011b49' }}>
-                  Tempo Restante: {tempoRestante}s
-                </Typography>
-              </Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {Math.round(progresso)}% restante
-              </Typography>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={100 - progresso} // Inverter para mostrar tempo decorrido em vermelho progressivo
-              sx={{
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: 'rgba(255, 44, 25, 0.1)',
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 3,
-                  backgroundColor: '#ff2c19',
-                  transition: 'transform 0.3s ease-in-out',
-                },
-              }}
-            />
-          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={tempoDecorrido} // Mostra tempo decorrido (cresce de 0% para 100%)
+            sx={{
+              height: 4,
+              backgroundColor: 'rgba(255, 44, 25, 0.1)',
+              '& .MuiLinearProgress-bar': {
+                backgroundColor: '#ff2c19',
+                transition: 'transform 0.1s linear',
+              },
+            }}
+          />
         </Box>
       )}
 
       <ParticipantLayout>
-        <Container maxWidth="lg" sx={{ pt: tempoLimite > 0 ? 10 : 0 }}>
+        <Container maxWidth="lg" sx={{ pt: tempoLimite > 0 ? 2 : 0 }}>
 
         {/* Breadcrumbs */}
         <Breadcrumbs 
@@ -587,6 +597,17 @@ const ParticipanteQuiz: React.FC = () => {
         )}
         </Container>
       </ParticipantLayout>
+
+      {/* Diálogo de Tempo Esgotado */}
+      <ConfirmDialog
+        open={mostrarDialogoTempoEsgotado}
+        title="Tempo Limite Excedido"
+        message="O tempo limite para responder esta pergunta foi excedido. A pergunta será marcada como não respondida e você será direcionado para a próxima pergunta."
+        confirmText="Entendi"
+        type="warning"
+        onConfirm={handleConfirmarTempoEsgotado}
+        onCancel={handleConfirmarTempoEsgotado}
+      />
     </>
   );
 };

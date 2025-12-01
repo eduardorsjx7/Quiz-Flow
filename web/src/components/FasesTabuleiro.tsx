@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box } from '@mui/material';
-import { Edit as EditIcon, Close as CloseIcon, Lock as LockIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Close as CloseIcon, Lock as LockIcon, CheckCircle as CheckCircleIcon, Schedule as ScheduleIcon } from '@mui/icons-material';
 import { QuestionIconFloating } from './QuestionIconFloating';
 import './animated-background.css';
 
@@ -9,9 +9,8 @@ interface FaseTabuleiro {
   ordem: number;
   titulo: string;
   desbloqueada?: boolean;
-  bloqueada?: boolean;
   finalizada?: boolean;
-  faseAberta?: boolean;
+  aguardandoDesbloqueio?: boolean;
   ativo?: boolean;
 }
 
@@ -321,16 +320,16 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
   };
 
   const getStatusFase = (fase: FaseTabuleiro) => {
+    // Ordem de prioridade: finalizada > aguardando > desbloqueada > bloqueada
+    // O backend já calcula tudo corretamente, apenas usar os valores
     if (fase.finalizada) return 'finalizada';
-    if (fase.desbloqueada || fase.faseAberta) return 'desbloqueada';
-    if (fase.bloqueada || !fase.ativo) return 'bloqueada';
-    return 'aguardando';
+    if (fase.aguardandoDesbloqueio) return 'aguardando';
+    if (fase.desbloqueada) return 'desbloqueada';
+    return 'bloqueada'; // Default: se não está desbloqueada, finalizada ou aguardando, está bloqueada
   };
 
   const podeClicarFase = (fase: FaseTabuleiro) =>
-    (fase.desbloqueada || fase.faseAberta) &&
-    !fase.finalizada &&
-    fase.ativo !== false;
+    fase.desbloqueada && !fase.finalizada && fase.ativo;
 
   const getCircleAppearance = (status: string) => {
     if (status === 'bloqueada') {
@@ -339,8 +338,20 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
         stroke: 'url(#circleBlockedGradient)',
       };
     }
+    if (status === 'aguardando') {
+      return {
+        fill: '#ffffff',
+        stroke: 'url(#circleBorderGradient)',
+      };
+    }
+    if (status === 'finalizada') {
+      return {
+        fill: '#ffffff',
+        stroke: 'url(#circleBorderGradient)',
+      };
+    }
     return {
-      fill: 'url(#circleGradient)',
+      fill: '#ffffff',
       stroke: 'url(#circleBorderGradient)',
     };
   };
@@ -542,14 +553,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
               <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
             </filter>
             
-            <filter id="blurRed" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
-            </filter>
-            
-            <filter id="blurGreen" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
-            </filter>
-            
             <filter id="redOverlay" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
             </filter>
@@ -571,13 +574,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                 <feMergeNode in="SourceGraphic"/>
               </feMerge>
             </filter>
-
-            {/* Gradiente radial para aura de bloqueio */}
-            <radialGradient id="lockAuraGradient" cx="50%" cy="50%">
-              <stop offset="0%" stopColor="rgba(220, 38, 38, 0.6)" />
-              <stop offset="50%" stopColor="rgba(220, 38, 38, 0.3)" />
-              <stop offset="100%" stopColor="rgba(220, 38, 38, 0)" />
-            </radialGradient>
 
             {/* Gradiente radial para aura de finalizada */}
             <radialGradient id="checkAuraGradient" cx="50%" cy="50%">
@@ -708,7 +704,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
             const pos = calcularPosicao(index);
             const status = getStatusFase(fase);
             const clicavel = podeClicarFase(fase);
-            const opacity = status === 'bloqueada' ? 1 : 1;
             const { fill, stroke } = getCircleAppearance(status);
 
             return (
@@ -726,7 +721,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   cy={pos.y + 1}
                   r={circleRadius}
                   fill="rgba(0,0,0,0.05)"
-                  opacity={opacity * 0.3}
+                  opacity={0.3}
                 />
 
                 {/* Círculo principal - 100% de opacidade, sem blur - na frente das linhas */}
@@ -764,75 +759,64 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   }}
                 />
 
-                {/* Efeito de overlay vermelho com gradiente radial quando bloqueada */}
+                {/* Efeito de overlay vermelho sólido quando bloqueada */}
                 {status === 'bloqueada' && (
-                  <>
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={circleRadius}
-                      fill="rgba(220, 38, 38, 0.25)"
-                      filter="url(#blurRed)"
-                      opacity={0.8}
-                      style={{ 
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={circleRadius * 0.7}
-                      fill="rgba(220, 38, 38, 0.15)"
-                      style={{ 
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  </>
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={circleRadius}
+                    fill="rgba(227, 12, 12, 0.75)"
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  />
                 )}
 
-                {/* Efeito de overlay verde com gradiente radial quando finalizada */}
+                {/* Efeito de overlay verde sólido quando finalizada */}
                 {status === 'finalizada' && (
-                  <>
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={circleRadius}
-                      fill="rgba(34, 197, 94, 0.25)"
-                      filter="url(#blurGreen)"
-                      opacity={0.8}
-                      style={{ 
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={circleRadius * 0.7}
-                      fill="rgba(34, 197, 94, 0.15)"
-                      style={{ 
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  </>
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={circleRadius}
+                    fill="rgba(14, 222, 90, 0.85)"
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  />
                 )}
 
-                {/* Número da fase - 100% de opacidade, sem blur */}
-                <text
-                  x={pos.x}
-                  y={pos.y + 12}
-                  textAnchor="middle"
-                  fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
-                  fontSize="32"
-                  fontWeight="700"
-                  fill={status === 'finalizada' ? '#14532d' : status === 'bloqueada' ? '#6b7280' : '#011b49'}
-                  opacity={1}
-                  style={{
-                    pointerEvents: 'none',
-                    transition: 'all 0.25s ease-in-out',
-                  }}
-                >
-                  {fase.ordem}
-                </text>
+                {/* Efeito de overlay amarelo sólido quando aguardando desbloqueio */}
+                {status === 'aguardando' && (
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={circleRadius}
+                    fill="rgba(255, 193, 7, 0.75)"
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
+
+                {/* Número da fase - 100% de opacidade, sem blur - não aparece quando bloqueada ou aguardando */}
+                {status !== 'bloqueada' && status !== 'aguardando' && (
+                  <text
+                    x={pos.x}
+                    y={pos.y + 12}
+                    textAnchor="middle"
+                    fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
+                    fontSize="32"
+                    fontWeight="700"
+                    fill={status === 'finalizada' ? '#14532d' : '#011b49'}
+                    opacity={1}
+                    style={{
+                      pointerEvents: 'none',
+                      transition: 'all 0.25s ease-in-out',
+                    }}
+                  >
+                    {fase.ordem}
+                  </text>
+                )}
 
                 {/* Círculo pulsante - aparece sempre que não está finalizada */}
                 {!fase.finalizada && (
@@ -1022,105 +1006,64 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   </g>
                 )}
 
-                {/* Ícone de cadeado com efeito melhorado - aparece por cima de tudo quando bloqueada */}
+                {/* Ícone de cadeado - aparece por cima de tudo quando bloqueada */}
                 {status === 'bloqueada' && (
-                  <g>
-                    {/* Aura pulsante ao redor do ícone */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r="28"
-                      fill="url(#lockAuraGradient)"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      <animate
-                        attributeName="r"
-                        values="28;35;28"
-                        dur="2s"
-                        repeatCount="indefinite"
-                      />
-                      <animate
-                        attributeName="opacity"
-                        values="0.4;0.7;0.4"
-                        dur="2s"
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r="24"
-                      fill="url(#lockAuraGradient)"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      <animate
-                        attributeName="r"
-                        values="24;30;24"
-                        dur="2s"
-                        repeatCount="indefinite"
-                        begin="0.3s"
-                      />
-                      <animate
-                        attributeName="opacity"
-                        values="0.5;0.8;0.5"
-                        dur="2s"
-                        repeatCount="indefinite"
-                        begin="0.3s"
-                      />
-                    </circle>
-                    
-                    {/* Círculo de fundo com gradiente para o ícone */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r="20"
-                      fill="rgba(220, 38, 38, 0.15)"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    
-                    {/* Ícone de cadeado com efeitos visuais aprimorados */}
-                    <foreignObject
-                      x={pos.x - 18}
-                      y={pos.y - 18}
-                      width="36"
-                      height="36"
-                      style={{ 
-                        pointerEvents: 'none',
+                  <foreignObject
+                    x={pos.x - 18}
+                    y={pos.y - 18}
+                    width="36"
+                    height="36"
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transform: 'scale(1)',
-                          transition: 'all 0.3s ease-in-out',
-                          animation: 'iconPulse 2s ease-in-out infinite',
-                          '@keyframes iconPulse': {
-                            '0%, 100%': {
-                              transform: 'scale(1)',
-                              opacity: 0.95,
-                            },
-                            '50%': {
-                              transform: 'scale(1.08)',
-                              opacity: 1,
-                            },
-                          },
-                        }}
-                      >
-                        <LockIcon 
-                          sx={{ 
-                            fontSize: '36px',
-                            color: '#ffffff',
-                            filter: 'drop-shadow(0 3px 8px rgba(220, 38, 38, 0.6)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5))',
-                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                          }} 
-                        />
-                      </Box>
-                    </foreignObject>
-                  </g>
+                      <LockIcon 
+                        sx={{ 
+                          fontSize: '36px',
+                          color: '#ffffff',
+                        }} 
+                      />
+                    </Box>
+                  </foreignObject>
+                )}
+
+                {/* Ícone de relógio - aparece por cima de tudo quando aguardando desbloqueio */}
+                {status === 'aguardando' && (
+                  <foreignObject
+                    x={pos.x - 18}
+                    y={pos.y - 18}
+                    width="36"
+                    height="36"
+                    style={{ 
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ScheduleIcon 
+                        sx={{ 
+                          fontSize: '36px',
+                          color: '#ffffff',
+                        }} 
+                      />
+                    </Box>
+                  </foreignObject>
                 )}
 
                 {/* Ícone de check com efeito melhorado - aparece por cima de tudo quando finalizada */}

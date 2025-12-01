@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -26,25 +25,20 @@ import {
   Grid,
   Breadcrumbs,
   Link,
-  Stack,
+  Button,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  Settings as SettingsIcon,
   Search as SearchIcon,
   TableChart as TableChartIcon,
   ViewModule as ViewModuleIcon,
   Route as RouteIcon,
-  CheckCircle as CheckCircleIcon,
   Home as HomeIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
-import AdminLayout from '../../components/AdminLayout';
-import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import ParticipantLayout from '../../components/ParticipantLayout';
 
 interface Jornada {
   id: number;
@@ -63,14 +57,13 @@ interface Jornada {
   };
 }
 
-const AdminJornadas: React.FC = () => {
+const Jornadas: React.FC = () => {
   const navigate = useNavigate();
-  const { confirm } = useConfirmDialog();
   const [jornadas, setJornadas] = useState<Jornada[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [pesquisa, setPesquisa] = useState('');
-  const [visualizacao, setVisualizacao] = useState<'tabela' | 'cards'>('tabela');
+  const [visualizacao, setVisualizacao] = useState<'tabela' | 'cards'>('cards');
   const [paginaAtualTabela, setPaginaAtualTabela] = useState(1);
   const [paginaAtualCards, setPaginaAtualCards] = useState(1);
   const itensPorPaginaTabela = 8;
@@ -85,7 +78,11 @@ const AdminJornadas: React.FC = () => {
       setLoading(true);
       const response = await api.get('/jornadas');
       const dados = response.data.data || response.data;
-      setJornadas(Array.isArray(dados) ? dados : []);
+      // Filtrar apenas jornadas ativas para participantes
+      const jornadasAtivas = Array.isArray(dados) 
+        ? dados.filter((j: Jornada) => j.ativo) 
+        : [];
+      setJornadas(jornadasAtivas);
       setPaginaAtualTabela(1);
       setPaginaAtualCards(1);
     } catch (error: any) {
@@ -93,26 +90,6 @@ const AdminJornadas: React.FC = () => {
       setJornadas([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeletar = async (id: number) => {
-    const jornada = jornadas.find(j => j.id === id);
-    const resultado = await confirm({
-      title: 'Excluir jornada?',
-      message: `Tem certeza que deseja excluir a jornada "${jornada?.titulo}"? Todas as fases e quizzes serão excluídos também. Esta ação não pode ser desfeita.`,
-      confirmText: 'Sim, excluir',
-      cancelText: 'Cancelar',
-      type: 'delete',
-    });
-
-    if (resultado) {
-      try {
-        await api.delete(`/jornadas/${id}`);
-        carregarJornadas();
-      } catch (error: any) {
-        alert(error.response?.data?.error || 'Erro ao deletar jornada');
-      }
     }
   };
 
@@ -156,16 +133,16 @@ const AdminJornadas: React.FC = () => {
 
   if (loading) {
     return (
-      <AdminLayout title="Jornadas">
+      <ParticipantLayout title="Jornadas">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
-      </AdminLayout>
+      </ParticipantLayout>
     );
   }
 
   return (
-    <AdminLayout title="Jornadas">
+    <ParticipantLayout title="Jornadas">
       <Container maxWidth="lg">
         <Breadcrumbs 
           sx={{ 
@@ -178,7 +155,7 @@ const AdminJornadas: React.FC = () => {
         >
           <Link
             component="button"
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/dashboard')}
             sx={{ 
               cursor: 'pointer', 
               display: 'flex', 
@@ -232,33 +209,9 @@ const AdminJornadas: React.FC = () => {
                 mt: 0.5,
               }}
             >
-              Gerencie suas jornadas e fases
+              Explore e acesse suas jornadas disponíveis
             </Typography>
           </Box>
-          <IconButton
-            onClick={() => navigate('/admin/jornadas/novo')}
-            sx={{
-              position: 'absolute',
-              right: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 48,
-              height: 48,
-              bgcolor: '#ff2c19',
-              color: '#ffffff',
-              border: '2px solid #e62816',
-              borderRadius: '50%',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: '#e62816',
-                transform: 'translateY(-50%) scale(1.1)',
-                boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
-              },
-            }}
-            title="Criar Nova Jornada"
-          >
-            <AddIcon />
-          </IconButton>
         </Box>
 
         {erro && (
@@ -342,31 +295,53 @@ const AdminJornadas: React.FC = () => {
         {/* Visualização em Tabela */}
         {visualizacao === 'tabela' && (
           <>
-          <TableContainer component={Paper}>
+          <TableContainer 
+            component={Paper}
+            sx={{
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              overflow: 'hidden',
+            }}
+          >
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Título</TableCell>
-                <TableCell align="center">Fase Atual</TableCell>
-                <TableCell align="center">Total de Fases</TableCell>
-                <TableCell align="center">Status</TableCell>
-                <TableCell align="right">Ações</TableCell>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#011b49' }}>
+                  Título
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#011b49' }}>
+                  Fase Atual
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#011b49' }}>
+                  Total de Fases
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#011b49' }}>
+                  Ações
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {jornadasFiltradas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                     <Typography variant="body2" color="text.secondary">
-                      {pesquisa ? 'Nenhuma jornada encontrada' : 'Nenhuma jornada cadastrada'}
+                      {pesquisa ? 'Nenhuma jornada encontrada' : 'Nenhuma jornada disponível'}
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 jornadasPaginadasTabela.map((jornada) => (
-                  <TableRow key={jornada.id}>
+                  <TableRow 
+                    key={jornada.id}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                      },
+                      transition: 'background-color 0.2s ease',
+                    }}
+                  >
                     <TableCell>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 500, color: '#011b49' }}>
                         {jornada.titulo}
                       </Typography>
                     </TableCell>
@@ -384,6 +359,7 @@ const AdminJornadas: React.FC = () => {
                           color="primary"
                           size="small"
                           variant="outlined"
+                          sx={{ fontWeight: 500 }}
                         />
                       ) : (
                         <Typography variant="body2" color="text.secondary">
@@ -392,81 +368,29 @@ const AdminJornadas: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell align="center">
-                      <Chip label={jornada._count.fases} size="small" color="default" />
+                      <Chip 
+                        label={jornada._count.fases} 
+                        size="small" 
+                        color="default"
+                        sx={{ fontWeight: 500 }}
+                      />
                     </TableCell>
                     <TableCell align="center">
-                      {(() => {
-                        // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
-                        const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
-                        // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
-                        const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
-                        
-                        let label = 'Ativa';
-                        let color: 'success' | 'default' | 'warning' | 'error' = 'success';
-                        
-                        if (estaFechada) {
-                          label = 'Fechada';
-                          color = 'default';
-                        } else if (estaBloqueada) {
-                          label = 'Bloqueada';
-                          color = 'error';
-                        } else if (jornada.ativo) {
-                          label = 'Ativa';
-                          color = 'success';
-                        } else {
-                          label = 'Inativa';
-                          color = 'default';
-                        }
-                        
-                        return (
-                          <Chip
-                            label={label}
-                            color={color}
-                            size="small"
-                          />
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/admin/jornadas/${jornada.id}`)}
-                          title="Detalhes"
+                          onClick={() => navigate(`/participante/jornadas/${jornada.id}/fases`)}
+                          title="Acessar Jornada"
                           sx={{
                             color: '#2196F3',
                             '&:hover': {
                               backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              transform: 'scale(1.1)',
                             },
+                            transition: 'all 0.2s ease',
                           }}
                         >
-                          <ViewIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
-                          title="Configurar Jornada"
-                          sx={{
-                            color: '#FF9800',
-                            '&:hover': {
-                              backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                            },
-                          }}
-                        >
-                          <SettingsIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeletar(jornada.id)}
-                          title="Deletar Jornada"
-                          sx={{
-                            color: '#f44336',
-                            '&:hover': {
-                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
+                          <PlayArrowIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </TableCell>
@@ -560,7 +484,7 @@ const AdminJornadas: React.FC = () => {
           jornadasFiltradas.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                {pesquisa ? 'Nenhuma jornada encontrada' : 'Nenhuma jornada cadastrada'}
+                {pesquisa ? 'Nenhuma jornada encontrada' : 'Nenhuma jornada disponível'}
               </Typography>
             </Paper>
           ) : (
@@ -591,6 +515,7 @@ const AdminJornadas: React.FC = () => {
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
+                pb: 2,
                 '&::-webkit-scrollbar': {
                   width: '8px',
                 },
@@ -661,7 +586,7 @@ const AdminJornadas: React.FC = () => {
                       <Box
                         sx={{
                           width: '100%',
-                          height: 90,
+                          height: 135,
                           background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                           display: 'flex',
                           alignItems: 'center',
@@ -723,54 +648,34 @@ const AdminJornadas: React.FC = () => {
                             gap: 1,
                           }}
                         >
-                          {(() => {
-                            // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
-                            const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
-                            // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
-                            const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
-                            
-                            let label = 'Ativa';
-                            let color: 'success' | 'default' | 'warning' | 'error' = 'success';
-                            const temIcone = jornada.ativo && !estaFechada && !estaBloqueada;
-                            
-                            if (estaFechada) {
-                              label = 'Fechada';
-                              color = 'default';
-                            } else if (estaBloqueada) {
-                              label = 'Bloqueada';
-                              color = 'error';
-                            } else if (jornada.ativo) {
-                              label = 'Ativa';
-                              color = 'success';
-                            } else {
-                              label = 'Inativa';
-                              color = 'default';
-                            }
-                            
-                            return (
-                              <>
-                                <CheckCircleIcon sx={{ color: temIcone ? '#4caf50' : '#6b7280', fontSize: 16 }} />
-                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                  Status:
-                                </Typography>
-                                <Chip
-                                  {...(temIcone && { icon: <CheckCircleIcon sx={{ fontSize: 14 }} /> })}
-                                  label={label}
-                                  color={color}
-                                  size="small"
-                                  sx={{ fontWeight: 600 }}
-                                />
-                              </>
-                            );
-                          })()}
+                          {jornada.todasFasesAbertas ? (
+                            <Chip
+                              label="Fases Abertas"
+                              color="success"
+                              size="small"
+                              sx={{ fontWeight: 600 }}
+                            />
+                          ) : jornada.faseAtual ? (
+                            <Chip
+                              label={`${jornada.faseAtual.ordem}ª - ${jornada.faseAtual.titulo}`}
+                              color="primary"
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontWeight: 600 }}
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              {jornada._count.fases} fase{jornada._count.fases !== 1 ? 's' : ''}
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
                     </CardContent>
                     <CardActions sx={{ justifyContent: 'center', p: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.75, flexShrink: 0 }}>
                       <Button
                         size="small"
-                        onClick={() => navigate(`/admin/jornadas/${jornada.id}`)}
-                        startIcon={<ViewIcon />}
+                        onClick={() => navigate(`/participante/jornadas/${jornada.id}/fases`)}
+                        startIcon={<PlayArrowIcon />}
                         sx={{
                           color: '#2196F3',
                           bgcolor: 'rgba(33, 150, 243, 0.08)',
@@ -795,67 +700,7 @@ const AdminJornadas: React.FC = () => {
                           },
                         }}
                       >
-                        Detalhes
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
-                        startIcon={<SettingsIcon />}
-                        sx={{
-                          color: '#FF9800',
-                          bgcolor: 'rgba(255, 152, 0, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(255, 152, 0, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 18,
-                          },
-                          '&:hover': {
-                            backgroundColor: '#FF9800',
-                            color: '#fff',
-                            borderColor: '#FF9800',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)',
-                          },
-                        }}
-                      >
-                        Configurar
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => handleDeletar(jornada.id)}
-                        startIcon={<DeleteIcon />}
-                        sx={{
-                          color: '#f44336',
-                          bgcolor: 'rgba(244, 67, 54, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(244, 67, 54, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 18,
-                          },
-                          '&:hover': {
-                            backgroundColor: '#f44336',
-                            color: '#fff',
-                            borderColor: '#f44336',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(244, 67, 54, 0.3)',
-                          },
-                        }}
-                      >
-                        Deletar
+                        Acessar
                       </Button>
                     </CardActions>
                   </Card>
@@ -876,79 +721,77 @@ const AdminJornadas: React.FC = () => {
                 flexShrink: 0,
               }}
             >
-              <Stack spacing={2.5} alignItems="center" sx={{ width: '100%' }}>
-                {jornadasFiltradas.length > itensPorPaginaCards && totalPaginasCards > 1 ? (
-                  <Box
+              {jornadasFiltradas.length > itensPorPaginaCards && totalPaginasCards > 1 ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <IconButton
+                    onClick={() => handleMudarPaginaCards({} as React.ChangeEvent<unknown>, paginaAtualCards - 1)}
+                    disabled={paginaAtualCards === 1}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
+                      color: '#011b49',
+                      '&:hover': {
+                        backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      },
+                      '&.Mui-disabled': {
+                        opacity: 0.3,
+                      },
                     }}
                   >
-                    <IconButton
-                      onClick={() => handleMudarPaginaCards({} as React.ChangeEvent<unknown>, paginaAtualCards - 1)}
-                      disabled={paginaAtualCards === 1}
-                      sx={{
-                        color: '#011b49',
-                        '&:hover': {
-                          backgroundColor: 'rgba(1, 27, 73, 0.08)',
-                        },
-                        '&.Mui-disabled': {
-                          opacity: 0.3,
-                        },
-                      }}
-                    >
-                      <ChevronLeftIcon sx={{ fontSize: '1.5rem' }} />
-                    </IconButton>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        fontWeight: 400,
-                        color: '#6b7280',
-                        fontSize: '0.875rem',
-                        minWidth: '80px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      Página {paginaAtualCards} de {totalPaginasCards}
-                    </Typography>
-                    <IconButton
-                      onClick={() => handleMudarPaginaCards({} as React.ChangeEvent<unknown>, paginaAtualCards + 1)}
-                      disabled={paginaAtualCards === totalPaginasCards}
-                      sx={{
-                        color: '#011b49',
-                        '&:hover': {
-                          backgroundColor: 'rgba(1, 27, 73, 0.08)',
-                        },
-                        '&.Mui-disabled': {
-                          opacity: 0.3,
-                        },
-                      }}
-                    >
-                      <ChevronRightIcon sx={{ fontSize: '1.5rem' }} />
-                    </IconButton>
-                  </Box>
-                ) : totalPaginasCards === 1 && jornadasFiltradas.length > 0 ? (
+                    <ChevronLeftIcon sx={{ fontSize: '1.5rem' }} />
+                  </IconButton>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       fontWeight: 400,
                       color: '#6b7280',
                       fontSize: '0.875rem',
+                      minWidth: '80px',
+                      textAlign: 'center',
                     }}
                   >
-                    Página 1 de 1
+                    Página {paginaAtualCards} de {totalPaginasCards}
                   </Typography>
-                ) : null}
-              </Stack>
+                  <IconButton
+                    onClick={() => handleMudarPaginaCards({} as React.ChangeEvent<unknown>, paginaAtualCards + 1)}
+                    disabled={paginaAtualCards === totalPaginasCards}
+                    sx={{
+                      color: '#011b49',
+                      '&:hover': {
+                        backgroundColor: 'rgba(1, 27, 73, 0.08)',
+                      },
+                      '&.Mui-disabled': {
+                        opacity: 0.3,
+                      },
+                    }}
+                  >
+                    <ChevronRightIcon sx={{ fontSize: '1.5rem' }} />
+                  </IconButton>
+                </Box>
+              ) : jornadasFiltradas.length > 0 ? (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 400,
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Página 1 de 1
+                </Typography>
+              ) : null}
             </Box>
           </Box>
           )
         )}
       </Container>
-    </AdminLayout>
+    </ParticipantLayout>
   );
 };
 
-export default AdminJornadas;
+export default Jornadas;
 

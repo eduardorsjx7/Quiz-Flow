@@ -23,6 +23,7 @@ import DashboardColaborador from './pages/participante/Dashboard';
 import FasesJornadaParticipante from './pages/participante/FasesJornada';
 import Pontuacoes from './pages/participante/Pontuacoes';
 import Avaliacoes from './pages/participante/Avaliacoes';
+import JornadasParticipante from './pages/participante/Jornadas';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -54,6 +55,14 @@ function App() {
           element={
             <PrivateRoute>
               <Pontuacoes />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/participante/jornadas"
+          element={
+            <PrivateRoute>
+              <JornadasParticipante />
             </PrivateRoute>
           }
         />

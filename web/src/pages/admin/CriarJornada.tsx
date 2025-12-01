@@ -46,7 +46,7 @@ import {
   DraggableProvided,
   DraggableStateSnapshot,
 } from '@hello-pangea/dnd';
-import { FormControlLabel, Switch, Grid } from '@mui/material';
+import { Switch, Grid } from '@mui/material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
@@ -75,7 +75,6 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
   const [dataDesbloqueio, setDataDesbloqueio] = useState<Date | null>(null);
   const [dataBloqueio, setDataBloqueio] = useState<Date | null>(null);
   const [pontuacao, setPontuacao] = useState(100);
-  const [salvando, setSalvando] = useState(false);
 
   // Funções auxiliares de formatação de data
   const formatDateForInput = (date: Date | null): string => {
@@ -610,14 +609,13 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
           </Box>
         </Box>
         <Box sx={{ flex: 1 }} />
-        <Button onClick={handleClose} color="inherit" size="medium" disabled={salvando}>
+        <Button onClick={handleClose} color="inherit" size="medium">
           Cancelar
         </Button>
         <Button
           onClick={handleConfirmar}
           variant="contained"
           size="medium"
-          disabled={salvando}
           sx={{
             bgcolor: '#ff2c19',
             '&:hover': {
@@ -625,7 +623,7 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
             },
           }}
         >
-          {salvando ? 'Salvando...' : 'Salvar'}
+          Salvar
         </Button>
       </DialogActions>
     </Dialog>

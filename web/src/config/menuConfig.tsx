@@ -156,6 +156,12 @@ export const getParticipanteMenuItems = (onLogout?: () => void): MenuItem[] => [
     path: '/dashboard',
   },
   {
+    id: 'jornadas',
+    text: 'Jornadas',
+    icon: <RouteIcon />,
+    path: '/participante/jornadas',
+  },
+  {
     id: 'avaliacoes',
     text: 'Avaliações',
     icon: <QuizIcon />,

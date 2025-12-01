@@ -331,9 +331,9 @@ const ConfigurarJornada: React.FC = () => {
       await api.put(`/jornadas/${jornadaId}/configuracao`, dadosEnvio);
       setTemAlteracoes(false);
       showSuccess('Configurações salvas com sucesso!', 'Sucesso');
-      // Redirecionar para a lista de jornadas após salvar
+      // Redirecionar para a tela anterior após salvar
       setTimeout(() => {
-        navigate('/admin/jornadas');
+        navigate(-1);
       }, 1000);
     } catch (error: any) {
       const mensagemErro = error.response?.data?.error?.message || 'Erro ao salvar configurações';
@@ -500,6 +500,41 @@ const ConfigurarJornada: React.FC = () => {
     handleFecharModal();
   };
 
+  const handleExcluirFase = async (fase: FaseConfig) => {
+    const resultado = await confirm({
+      title: 'Excluir fase?',
+      message: `Tem certeza que deseja excluir a fase "${fase.titulo}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Sim, excluir',
+      cancelText: 'Cancelar',
+      type: 'delete',
+    });
+
+    if (!resultado) return;
+
+    try {
+      await api.delete(`/v1/fases/${fase.id}`);
+      
+      // Remover a fase da lista local
+      const fasesAtualizadas = fases
+        .filter(f => f.id !== fase.id)
+        .map((f, index) => ({
+          ...f,
+          ordem: index + 1,
+        }));
+      
+      setFases(fasesAtualizadas);
+      setTemAlteracoes(true);
+      showSuccess(`Fase "${fase.titulo}" excluída com sucesso`, 'Fase excluída');
+    } catch (error: any) {
+      console.error('Erro ao excluir fase:', error);
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.error 
+        || error.response?.data?.message
+        || 'Erro ao excluir fase';
+      showError(errorMessage, 'Erro ao excluir');
+    }
+  };
+
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -602,7 +637,7 @@ const ConfigurarJornada: React.FC = () => {
               </Link>
               <Link
                 component="button"
-                onClick={() => navigate('/admin/jornadas')}
+                onClick={() => navigate('/admin/fases')}
                 sx={{ 
                   cursor: 'pointer', 
                   textDecoration: 'none',
@@ -619,7 +654,28 @@ const ConfigurarJornada: React.FC = () => {
                   },
                 }}
               >
-                Jornadas
+                Fases
+              </Link>
+              <Link
+                component="button"
+                onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+                sx={{ 
+                  cursor: 'pointer', 
+                  textDecoration: 'none',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.5,
+                  fontWeight: 400,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    textDecoration: 'none',
+                  },
+                }}
+              >
+                {jornada?.titulo || 'Jornada'}
               </Link>
               <Typography 
                 color="text.primary"
@@ -628,7 +684,7 @@ const ConfigurarJornada: React.FC = () => {
                   fontSize: '0.95rem',
                 }}
               >
-                Configurar Jornada
+                Configuração Jornada
               </Typography>
             </Breadcrumbs>
           </Box>
@@ -758,14 +814,14 @@ const ConfigurarJornada: React.FC = () => {
                     <Table stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 600, width: 50 }}></TableCell>
-                        <TableCell sx={{ fontWeight: 600, width: 80 }}>Ordem</TableCell>
-                        <TableCell sx={{ fontWeight: 600, minWidth: 150, maxWidth: 200 }}>Título</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600, width: 150 }}>Desbloqueio</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600, width: 150 }}>Bloqueio</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 600, width: 120 }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600, width: 100 }}>Pontuação</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, width: 80 }}>Ações</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 30 }}></TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 70 }}>Ordem</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: 120 }}>Título</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 130 }}>Desbloqueio</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 130 }}>Bloqueio</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 160 }}>Status</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 100 }}>Pontuação</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, width: 100 }}>Ações</TableCell>
                       </TableRow>
                     </TableHead>
                     <Droppable droppableId="fases">
@@ -794,7 +850,7 @@ const ConfigurarJornada: React.FC = () => {
                                       },
                                     }}
                                   >
-                                    <TableCell {...provided.dragHandleProps} sx={{ width: 50 }}>
+                                    <TableCell {...provided.dragHandleProps} align="center" sx={{ width: 30 }}>
                                       {fase.faseAberta && (
                                         <DragIndicatorIcon
                                           className="drag-handle"
@@ -805,18 +861,19 @@ const ConfigurarJornada: React.FC = () => {
                                         />
                                       )}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell align="center">
                                       <Chip label={`${fase.ordem}ª`} color="primary" size="small" />
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ width: 120 }}>
                                       <Typography 
                                         variant="body1" 
+                                        title={fase.titulo}
                                         sx={{ 
                                           fontWeight: 500,
-                                          wordBreak: 'break-word',
-                                          whiteSpace: 'normal',
-                                          overflowWrap: 'break-word',
-                                          maxWidth: '200px',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          maxWidth: '120px',
                                         }}
                                       >
                                         {fase.titulo}
@@ -857,25 +914,40 @@ const ConfigurarJornada: React.FC = () => {
                                         );
                                       })()}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell align="center">
                                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                         {fase.pontuacao} pontos
                                       </Typography>
                                     </TableCell>
-                                    <TableCell align="right">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => handleAbrirModal(fase)}
-                                        sx={{
-                                          color: '#2196F3',
-                                          '&:hover': {
-                                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                          },
-                                        }}
-                                        title="Editar configurações da fase"
-                                      >
-                                        <EditIcon fontSize="small" />
-                                      </IconButton>
+                                    <TableCell align="center" sx={{ width: 100 }}>
+                                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleAbrirModal(fase)}
+                                          sx={{
+                                            color: '#2196F3',
+                                            '&:hover': {
+                                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                            },
+                                          }}
+                                          title="Editar configurações da fase"
+                                        >
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleExcluirFase(fase)}
+                                          sx={{
+                                            color: '#f44336',
+                                            '&:hover': {
+                                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                            },
+                                          }}
+                                          title="Excluir fase"
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Box>
                                     </TableCell>
                                   </TableRow>
                                 )}
@@ -1283,13 +1355,19 @@ const ConfigurarJornada: React.FC = () => {
                         label="Pontuação da Fase"
                         type="number"
                         value={faseEditando.pontuacao}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const valor = parseInt(e.target.value) || 0;
+                          if (valor > 100) {
+                            showError('A pontuação máxima permitida é 100', 'Valor inválido');
+                            return;
+                          }
                           setFaseEditando({
                             ...faseEditando,
-                            pontuacao: parseInt(e.target.value) || 0,
-                          })
-                        }
-                        inputProps={{ min: 0 }}
+                            pontuacao: valor,
+                          });
+                        }}
+                        inputProps={{ min: 0, max: 100 }}
+                        helperText="Valor máximo: 100 pontos"
                       />
                     </Grid>
                   </Grid>

@@ -2,6 +2,54 @@ import prisma from '../config/database';
 import logger from '../config/logger';
 import { CustomError } from '../middleware/errorHandler';
 
+// Função auxiliar para calcular status de desbloqueio de uma fase
+function calcularStatusFase(
+  fase: any,
+  jornadaTemDesbloqueio: boolean,
+  desbloqueio?: any
+): { desbloqueada: boolean; aguardandoDesbloqueio: boolean } {
+  // Se a fase não está ativa, não pode estar desbloqueada nem aguardando
+  if (fase.ativo === false) {
+    return { desbloqueada: false, aguardandoDesbloqueio: false };
+  }
+
+  const agora = new Date();
+  const temDataDesbloqueio = fase.dataDesbloqueio !== null && fase.dataDesbloqueio !== undefined;
+  const temDataBloqueio = fase.dataBloqueio !== null && fase.dataBloqueio !== undefined;
+
+  // Caso 1: Não tem data de desbloqueio nem bloqueio → fase está aberta (desbloqueada)
+  if (!temDataDesbloqueio && !temDataBloqueio) {
+    return { desbloqueada: true, aguardandoDesbloqueio: false };
+  }
+
+  // Caso 2: Tem data de bloqueio e já passou → fase bloqueada
+  if (temDataBloqueio) {
+    const dataBloqueio = new Date(fase.dataBloqueio);
+    if (dataBloqueio <= agora) {
+      return { desbloqueada: false, aguardandoDesbloqueio: false };
+    }
+  }
+
+  // Caso 3: Tem data de desbloqueio
+  if (temDataDesbloqueio) {
+    const dataDesbloqueio = new Date(fase.dataDesbloqueio);
+    
+    // Se a data de desbloqueio já passou → fase desbloqueada
+    if (dataDesbloqueio <= agora) {
+      return { desbloqueada: true, aguardandoDesbloqueio: false };
+    }
+    
+    // Se a data de desbloqueio ainda não passou → aguardando desbloqueio
+    return { desbloqueada: false, aguardandoDesbloqueio: true };
+  }
+
+  // Caso padrão: se não tem data de desbloqueio mas tem desbloqueio manual, está desbloqueada
+  return {
+    desbloqueada: !!desbloqueio,
+    aguardandoDesbloqueio: false,
+  };
+}
+
 export class JornadaService {
   async listarJornadas(apenasAtivas: boolean = true) {
     try {
@@ -100,16 +148,28 @@ export class JornadaService {
         throw new CustomError('Jornada não encontrada', 404);
       }
 
-      // Calcular total de perguntas por fase
+      // Verificar se a jornada tem sequência de desbloqueio
+      const jornadaTemDesbloqueio = jornada.fases.some((fase: any) => fase.dataDesbloqueio !== null);
+
+      // Calcular total de perguntas por fase e status
       const jornadaComPerguntas = {
         ...jornada,
         fases: jornada.fases.map((fase: any) => {
           const totalPerguntas = (fase.quizzes || []).reduce((sum: number, quiz: any) => {
             return sum + (quiz._count?.perguntas || 0);
           }, 0);
+          
+          // Calcular status usando função auxiliar
+          const { desbloqueada, aguardandoDesbloqueio } = calcularStatusFase(
+            fase,
+            jornadaTemDesbloqueio
+          );
+          
           return {
             ...fase,
             totalPerguntas,
+            desbloqueada,
+            aguardandoDesbloqueio,
           };
         }),
       };
@@ -219,27 +279,17 @@ export class JornadaService {
             tentativasFase.some((t: any) => t.quizId === quizId)
           );
         
-        // Se a jornada não tem sequência de desbloqueio, todas estão desbloqueadas
-        let estaDesbloqueada = true;
-        if (jornadaTemDesbloqueio) {
-          // Se tem sequência de desbloqueio, verificar se está desbloqueada
-          if (fase.dataDesbloqueio) {
-            const agora = new Date();
-            // Verificar se a data de desbloqueio já passou
-            const desbloqueada = new Date(fase.dataDesbloqueio) <= agora;
-            // Verificar se a data de bloqueio já passou (se existir)
-            const bloqueada = fase.dataBloqueio ? new Date(fase.dataBloqueio) <= agora : false;
-            // Está desbloqueada se passou a data de desbloqueio E não passou a data de bloqueio
-            estaDesbloqueada = desbloqueada && !bloqueada;
-          } else {
-            // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
-            estaDesbloqueada = !!desbloqueio;
-          }
-        }
+        // Calcular status usando função auxiliar
+        const { desbloqueada, aguardandoDesbloqueio } = calcularStatusFase(
+          fase,
+          jornadaTemDesbloqueio,
+          desbloqueio
+        );
 
         return {
           ...fase,
-          desbloqueada: estaDesbloqueada,
+          desbloqueada,
+          aguardandoDesbloqueio,
           faseAtual: desbloqueio?.faseAtual || false,
           totalPerguntas,
           finalizada,

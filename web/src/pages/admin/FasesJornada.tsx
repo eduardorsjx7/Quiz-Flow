@@ -42,6 +42,8 @@ interface Fase {
   ordem: number;
   totalPerguntas?: number;
   ativo?: boolean;
+  desbloqueada?: boolean;
+  aguardandoDesbloqueio?: boolean;
   dataDesbloqueio?: string | Date | null;
   dataBloqueio?: string | Date | null;
   _count: {
@@ -441,46 +443,15 @@ const FasesJornada: React.FC = () => {
         ) : (
           <Box sx={{ mb: 3 }}>
             <FasesTabuleiro
-              fases={jornada.fases.map((fase: Fase) => {
-                // Calcular se a fase está bloqueada baseado em dataDesbloqueio, dataBloqueio e ativo
-                const agora = new Date();
-                let estaDesbloqueada = true;
-                let estaBloqueada = false;
-                
-                // Se a fase não está ativa, está bloqueada
-                if (fase.ativo === false) {
-                  estaBloqueada = true;
-                  estaDesbloqueada = false;
-                } else {
-                  // Verificar datas de desbloqueio e bloqueio
-                  if (fase.dataDesbloqueio) {
-                    const dataDesbloqueio = new Date(fase.dataDesbloqueio);
-                    // Só está desbloqueada se a data de desbloqueio já passou
-                    estaDesbloqueada = dataDesbloqueio <= agora;
-                  }
-                  
-                  if (fase.dataBloqueio) {
-                    const dataBloqueio = new Date(fase.dataBloqueio);
-                    // Está bloqueada se a data de bloqueio já passou
-                    estaBloqueada = dataBloqueio <= agora;
-                  }
-                  
-                  // Se está bloqueada por data, não pode estar desbloqueada
-                  if (estaBloqueada) {
-                    estaDesbloqueada = false;
-                  }
-                }
-                
-                return {
-                  id: fase.id,
-                  ordem: fase.ordem,
-                  titulo: fase.titulo,
-                  desbloqueada: estaDesbloqueada,
-                  bloqueada: estaBloqueada,
-                  faseAberta: estaDesbloqueada && !estaBloqueada,
-                  ativo: fase.ativo !== false,
-                };
-              })}
+              fases={jornada.fases.map((fase: Fase) => ({
+                id: fase.id,
+                ordem: fase.ordem,
+                titulo: fase.titulo,
+                desbloqueada: fase.desbloqueada ?? true,
+                finalizada: false, // Admin não precisa de finalizada
+                aguardandoDesbloqueio: fase.aguardandoDesbloqueio ?? false,
+                ativo: fase.ativo ?? true, // Default true se não vier do backend
+              }))}
               onFaseClick={(faseId: number) => {
                 navigate(`/admin/fases/${faseId}/perguntas`);
               }}

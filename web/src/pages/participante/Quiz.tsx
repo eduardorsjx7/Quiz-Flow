@@ -246,7 +246,7 @@ const ParticipanteQuiz: React.FC = () => {
         setFeedback(null);
       }
     }
-  }, [perguntaAtualIndex, perguntas.length, respondida, enviarResposta, tentativa]);
+  }, [perguntaAtualIndex, perguntas, respondida, enviarResposta, tentativa]);
 
   const handleResponder = () => {
     if (alternativaSelecionada !== null) {

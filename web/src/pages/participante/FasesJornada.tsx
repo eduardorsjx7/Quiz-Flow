@@ -30,6 +30,7 @@ interface Fase {
   totalPerguntas?: number;
   finalizada?: boolean;
   ativo?: boolean;
+  aguardandoDesbloqueio?: boolean;
   dataDesbloqueio?: string | Date | null;
   dataBloqueio?: string | Date | null;
 }
@@ -165,61 +166,68 @@ const FasesJornada: React.FC = () => {
   }
 
   return (
-    <ParticipantLayout title="Fases da Jornada">
+      <ParticipantLayout title="Fases da Jornada">
       <Container maxWidth="lg">
-        <Breadcrumbs 
-          sx={{ 
-            mb: 3,
-            '& .MuiBreadcrumbs-separator': {
-              mx: 1.5,
-              color: 'text.disabled',
-            },
-          }}
-        >
-          <Link
-            component="button"
-            onClick={() => navigate('/dashboard')}
-            sx={{ 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              color: 'text.secondary',
-              transition: 'all 0.2s ease',
-              borderRadius: 1,
-              p: 0.5,
-              '&:hover': { 
-                color: 'primary.main',
-                bgcolor: 'rgba(0, 0, 0, 0.04)',
-              },
-            }}
-            title="Dashboard"
-          >
-            <HomeIcon sx={{ fontSize: 20 }} />
-          </Link>
-          <Typography 
-            color="text.primary"
-            sx={{
-              fontWeight: 500,
-              fontSize: '0.95rem',
-            }}
-          >
-            {jornada?.titulo || 'Jornada'}
-          </Typography>
-        </Breadcrumbs>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+        <Box sx={{ position: 'relative', mb: 3 }}>
           <IconButton 
             onClick={() => navigate('/dashboard')} 
             size="small"
             sx={{
+              position: 'absolute',
+              left: -56,
+              top: '50%',
+              transform: 'translateY(-50%)',
               '&:hover': {
                 bgcolor: 'rgba(0, 0, 0, 0.04)',
               },
             }}
+            title="Voltar"
           >
             <ArrowBackIcon />
           </IconButton>
-          <Box>
+          <Breadcrumbs 
+            sx={{ 
+              '& .MuiBreadcrumbs-separator': {
+                mx: 1.5,
+                color: 'text.disabled',
+              },
+            }}
+          >
+            <Link
+              component="button"
+              onClick={() => navigate('/dashboard')}
+              sx={{ 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center',
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                borderRadius: 1,
+                p: 0.5,
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+              title="Dashboard"
+            >
+              <HomeIcon sx={{ fontSize: 20 }} />
+            </Link>
+            <Typography 
+              color="text.primary"
+              sx={{
+                fontWeight: 500,
+                fontSize: '0.95rem',
+              }}
+            >
+              {jornada?.titulo || 'Jornada'}
+            </Typography>
+          </Breadcrumbs>
+        </Box>
+
+        <Box sx={{ position: 'relative', mb: 4 }}>
+          {/* Título e descrição centralizados */}
+          <Box sx={{ textAlign: 'center' }}>
             <Typography 
               variant="h4" 
               sx={{ 
@@ -255,37 +263,20 @@ const FasesJornada: React.FC = () => {
         ) : (
           <Box sx={{ mb: 3 }}>
             <FasesTabuleiro
-              fases={fases.map((fase) => {
-                // Usar o valor desbloqueada que vem do backend (já calculado corretamente)
-                // O backend já considera: dataDesbloqueio, dataBloqueio, e desbloqueio manual
-                const estaDesbloqueada = fase.desbloqueada;
-                
-                // Calcular bloqueada: apenas se não está ativa (o backend já calculou desbloqueada corretamente)
-                // Se o backend diz que está desbloqueada, confiamos nisso
-                const estaBloqueada = fase.ativo === false;
-                
-                return {
-                  id: fase.id,
-                  ordem: fase.ordem,
-                  titulo: fase.titulo,
-                  desbloqueada: estaDesbloqueada,
-                  bloqueada: estaBloqueada,
-                  finalizada: fase.finalizada,
-                  faseAberta: estaDesbloqueada && !estaBloqueada,
-                  ativo: fase.ativo !== false,
-                };
-              })}
+              fases={fases.map((fase) => ({
+                id: fase.id,
+                ordem: fase.ordem,
+                titulo: fase.titulo,
+                desbloqueada: fase.desbloqueada ?? false,
+                finalizada: fase.finalizada ?? false,
+                aguardandoDesbloqueio: fase.aguardandoDesbloqueio ?? false,
+                ativo: fase.ativo ?? true, // Default true se não vier do backend
+              }))}
               onFaseClick={(faseId) => {
                 const fase = fases.find((f) => f.id === faseId);
-                if (fase) {
-                  // Usar o valor desbloqueada do backend (já calculado corretamente)
-                  const estaDesbloqueada = fase.desbloqueada;
-                  const estaBloqueada = fase.ativo === false;
-                  
-                  // Só permite abrir se estiver desbloqueada, não bloqueada e não finalizada
-                  if (estaDesbloqueada && !estaBloqueada && !fase.finalizada) {
-                    handleAbrirFase(faseId);
-                  }
+                // O backend já calcula tudo: se desbloqueada é true, a fase está ativa e desbloqueada
+                if (fase && fase.desbloqueada && !fase.finalizada) {
+                  handleAbrirFase(faseId);
                 }
               }}
               isAdmin={false}

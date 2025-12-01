@@ -4,8 +4,81 @@ import { CreateFaseDTO, UpdateFaseDTO } from '../../dto/fase.dto';
 import logger from '../../config/logger';
 import prisma from '../../config/database';
 
+type DataLike = string | Date | null | undefined;
+
+interface FaseStatusInput {
+  ativo?: boolean | null;
+  dataDesbloqueio?: DataLike;
+  dataBloqueio?: DataLike;
+}
+
+interface StatusFase {
+  desbloqueada: boolean;
+  aguardandoDesbloqueio: boolean;
+}
+
+function parseValidDate(value: DataLike): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+// Função auxiliar para calcular status de desbloqueio de uma fase
+function calcularStatusFase(
+  fase: FaseStatusInput,
+  desbloqueio?: unknown
+): StatusFase {
+  // Se a fase não está ativa, não pode estar desbloqueada nem aguardando
+  if (fase.ativo === false) {
+    return { desbloqueada: false, aguardandoDesbloqueio: false };
+  }
+
+  const agora = new Date();
+
+  const dataDesbloqueio = parseValidDate(fase.dataDesbloqueio);
+  const dataBloqueio = parseValidDate(fase.dataBloqueio);
+
+  const temDataDesbloqueio = !!dataDesbloqueio;
+  const temDataBloqueio = !!dataBloqueio;
+
+  // Caso 1: Não tem data de desbloqueio nem bloqueio → fase está aberta (desbloqueada)
+  if (!temDataDesbloqueio && !temDataBloqueio) {
+    return { desbloqueada: true, aguardandoDesbloqueio: false };
+  }
+
+  // Caso 2: Tem data de bloqueio e já passou → fase bloqueada
+  if (temDataBloqueio && dataBloqueio! <= agora) {
+    return { desbloqueada: false, aguardandoDesbloqueio: false };
+  }
+
+  // Caso 3: Tem data de desbloqueio
+  if (temDataDesbloqueio) {
+    // Se a data de desbloqueio já passou → fase desbloqueada
+    if (dataDesbloqueio! <= agora) {
+      return { desbloqueada: true, aguardandoDesbloqueio: false };
+    }
+
+    // Se a data de desbloqueio ainda não passou → aguardando desbloqueio
+    return { desbloqueada: false, aguardandoDesbloqueio: true };
+  }
+
+  // Caso padrão: se não tem data de desbloqueio mas tem desbloqueio manual, está desbloqueada
+  return {
+    desbloqueada: !!desbloqueio,
+    aguardandoDesbloqueio: false,
+  };
+}
+
 /**
- * Serviço refatorado para Fase usando Design Patterns
+ * Serviço refatorado para Fase usando boas práticas
  */
 export class FaseService extends BaseService {
   private faseRepository: FaseRepository;
@@ -67,44 +140,19 @@ export class FaseService extends BaseService {
         }
       );
 
-      // Verificar se alguma jornada tem fases com dataDesbloqueio definida
-      // Agrupar fases por jornada para verificar se cada jornada tem sequência de desbloqueio
-      const jornadasComDesbloqueio = new Set<number>();
-      fases.forEach((fase: any) => {
-        if (fase.dataDesbloqueio !== null) {
-          jornadasComDesbloqueio.add(fase.jornadaId || fase.jornada?.id);
-        }
-      });
-
       if (usuarioId) {
         return fases.map((fase: any) => {
           const desbloqueio = fase.desbloqueios?.[0];
-          const jornadaId = fase.jornadaId || fase.jornada?.id;
-          const jornadaTemDesbloqueio = jornadasComDesbloqueio.has(jornadaId);
-          
-          // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas para todos os usuários
-          let estaDesbloqueada = true;
-          if (jornadaTemDesbloqueio) {
-            // Se tem sequência de desbloqueio, verificar se está desbloqueada
-            if (fase.dataDesbloqueio) {
-              const agora = new Date();
-              // Verificar se a data de desbloqueio já passou
-              const desbloqueada = new Date(fase.dataDesbloqueio) <= agora;
-              // Verificar se a data de bloqueio já passou (se existir)
-              const bloqueada = fase.dataBloqueio ? new Date(fase.dataBloqueio) <= agora : false;
-              // Está desbloqueada se passou a data de desbloqueio E não passou a data de bloqueio
-              estaDesbloqueada = desbloqueada && !bloqueada;
-            } else {
-              // Se não tem dataDesbloqueio mas a jornada tem sequência, precisa de desbloqueio manual
-              estaDesbloqueada = !!desbloqueio;
-            }
-          }
-          // Se não tem sequência de desbloqueio (jornadaTemDesbloqueio = false), todas estão desbloqueadas (true)
-          // Isso significa que a jornada está aberta e disponível para todos os usuários
-          
+
+          const { desbloqueada, aguardandoDesbloqueio } = calcularStatusFase(
+            fase as FaseStatusInput,
+            desbloqueio
+          );
+
           return {
             ...fase,
-            desbloqueada: estaDesbloqueada,
+            desbloqueada,
+            aguardandoDesbloqueio,
             faseAtual: desbloqueio?.faseAtual || false,
             desbloqueios: undefined,
           };
@@ -144,38 +192,17 @@ export class FaseService extends BaseService {
         throw new Error('Fase não encontrada');
       }
 
-      // Verificar se a jornada tem alguma fase com dataDesbloqueio definida
-      const jornadaId = (fase as any).jornadaId;
-      const fasesDaJornada = await prisma.fase.findMany({
-        where: {
-          jornadaId,
-          ativo: true,
-        },
-        select: {
-          dataDesbloqueio: true,
-          dataBloqueio: true,
-        },
-      });
-
-      const jornadaTemDesbloqueio = fasesDaJornada.some((f) => f.dataDesbloqueio !== null);
       const desbloqueio = (fase as any).desbloqueios?.[0];
-      
-      // Se a jornada não tem nenhuma fase com dataDesbloqueio, todas estão desbloqueadas
-      let estaDesbloqueada = true;
-      if (jornadaTemDesbloqueio) {
-        if ((fase as any).dataDesbloqueio) {
-          const agora = new Date();
-          const desbloqueada = new Date((fase as any).dataDesbloqueio) <= agora;
-          const bloqueada = (fase as any).dataBloqueio ? new Date((fase as any).dataBloqueio) <= agora : false;
-          estaDesbloqueada = desbloqueada && !bloqueada;
-        } else {
-          estaDesbloqueada = !!desbloqueio;
-        }
-      }
+
+      const { desbloqueada, aguardandoDesbloqueio } = calcularStatusFase(
+        fase as FaseStatusInput,
+        desbloqueio
+      );
 
       return {
         ...fase,
-        desbloqueada: estaDesbloqueada,
+        desbloqueada,
+        aguardandoDesbloqueio,
         faseAtual: desbloqueio?.faseAtual || false,
         desbloqueios: undefined,
       };
@@ -267,7 +294,7 @@ export class FaseService extends BaseService {
   ) {
     try {
       await this.validateResourceExists(this.faseRepository, faseId, 'Fase');
-      
+
       const usuario = await prisma.usuario.findUnique({
         where: { id: usuarioId },
       });
@@ -405,4 +432,3 @@ export class FaseService extends BaseService {
     }
   }
 }
-

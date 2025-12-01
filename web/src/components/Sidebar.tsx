@@ -112,9 +112,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (item: MenuItem): boolean => {
+    // Exceção: rota de Configurar Jornada deve ativar "Fases" e não "Jornadas"
+    const isConfigurarJornadaPath = /^\/admin\/jornadas\/\d+\/configurar$/.test(location.pathname);
+    
     // Caso especial: item "Jornadas" (id: 'jornadas') deve estar ativo para rotas relacionadas a jornadas
     // Incluindo /admin/jornadas/:id (detalhes), mas não /admin/jornadas/novo
+    // Exceção: não ativar para rota de configurar jornada
     if (item.id === 'jornadas') {
+      if (isConfigurarJornadaPath) {
+        return false; // Não ativar Jornadas para rota de configurar
+      }
       const isJornadasPath =
         location.pathname === '/admin/jornadas' ||
         /^\/admin\/jornadas\/\d+$/.test(location.pathname) || // /admin/jornadas/:id
@@ -138,11 +145,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
     
     // Caso especial: /admin/fases deve estar ativo para rotas relacionadas a fases
+    // Incluindo a rota de Configurar Jornada (exceção)
     if (item.path === '/admin/fases') {
       const isFasesPath =
         location.pathname === '/admin/fases' ||
         location.pathname.startsWith('/admin/fases/') ||
-        /^\/admin\/jornadas\/[^/]+\/fases/.test(location.pathname);
+        /^\/admin\/jornadas\/[^/]+\/fases/.test(location.pathname) ||
+        isConfigurarJornadaPath; // Exceção: configurar jornada ativa Fases
       return isFasesPath;
     }
     

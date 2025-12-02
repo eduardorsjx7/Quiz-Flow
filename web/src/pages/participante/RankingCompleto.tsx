@@ -16,8 +16,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Breadcrumbs,
-  Link,
   IconButton,
 } from '@mui/material';
 import {
@@ -111,6 +109,29 @@ const RankingCompleto: React.FC = () => {
     >
       <AnimatedBackground dark />
 
+      {/* Seta Esquerda - Com margem do menu lateral */}
+      <IconButton
+        onClick={() => navigate(`/participante/resultado/${tentativaId}?fullscreen=false`)}
+        sx={{
+          position: 'fixed',
+          left: { xs: 30, sm: 'calc(80px + 60px)' }, // 80px (sidebar) + 60px (margem maior)
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 1000, // Atrás do menu lateral (que tem zIndex 1200)
+          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          width: { xs: 56, md: 70 },
+          height: { xs: 56, md: 70 },
+          '&:hover': {
+            bgcolor: '#fff',
+            transform: 'translateY(-50%) scale(1.15)',
+          },
+          transition: 'all 0.3s ease',
+          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <ArrowLeftIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
+      </IconButton>
+
       <ParticipantLayout title="Ranking Board">
         <Box
           sx={{
@@ -122,27 +143,6 @@ const RankingCompleto: React.FC = () => {
             zIndex: 1,
           }}
         >
-          {/* Seta Esquerda - Alinhada com o conteúdo */}
-          <IconButton
-            onClick={() => navigate(`/participante/resultado/${tentativaId}`)}
-            sx={{
-              position: 'absolute',
-              left: { xs: -60, md: -90 },
-              top: '50%',
-              transform: 'translateY(-50%)',
-              bgcolor: 'rgba(255, 255, 255, 0.95)',
-              width: { xs: 50, md: 70 },
-              height: { xs: 50, md: 70 },
-              '&:hover': {
-                bgcolor: '#fff',
-                transform: 'translateY(-50%) scale(1.15)',
-              },
-              transition: 'all 0.3s ease',
-              boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <ArrowLeftIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
-          </IconButton>
 
         {/* Título */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
@@ -157,27 +157,7 @@ const RankingCompleto: React.FC = () => {
               textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
             }}
           >
-            📊 Ranking Board
-          </Typography>
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: '1rem',
-              fontWeight: 500,
-            }}
-          >
-            {dados.tentativa.quiz.titulo}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '0.875rem',
-              mt: 0.5,
-            }}
-          >
-            Classificação final dos participantes
+           Ranking Board
           </Typography>
         </Box>
 

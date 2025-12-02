@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -13,11 +13,14 @@ import {
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 
 const ParticipanteResultado: React.FC = () => {
   const { tentativaId } = useParams<{ tentativaId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const telaCheia = searchParams.get('fullscreen') !== 'false'; // Por padrão é tela cheia
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -46,104 +49,72 @@ const ParticipanteResultado: React.FC = () => {
     carregarResultado();
   }, [carregarResultado]);
 
-  // Auto-navegar para ranking board após 5 segundos
+  // Auto-navegar para ranking board após 5 segundos (apenas em tela cheia)
   useEffect(() => {
-    if (dados && !loading && !erro) {
+    if (dados && !loading && !erro && telaCheia) {
       const timer = setTimeout(() => {
         navigate(`/participante/ranking/${tentativaId}`);
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [dados, loading, erro, tentativaId, navigate]);
+  }, [dados, loading, erro, tentativaId, navigate, telaCheia]);
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'relative',
-        }}
-      >
-        <AnimatedBackground dark />
-        <CircularProgress sx={{ position: 'relative', zIndex: 1, color: '#fff' }} />
+    const LoadingContent = (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <CircularProgress sx={{ color: telaCheia ? '#fff' : undefined }} />
       </Box>
     );
+
+    if (telaCheia) {
+      return (
+        <Box sx={{ minHeight: '100vh', position: 'relative' }}>
+          <AnimatedBackground dark />
+          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
+            {LoadingContent}
+          </Box>
+        </Box>
+      );
+    }
+    return <ParticipantLayout title="Resultado">{LoadingContent}</ParticipantLayout>;
   }
 
   if (erro) {
-    return (
-      <Box 
-        sx={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          position: 'relative',
-        }}
-      >
-        <AnimatedBackground dark />
-        <Alert severity="error" sx={{ position: 'relative', zIndex: 1, maxWidth: 500 }}>{erro}</Alert>
+    const ErrorContent = (
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Alert severity="error">{erro}</Alert>
       </Box>
     );
+
+    if (telaCheia) {
+      return (
+        <Box sx={{ minHeight: '100vh', position: 'relative' }}>
+          <AnimatedBackground dark />
+          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+            {ErrorContent}
+          </Box>
+        </Box>
+      );
+    }
+    return <ParticipantLayout title="Resultado">{ErrorContent}</ParticipantLayout>;
   }
 
   if (!dados) {
     return null;
   }
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+  // Conteúdo do Podium
+  const PodiumContent = (
+    <Box 
+      sx={{ 
+        position: 'relative', 
+        zIndex: 1, 
+        textAlign: 'center', 
+        px: 2,
+        width: '100%',
+        py: telaCheia ? 0 : 4,
       }}
     >
-      <AnimatedBackground dark />
-
-      {/* Conteúdo Principal */}
-      <Box 
-        sx={{ 
-          position: 'relative', 
-          zIndex: 1, 
-          textAlign: 'center', 
-          px: 2,
-          maxWidth: '1200px',
-          mx: 'auto',
-        }}
-      >
-        {/* Seta Direita - Alinhada com o conteúdo */}
-        <IconButton
-          onClick={() => navigate(`/participante/ranking/${tentativaId}`)}
-          sx={{
-            position: 'absolute',
-            right: { xs: -60, md: -90 },
-            top: '50%',
-            transform: 'translateY(-50%)',
-            bgcolor: 'rgba(255, 255, 255, 0.95)',
-            width: { xs: 50, md: 70 },
-            height: { xs: 50, md: 70 },
-            animation: 'pulse 2s ease-in-out 2s infinite',
-            '@keyframes pulse': {
-              '0%, 100%': { transform: 'translateY(-50%) scale(1)' },
-              '50%': { transform: 'translateY(-50%) scale(1.1)' },
-            },
-            '&:hover': {
-              bgcolor: '#fff',
-              transform: 'translateY(-50%) scale(1.15)',
-            },
-            transition: 'all 0.3s ease',
-            boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          <ArrowRightIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
-        </IconButton>
         {/* Título */}
         <Typography
           variant="h2"
@@ -160,7 +131,7 @@ const ParticipanteResultado: React.FC = () => {
             },
           }}
         >
-          🏆 Top 3
+          🏆 Podium
         </Typography>
 
         {/* Pódio com Top 3 */}
@@ -390,6 +361,64 @@ const ParticipanteResultado: React.FC = () => {
           Próxima tela em 5 segundos...
         </Typography>
       </Box>
+    );
+
+  // Renderizar com ou sem tela cheia
+  if (telaCheia) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <AnimatedBackground dark />
+        {PodiumContent}
+      </Box>
+    );
+  }
+
+  // Com layout normal (quando volta do Ranking Board)
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <AnimatedBackground dark />
+      
+      {/* Seta Direita para ir ao Ranking Board */}
+      <IconButton
+        onClick={() => navigate(`/participante/ranking/${tentativaId}`)}
+        sx={{
+          position: 'fixed',
+          right: { xs: 30, sm: 'calc(80px + 60px)' }, // Mesma distância relativa
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 1000, // Atrás do menu lateral (que tem zIndex 1200)
+          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          width: { xs: 56, md: 70 },
+          height: { xs: 56, md: 70 },
+          '&:hover': {
+            bgcolor: '#fff',
+            transform: 'translateY(-50%) scale(1.15)',
+          },
+          transition: 'all 0.3s ease',
+          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <ArrowRightIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
+      </IconButton>
+
+      <ParticipantLayout title="Podium">
+        {PodiumContent}
+      </ParticipantLayout>
     </Box>
   );
 };

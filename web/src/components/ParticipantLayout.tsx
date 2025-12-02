@@ -17,12 +17,14 @@ interface ParticipantLayoutProps {
   children: React.ReactNode;
   title?: string;
   drawerWidth?: number;
+  noPadding?: boolean;
 }
 
 const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   children,
   title = 'Quiz Flow',
   drawerWidth = 280,
+  noPadding = false,
 }) => {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
@@ -43,7 +45,15 @@ const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      backgroundColor: '#f5f5f5', 
+      minHeight: '100vh',
+      width: '100vw',
+      maxWidth: '100vw',
+      overflow: 'hidden',
+      overflowX: 'hidden',
+    }}>
       {/* Sidebar Dinâmico */}
       <Sidebar
         open={mobileOpen}
@@ -60,17 +70,24 @@ const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${desktopCollapsed ? 80 : drawerWidth}px)` },
+          width: { xs: '100%', sm: `calc(100% - ${desktopCollapsed ? 80 : drawerWidth}px)` },
+          maxWidth: '100vw',
           ml: { sm: `${desktopCollapsed ? 80 : drawerWidth}px` },
           backgroundColor: '#fff',
           color: '#011b49',
           boxShadow: '0 1px 3px rgba(1, 27, 73, 0.1)',
-          zIndex: (theme) => theme.zIndex.drawer - 1, // Atrás do sidebar
+          zIndex: 10000, // Na frente de tudo (confetes, podium, etc)
           borderBottom: '1px solid rgba(255, 44, 25, 0.1)',
           transition: 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
         }}
       >
-        <Toolbar sx={{ justifyContent: 'center', position: 'relative' }}>
+        <Toolbar sx={{ 
+          justifyContent: 'center', 
+          position: 'relative',
+          minHeight: { xs: 56, sm: 64 },
+          px: { xs: 1, sm: 2 },
+        }}>
           {/* Botão de menu apenas para mobile */}
           <IconButton
             color="inherit"
@@ -110,15 +127,18 @@ const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${desktopCollapsed ? 80 : drawerWidth}px)` },
+          p: noPadding ? 0 : 3,
+          width: { xs: '100%', sm: `calc(100% - ${desktopCollapsed ? 80 : drawerWidth}px)` },
+          maxWidth: '100vw',
           ml: { sm: `${desktopCollapsed ? 80 : drawerWidth}px` },
-          backgroundColor: '#f5f5f5',
+          backgroundColor: noPadding ? 'transparent' : '#f5f5f5',
           minHeight: '100vh',
           transition: 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          overflowX: 'hidden',
         }}
       >
-        <Toolbar />
+        {!noPadding && <Toolbar />}
         {children}
       </Box>
     </Box>

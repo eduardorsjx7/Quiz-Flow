@@ -492,10 +492,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         }}
         sx={{
           display: { xs: 'block', sm: 'none' },
+          zIndex: 10001, // Na frente de tudo, inclusive AppBar
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: drawerWidth,
             boxShadow: 3,
+            zIndex: 10001,
           },
         }}
       >
@@ -507,6 +509,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
+          zIndex: 10001, // Na frente de tudo, inclusive AppBar
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: desktopWidth,
@@ -519,6 +522,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             display: 'flex',
             flexDirection: 'column',
             transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            zIndex: 10001,
             '&::-webkit-scrollbar': {
               width: '6px',
             },

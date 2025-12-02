@@ -4,9 +4,11 @@ import './animated-background.css';
 
 interface AnimatedBackgroundProps {
   dark?: boolean;
+  dimmed?: boolean;
+  brightLogin?: boolean;
 }
 
-export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ dark = false }) => {
+export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ dark = false, dimmed = false, brightLogin = false }) => {
   // Gerar formas geométricas aleatórias (valores estáveis)
   const shapes = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
     id: i,
@@ -79,7 +81,7 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ dark = f
   })), []);
 
   return (
-    <div className="animated-background">
+    <div className={`animated-background${dimmed ? ' dimmed' : ''}${brightLogin ? ' bright-login' : ''}`}>
       {/* Gradiente de fundo */}
       <div 
         className="bg-gradient" 

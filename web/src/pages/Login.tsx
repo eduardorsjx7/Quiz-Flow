@@ -148,7 +148,7 @@ const Login: React.FC = () => {
       }}
     >
       {/* Fundo animado com interrogações, formas e partículas */}
-      <AnimatedBackground />
+      <AnimatedBackground brightLogin={true} />
       
       <Container 
         maxWidth="sm"

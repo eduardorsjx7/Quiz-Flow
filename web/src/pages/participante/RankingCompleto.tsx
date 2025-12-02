@@ -22,10 +22,12 @@ import {
   CheckCircle as CheckIcon,
   Timer as TimerIcon,
   KeyboardArrowLeft as ArrowLeftIcon,
+  ExitToApp as ExitIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
+import TituloRankingFinal from '../../components/TituloRankingFinal';
 import { useAuth } from '../../contexts/AuthContext';
 
 const getPosicaoColor = (posicao: number) => {
@@ -107,32 +109,59 @@ const RankingCompleto: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      <AnimatedBackground dark />
+      <AnimatedBackground dark dimmed />
 
       {/* Seta Esquerda - Com margem do menu lateral */}
       <IconButton
         onClick={() => navigate(`/participante/resultado/${tentativaId}?fullscreen=false`)}
         sx={{
           position: 'fixed',
-          left: { xs: 30, sm: 'calc(80px + 60px)' }, // 80px (sidebar) + 60px (margem maior)
+          left: { xs: 20, sm: 'calc(80px + 20px)' },
           top: '50%',
           transform: 'translateY(-50%)',
-          zIndex: 1000, // Atrás do menu lateral (que tem zIndex 1200)
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
-          width: { xs: 56, md: 70 },
-          height: { xs: 56, md: 70 },
+          zIndex: 1000,
+          bgcolor: 'transparent',
+          padding: 2,
           '&:hover': {
-            bgcolor: '#fff',
-            transform: 'translateY(-50%) scale(1.15)',
+            bgcolor: 'transparent',
+            transform: 'translateY(-50%) translateX(-5px)',
           },
           transition: 'all 0.3s ease',
-          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
         }}
       >
-        <ArrowLeftIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
+        <ArrowLeftIcon 
+          sx={{ 
+            color: '#fff', 
+            fontSize: { xs: 48, md: 64 },
+            filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5))',
+          }} 
+        />
       </IconButton>
 
-      <ParticipantLayout title="Ranking Board">
+      {/* Botão de Sair alinhado com o título */}
+      <IconButton
+        onClick={() => navigate('/dashboard')}
+        sx={{
+          position: 'fixed',
+          top: { xs: 'calc(64px + 32px)', sm: 'calc(64px + 32px)', md: 'calc(64px + 32px)' },
+          right: { xs: 20, sm: 'calc(80px + 20px)' },
+          zIndex: 10002,
+          bgcolor: '#fff',
+          width: { xs: 48, md: 56 },
+          height: { xs: 48, md: 56 },
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          '&:hover': {
+            bgcolor: '#fff',
+            transform: 'scale(1.1)',
+            boxShadow: '0 6px 30px rgba(0, 0, 0, 0.4)',
+          },
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <ExitIcon sx={{ color: '#E62816', fontSize: { xs: 28, md: 32 } }} />
+      </IconButton>
+
+      <ParticipantLayout title="Ranking Geral" noPadding={true}>
         <Box
           sx={{
             maxWidth: '1200px',
@@ -146,19 +175,7 @@ const RankingCompleto: React.FC = () => {
 
         {/* Título */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 800,
-              fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#fff',
-              mb: 1,
-              letterSpacing: '-0.02em',
-              textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-           Ranking Board
-          </Typography>
+          <TituloRankingFinal texto="Ranking Geral" />
         </Box>
 
         {/* Tabela de Ranking */}

@@ -1,0 +1,43 @@
+/* Reset global para prevenir scroll horizontal */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Prevenir overflow em todos os containers */
+.MuiBox-root {
+  max-width: 100%;
+}
+
+/* Garantir que o Toolbar não cause overflow */
+.MuiToolbar-root {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (max-width: 600px) {
+  .MuiToolbar-root {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+

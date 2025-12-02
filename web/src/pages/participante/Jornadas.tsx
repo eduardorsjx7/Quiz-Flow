@@ -47,6 +47,7 @@ interface Jornada {
   imagemCapa?: string;
   ordem: number;
   ativo: boolean;
+  createdAt?: string;
   faseAtual?: {
     id: number;
     titulo: string;
@@ -85,7 +86,17 @@ const Jornadas: React.FC = () => {
       const jornadasAtivas = Array.isArray(dados) 
         ? dados.filter((j: Jornada) => j.ativo) 
         : [];
-      setJornadas(jornadasAtivas);
+      
+      // Ordenar por data de criação (mais recentes primeiro)
+      const jornadasOrdenadas = jornadasAtivas.sort((a: Jornada, b: Jornada) => {
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        // Se não tiver data, ordenar por ID (mais recente = maior ID)
+        return b.id - a.id;
+      });
+      
+      setJornadas(jornadasOrdenadas);
       setPaginaAtualTabela(1);
       setPaginaAtualCards(1);
     } catch (error: any) {

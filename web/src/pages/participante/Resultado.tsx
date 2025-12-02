@@ -1,20 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Typography,
   Box,
   CircularProgress,
   Alert,
-  Avatar,
   IconButton,
 } from '@mui/material';
 import {
-  EmojiEvents as TrophyIcon,
   KeyboardArrowRight as ArrowRightIcon,
+  ExitToApp as ExitIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
+import PodiumWithConfetti from '../../components/PodiumWithConfetti';
 
 const ParticipanteResultado: React.FC = () => {
   const { tentativaId } = useParams<{ tentativaId: string }>();
@@ -34,9 +33,17 @@ const ParticipanteResultado: React.FC = () => {
       const rankingRes = await api.get(`/tentativas/quiz/${tentativa.quizId}/ranking?limit=3`);
       const ranking = rankingRes?.data || [];
 
+      // Buscar informações do quiz e fase
+      const quizRes = await api.get(`/quizzes/${tentativa.quizId}`);
+      const quiz = quizRes.data.data || quizRes.data;
+      
+      const faseRes = await api.get(`/fases/${quiz.faseId}`);
+      const fase = faseRes.data.data || faseRes.data;
+
       setDados({
         tentativa,
         rankingTop3: ranking,
+        nomeFase: fase.nome,
       });
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao carregar resultado');
@@ -60,308 +67,52 @@ const ParticipanteResultado: React.FC = () => {
   }, [dados, loading, erro, tentativaId, navigate, telaCheia]);
 
   if (loading) {
-    const LoadingContent = (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <CircularProgress sx={{ color: telaCheia ? '#fff' : undefined }} />
+    return (
+      <Box sx={{ minHeight: '100vh', position: 'relative', m: 0, p: 0 }}>
+        <AnimatedBackground dark dimmed />
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <CircularProgress sx={{ color: '#fff' }} />
+        </Box>
       </Box>
     );
-
-    if (telaCheia) {
-      return (
-        <Box sx={{ minHeight: '100vh', position: 'relative' }}>
-          <AnimatedBackground dark />
-          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
-            {LoadingContent}
-          </Box>
-        </Box>
-      );
-    }
-    return <ParticipantLayout title="Resultado">{LoadingContent}</ParticipantLayout>;
   }
 
   if (erro) {
-    const ErrorContent = (
-      <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <Alert severity="error">{erro}</Alert>
+    return (
+      <Box sx={{ minHeight: '100vh', position: 'relative', m: 0, p: 0 }}>
+        <AnimatedBackground dark dimmed />
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', px: 2 }}>
+          <Alert severity="error">{erro}</Alert>
+        </Box>
       </Box>
     );
-
-    if (telaCheia) {
-      return (
-        <Box sx={{ minHeight: '100vh', position: 'relative' }}>
-          <AnimatedBackground dark />
-          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-            {ErrorContent}
-          </Box>
-        </Box>
-      );
-    }
-    return <ParticipantLayout title="Resultado">{ErrorContent}</ParticipantLayout>;
   }
 
   if (!dados) {
     return null;
   }
 
-  // Conteúdo do Podium
+  // Conteúdo do Podium com Confetes
   const PodiumContent = (
-    <Box 
-      sx={{ 
-        position: 'relative', 
-        zIndex: 1, 
-        textAlign: 'center', 
-        px: 2,
+    <Box
+      sx={{
+        position: 'relative',
         width: '100%',
-        py: telaCheia ? 0 : 4,
+        height: 'calc(100vh - 64px)', // Desconta altura do header
+        overflow: 'hidden',
+        p: 0,
+        m: 0,
       }}
     >
-        {/* Título */}
-        <Typography
-          variant="h2"
-          sx={{
-            fontWeight: 800,
-            color: '#fff',
-            mb: 8,
-            textShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-            fontSize: { xs: '2.5rem', md: '4rem' },
-            animation: 'fadeIn 0.8s ease-out',
-            '@keyframes fadeIn': {
-              '0%': { opacity: 0, transform: 'translateY(-20px)' },
-              '100%': { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
-          🏆 Podium
-        </Typography>
-
-        {/* Pódio com Top 3 */}
-        {dados.rankingTop3 && dados.rankingTop3.length > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'flex-end',
-              gap: { xs: 3, md: 6 },
-            }}
-          >
-            {/* 2º Lugar */}
-            {dados.rankingTop3[1] && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  animation: 'slideUp 0.6s ease-out 0.8s both',
-                  '@keyframes slideUp': {
-                    '0%': { opacity: 0, transform: 'translateY(50px)' },
-                    '100%': { opacity: 1, transform: 'translateY(0)' },
-                  },
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: '#C0C0C0',
-                    fontWeight: 900,
-                    mb: 2,
-                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-                  }}
-                >
-                  2
-                </Typography>
-                <Avatar
-                  sx={{
-                    width: { xs: 80, md: 100 },
-                    height: { xs: 80, md: 100 },
-                    bgcolor: 'rgba(192, 192, 192, 0.3)',
-                    border: '4px solid #C0C0C0',
-                    boxShadow: '0 6px 20px rgba(192, 192, 192, 0.5)',
-                    mb: 2,
-                    fontSize: { xs: '2rem', md: '2.5rem' },
-                    fontWeight: 700,
-                    color: '#C0C0C0',
-                  }}
-                >
-                  {dados.rankingTop3[1].usuario.nome.charAt(0).toUpperCase()}
-                </Avatar>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 600,
-                    mb: 1,
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                  }}
-                >
-                  {dados.rankingTop3[1].usuario.nome}
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: '#FFD700',
-                    fontWeight: 800,
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                  }}
-                >
-                  {dados.rankingTop3[1].pontuacaoTotal}
-                </Typography>
-              </Box>
-            )}
-
-            {/* 1º Lugar */}
-            {dados.rankingTop3[0] && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  animation: 'slideUp 0.6s ease-out 0.4s both',
-                }}
-              >
-                <TrophyIcon
-                  sx={{
-                    fontSize: { xs: 50, md: 70 },
-                    color: '#FFD700',
-                    mb: 2,
-                    filter: 'drop-shadow(0 4px 12px rgba(255, 215, 0, 0.7))',
-                    animation: 'float 3s ease-in-out infinite',
-                    '@keyframes float': {
-                      '0%, 100%': { transform: 'translateY(0px)' },
-                      '50%': { transform: 'translateY(-10px)' },
-                    },
-                  }}
-                />
-                <Typography
-                  variant="h3"
-                  sx={{
-                    color: '#FFD700',
-                    fontWeight: 900,
-                    mb: 2,
-                    textShadow: '0 3px 12px rgba(255, 215, 0, 0.7)',
-                    fontSize: { xs: '2.5rem', md: '3rem' },
-                  }}
-                >
-                  1
-                </Typography>
-                <Avatar
-                  sx={{
-                    width: { xs: 100, md: 130 },
-                    height: { xs: 100, md: 130 },
-                    bgcolor: 'rgba(255, 215, 0, 0.3)',
-                    border: '5px solid #FFD700',
-                    boxShadow: '0 8px 30px rgba(255, 215, 0, 0.7)',
-                    mb: 2,
-                    fontSize: { xs: '2.5rem', md: '3.5rem' },
-                    fontWeight: 700,
-                    color: '#FFD700',
-                  }}
-                >
-                  {dados.rankingTop3[0].usuario.nome.charAt(0).toUpperCase()}
-                </Avatar>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 700,
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.2rem' },
-                  }}
-                >
-                  {dados.rankingTop3[0].usuario.nome}
-                </Typography>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: '#FFD700',
-                    fontWeight: 900,
-                    fontSize: { xs: '1.8rem', md: '2.5rem' },
-                  }}
-                >
-                  {dados.rankingTop3[0].pontuacaoTotal}
-                </Typography>
-              </Box>
-            )}
-
-            {/* 3º Lugar */}
-            {dados.rankingTop3[2] && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  animation: 'slideUp 0.6s ease-out 1.2s both',
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: '#CD7F32',
-                    fontWeight: 900,
-                    mb: 2,
-                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-                  }}
-                >
-                  3
-                </Typography>
-                <Avatar
-                  sx={{
-                    width: { xs: 80, md: 100 },
-                    height: { xs: 80, md: 100 },
-                    bgcolor: 'rgba(205, 127, 50, 0.3)',
-                    border: '4px solid #CD7F32',
-                    boxShadow: '0 6px 20px rgba(205, 127, 50, 0.5)',
-                    mb: 2,
-                    fontSize: { xs: '2rem', md: '2.5rem' },
-                    fontWeight: 700,
-                    color: '#CD7F32',
-                  }}
-                >
-                  {dados.rankingTop3[2].usuario.nome.charAt(0).toUpperCase()}
-                </Avatar>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 600,
-                    mb: 1,
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                  }}
-                >
-                  {dados.rankingTop3[2].usuario.nome}
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: '#FFD700',
-                    fontWeight: 800,
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                  }}
-                >
-                  {dados.rankingTop3[2].pontuacaoTotal}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* Texto de redirecionamento */}
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            mt: 6,
-            fontSize: '0.9rem',
-            animation: 'fadeIn 1s ease-out 2s both',
-            '@keyframes fadeIn': {
-              '0%': { opacity: 0 },
-              '100%': { opacity: 1 },
-            },
-          }}
-        >
-          Próxima tela em 5 segundos...
-        </Typography>
-      </Box>
-    );
+      <PodiumWithConfetti
+        rankingTop3={dados.rankingTop3}
+        nomeFase={dados.nomeFase}
+        showRedirectMessage={telaCheia}
+        confettiDuration={5000}
+        confettiIntensity="heavy"
+      />
+    </Box>
+  );
 
   // Renderizar com ou sem tela cheia
   if (telaCheia) {
@@ -369,14 +120,44 @@ const ParticipanteResultado: React.FC = () => {
       <Box
         sx={{
           minHeight: '100vh',
+          height: '100vh',
+          width: '100vw',
+          maxWidth: '100vw',
           position: 'relative',
           overflow: 'hidden',
+          overflowX: 'hidden',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'stretch',
           justifyContent: 'center',
+          m: 0,
+          p: 0,
         }}
       >
-        <AnimatedBackground dark />
+        <AnimatedBackground dark dimmed />
+        
+        {/* Botão de Sair no canto superior direito */}
+        <IconButton
+          onClick={() => navigate('/dashboard')}
+          sx={{
+            position: 'fixed',
+            top: { xs: 80, sm: 90, md: 100 },
+            right: 20,
+            zIndex: 10002,
+            bgcolor: '#fff',
+            width: { xs: 48, md: 56 },
+            height: { xs: 48, md: 56 },
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            '&:hover': {
+              bgcolor: '#fff',
+              transform: 'scale(1.1)',
+              boxShadow: '0 6px 30px rgba(0, 0, 0, 0.4)',
+            },
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <ExitIcon sx={{ color: '#E62816', fontSize: { xs: 28, md: 32 } }} />
+        </IconButton>
+        
         {PodiumContent}
       </Box>
     );
@@ -391,32 +172,59 @@ const ParticipanteResultado: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      <AnimatedBackground dark />
+      <AnimatedBackground dark dimmed />
+      
+      {/* Botão de Sair alinhado com o título */}
+      <IconButton
+        onClick={() => navigate('/dashboard')}
+        sx={{
+          position: 'fixed',
+          top: { xs: 'calc(64px + 80px)', sm: 'calc(64px + 90px)', md: 'calc(64px + 100px)' },
+          right: { xs: 20, sm: 'calc(80px + 20px)' },
+          zIndex: 10002,
+          bgcolor: '#fff',
+          width: { xs: 48, md: 56 },
+          height: { xs: 48, md: 56 },
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          '&:hover': {
+            bgcolor: '#fff',
+            transform: 'scale(1.1)',
+            boxShadow: '0 6px 30px rgba(0, 0, 0, 0.4)',
+          },
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <ExitIcon sx={{ color: '#E62816', fontSize: { xs: 28, md: 32 } }} />
+      </IconButton>
       
       {/* Seta Direita para ir ao Ranking Board */}
       <IconButton
         onClick={() => navigate(`/participante/ranking/${tentativaId}`)}
         sx={{
           position: 'fixed',
-          right: { xs: 30, sm: 'calc(80px + 60px)' }, // Mesma distância relativa
+          right: { xs: 20, sm: 'calc(80px + 20px)' },
           top: '50%',
           transform: 'translateY(-50%)',
-          zIndex: 1000, // Atrás do menu lateral (que tem zIndex 1200)
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
-          width: { xs: 56, md: 70 },
-          height: { xs: 56, md: 70 },
+          zIndex: 1000,
+          bgcolor: 'transparent',
+          padding: 2,
           '&:hover': {
-            bgcolor: '#fff',
-            transform: 'translateY(-50%) scale(1.15)',
+            bgcolor: 'transparent',
+            transform: 'translateY(-50%) translateX(5px)',
           },
           transition: 'all 0.3s ease',
-          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
         }}
       >
-        <ArrowRightIcon sx={{ color: '#011b49', fontSize: { xs: 32, md: 44 } }} />
+        <ArrowRightIcon 
+          sx={{ 
+            color: '#fff', 
+            fontSize: { xs: 48, md: 64 },
+            filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5))',
+          }} 
+        />
       </IconButton>
 
-      <ParticipantLayout title="Podium">
+      <ParticipantLayout title={dados.nomeFase || 'Resultado'} noPadding={true}>
         {PodiumContent}
       </ParticipantLayout>
     </Box>

@@ -18,16 +18,7 @@
     rgba(230, 40, 22, 0.03) 75%,
     rgba(76, 175, 80, 0.03) 100%
   );
-  animation: gradient-shift 20s ease infinite;
-}
-
-@keyframes gradient-shift {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
+  opacity: 1;
 }
 
 /* Formas geométricas flutuantes */
@@ -45,41 +36,46 @@
   animation-name: float-shape-rotate;
 }
 
+/* Versão mais apagada para telas específicas */
+.animated-background.dimmed .floating-shape {
+  opacity: 0.06;
+}
+
 @keyframes float-shape {
   0%, 100% {
     transform: translate(0, 0) scale(1) rotate(0deg);
-    opacity: 0.1;
+    opacity: 0.05;
   }
   25% {
     transform: translate(30px, -30px) scale(1.2) rotate(90deg);
-    opacity: 0.2;
+    opacity: 0.12;
   }
   50% {
     transform: translate(-20px, 20px) scale(0.9) rotate(180deg);
-    opacity: 0.15;
+    opacity: 0.08;
   }
   75% {
     transform: translate(20px, 30px) scale(1.1) rotate(270deg);
-    opacity: 0.18;
+    opacity: 0.1;
   }
 }
 
 @keyframes float-shape-rotate {
   0%, 100% {
     transform: translate(0, 0) scale(1) rotate(0deg);
-    opacity: 0.1;
+    opacity: 0.05;
   }
   25% {
     transform: translate(-30px, 30px) scale(1.15) rotate(-90deg);
-    opacity: 0.2;
+    opacity: 0.12;
   }
   50% {
     transform: translate(25px, -25px) scale(0.95) rotate(-180deg);
-    opacity: 0.15;
+    opacity: 0.08;
   }
   75% {
     transform: translate(-20px, -30px) scale(1.05) rotate(-270deg);
-    opacity: 0.18;
+    opacity: 0.1;
   }
 }
 
@@ -90,6 +86,11 @@
   opacity: 0.4;
   animation: float-particle 15s ease-in-out infinite;
   box-shadow: 0 0 10px currentColor;
+}
+
+/* Versão mais apagada para partículas */
+.animated-background.dimmed .floating-particle {
+  opacity: 0.15;
 }
 
 @keyframes float-particle {
@@ -127,3 +128,120 @@
   }
 }
 
+/* Versão mais apagada para interrogações */
+.animated-background.dimmed .question-icon-floating {
+  opacity: 0.06 !important;
+}
+
+.animated-background.dimmed .qif-item {
+  opacity: 0.06 !important;
+}
+
+/* Versão mais clara para tela de login */
+.animated-background.bright-login .bg-gradient {
+  animation: gradient-shift-login 20s ease infinite;
+}
+
+@keyframes gradient-shift-login {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animated-background.bright-login .floating-shape {
+  opacity: 0.15;
+  filter: blur(1px);
+  animation-name: float-shape-bright;
+}
+
+.animated-background.bright-login .floating-shape:nth-child(odd) {
+  opacity: 0.15;
+  animation-name: float-shape-rotate-bright;
+}
+
+.animated-background.bright-login .floating-particle {
+  opacity: 0.4;
+  animation-name: float-particle-bright;
+}
+
+.animated-background.bright-login .floating-particle:nth-child(3n) {
+  opacity: 0.4;
+  animation-name: float-particle-pulse-bright;
+}
+
+.animated-background.bright-login .qif-item {
+  animation-name: qif-appear-move-login !important;
+}
+
+/* Animações para formas na tela de login */
+@keyframes float-shape-bright {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 0.1;
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.2) rotate(90deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9) rotate(180deg);
+    opacity: 0.15;
+  }
+  75% {
+    transform: translate(20px, 30px) scale(1.1) rotate(270deg);
+    opacity: 0.18;
+  }
+}
+
+@keyframes float-shape-rotate-bright {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 0.1;
+  }
+  25% {
+    transform: translate(-30px, 30px) scale(1.15) rotate(-90deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(25px, -25px) scale(0.95) rotate(-180deg);
+    opacity: 0.15;
+  }
+  75% {
+    transform: translate(-20px, -30px) scale(1.05) rotate(-270deg);
+    opacity: 0.18;
+  }
+}
+
+/* Animações para partículas na tela de login */
+@keyframes float-particle-bright {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(50px, -50px) scale(1.3);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-40px, 40px) scale(0.8);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(40px, 50px) scale(1.2);
+    opacity: 0.5;
+  }
+}
+
+@keyframes float-particle-pulse-bright {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(30px, -30px) scale(1.5);
+    opacity: 0.6;
+  }
+}

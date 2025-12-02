@@ -359,7 +359,7 @@ const ConfigurarJornada: React.FC = () => {
       <AdminLayout title="Configurar Jornada">
         <Container maxWidth="lg">
           <Alert severity="error" sx={{ mb: 2 }}>
-            {erro}
+            {typeof erro === 'string' ? erro : JSON.stringify(erro)}
           </Alert>
           <Button onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)} startIcon={<ArrowBackIcon />}>
             Voltar
@@ -757,7 +757,7 @@ const ConfigurarJornada: React.FC = () => {
 
           {erro && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErro('')}>
-              {erro}
+              {typeof erro === 'string' ? erro : JSON.stringify(erro)}
             </Alert>
           )}
 

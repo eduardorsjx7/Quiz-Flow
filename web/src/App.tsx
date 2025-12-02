@@ -18,6 +18,7 @@ import DetalhesJornada from './pages/admin/DetalhesJornada';
 import ConfigurarJornada from './pages/admin/ConfigurarJornada';
 import ParticipanteQuiz from './pages/participante/Quiz';
 import ParticipanteResultado from './pages/participante/Resultado';
+import RankingCompleto from './pages/participante/RankingCompleto';
 import ParticipanteQuizzesFase from './pages/participante/QuizzesFase';
 import DashboardColaborador from './pages/participante/Dashboard';
 import FasesJornadaParticipante from './pages/participante/FasesJornada';
@@ -84,6 +85,7 @@ function App() {
         />
         <Route path="/participante/quiz/:tentativaId" element={<ParticipanteQuiz />} />
         <Route path="/participante/resultado/:tentativaId" element={<ParticipanteResultado />} />
+        <Route path="/participante/ranking/:tentativaId" element={<RankingCompleto />} />
         
         <Route
           path="/admin"

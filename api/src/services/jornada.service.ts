@@ -51,7 +51,7 @@ function calcularStatusFase(
 }
 
 export class JornadaService {
-  async listarJornadas(apenasAtivas: boolean = true) {
+  async listarJornadas(apenasAtivas: boolean = true, usuarioId?: number) {
     try {
       const jornadas = await prisma.jornada.findMany({
         where: apenasAtivas ? { ativo: true } : undefined,
@@ -83,7 +83,7 @@ export class JornadaService {
         },
       });
 
-      // Para cada jornada, verificar se tem sequência de desbloqueio
+      // Para cada jornada, verificar se tem sequência de desbloqueio e calcular pontuação
       const jornadasComInfo = await Promise.all(
         jornadas.map(async (jornada: any) => {
           // Buscar todas as fases da jornada para verificar se alguma tem dataDesbloqueio
@@ -93,17 +93,61 @@ export class JornadaService {
               ativo: true,
             },
             select: {
+              id: true,
               dataDesbloqueio: true,
+              pontuacao: true,
             },
           });
 
           // Verificar se alguma fase tem dataDesbloqueio definida
           const temSequenciaDesbloqueio = todasFases.some((fase: any) => fase.dataDesbloqueio !== null);
 
+          // Calcular pontuação total da jornada (soma das pontuações de todas as fases ativas)
+          const pontuacaoTotal = todasFases.reduce((total: number, fase: any) => total + (fase.pontuacao || 0), 0);
+
+          // Calcular pontuação obtida pelo usuário (se usuarioId foi fornecido)
+          let pontuacaoObtida = 0;
+          if (usuarioId) {
+            // Buscar todos os quizzes das fases desta jornada
+            const quizzesDaJornada = await prisma.quiz.findMany({
+              where: {
+                faseId: {
+                  in: todasFases.map((f: any) => f.id),
+                },
+                ativo: true,
+              },
+              select: {
+                id: true,
+              },
+            });
+
+            // Buscar todas as tentativas finalizadas do usuário para esses quizzes
+            const tentativasFinalizadas = await prisma.tentativaQuiz.findMany({
+              where: {
+                usuarioId,
+                quizId: {
+                  in: quizzesDaJornada.map((q: any) => q.id),
+                },
+                status: 'FINALIZADA',
+              },
+              select: {
+                pontuacaoTotal: true,
+              },
+            });
+
+            // Somar a pontuação de todas as tentativas finalizadas
+            pontuacaoObtida = tentativasFinalizadas.reduce(
+              (total: number, tentativa: any) => total + (tentativa.pontuacaoTotal || 0),
+              0
+            );
+          }
+
           return {
             ...jornada,
             faseAtual: jornada.fases.length > 0 ? jornada.fases[0] : null,
             todasFasesAbertas: !temSequenciaDesbloqueio && todasFases.length > 0,
+            pontuacaoTotal,
+            pontuacaoObtida,
           };
         })
       );

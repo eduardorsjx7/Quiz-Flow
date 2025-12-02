@@ -41,7 +41,8 @@ export const upload = multer({
 export const listarJornadas = asyncHandler(async (req: Request, res: Response) => {
   // Se não for admin, filtrar apenas jornadas ativas
   const isAdmin = (req as any).userTipo === 'ADMINISTRADOR';
-  const jornadas = await jornadaService.listarJornadas(!isAdmin);
+  const usuarioId = (req as any).userId;
+  const jornadas = await jornadaService.listarJornadas(!isAdmin, usuarioId);
   res.json({
     success: true,
     data: jornadas,

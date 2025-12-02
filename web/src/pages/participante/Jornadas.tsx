@@ -36,6 +36,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   PlayArrow as PlayArrowIcon,
+  EmojiEvents as TrophyIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
@@ -55,6 +56,8 @@ interface Jornada {
   _count: {
     fases: number;
   };
+  pontuacaoTotal?: number;
+  pontuacaoObtida?: number;
 }
 
 const Jornadas: React.FC = () => {
@@ -546,7 +549,7 @@ const Jornadas: React.FC = () => {
                   <Card
                     sx={{
                       width: '100%',
-                      height: 250,
+                      height: 280,
                       display: 'flex',
                       flexDirection: 'column',
                       borderRadius: 3,
@@ -557,6 +560,7 @@ const Jornadas: React.FC = () => {
                       overflow: 'hidden',
                       filter: !jornada.ativo ? 'grayscale(0.8)' : 'none',
                       opacity: !jornada.ativo ? 0.7 : 1,
+                      position: 'relative',
                       '&:hover': {
                         transform: jornada.ativo ? 'translateY(-4px)' : 'none',
                         boxShadow: jornada.ativo 
@@ -566,86 +570,103 @@ const Jornadas: React.FC = () => {
                       },
                     }}
                   >
-                    {jornada.imagemCapa ? (
+                    {/* Container com título e imagem sobrepostos */}
+                    <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                      {/* Imagem de fundo */}
+                      {jornada.imagemCapa ? (
+                        <Box
+                          component="img"
+                          src={jornada.imagemCapa}
+                          alt={jornada.titulo}
+                          sx={{
+                            width: '100%',
+                            height: 170,
+                            objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                            display: 'block',
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 170,
+                            background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: 'linear-gradient(135deg, rgba(255, 44, 25, 0.05) 0%, rgba(255, 44, 25, 0.1) 100%)',
+                            },
+                          }}
+                        >
+                          <RouteIcon sx={{ color: '#ff2c19', fontSize: 48, position: 'relative', zIndex: 1 }} />
+                        </Box>
+                      )}
+                      
+                      {/* Título sobreposto com gradiente */}
                       <Box
-                        component="img"
-                        src={jornada.imagemCapa}
-                        alt={jornada.titulo}
                         sx={{
-                          width: '100%',
-                          height: 90,
-                          objectFit: 'cover',
-                          transition: 'transform 0.3s ease',
-                          flexShrink: 0,
-                          '&:hover': {
-                            transform: jornada.ativo ? 'scale(1.03)' : 'none',
-                          },
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: 135,
-                          background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                          flexShrink: 0,
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: 'linear-gradient(135deg, rgba(255, 44, 25, 0.05) 0%, rgba(255, 44, 25, 0.1) 100%)',
-                          },
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          p: 2,
+                          pb: 4,
+                          background: 'linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.95) 60%, rgba(255, 255, 255, 0) 100%)',
                         }}
                       >
-                        <RouteIcon sx={{ color: '#ff2c19', fontSize: 32, position: 'relative', zIndex: 1 }} />
-                      </Box>
-                    )}
-                    <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, minHeight: 0 }}>
                         <Typography 
                           variant="h6" 
                           sx={{ 
-                            fontWeight: 600, 
+                            fontWeight: 700, 
                             color: '#011b49', 
-                            flex: 1,
-                            fontSize: '0.875rem',
+                            fontSize: '1rem',
                             lineHeight: 1.3,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical',
+                            textAlign: 'center',
                           }}
                         >
                           {jornada.titulo}
                         </Typography>
                       </Box>
+                    </Box>
+                    
+                    <CardContent sx={{ p: 2, pt: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
                       
                       <Box 
                         sx={{ 
                           display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: 0.5, 
-                          mb: 0.5,
-                          p: 0.75,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'flex-start', sm: 'center' }, 
+                          justifyContent: 'space-between',
+                          gap: { xs: 1, sm: 1.5 },
+                          p: 1.5,
                           borderRadius: 2,
                           bgcolor: 'rgba(0, 0, 0, 0.02)',
                           flexShrink: 0,
                         }}
                       >
+                        {/* Fase Atual */}
                         <Box 
                           sx={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            justifyContent: 'center', 
                             gap: 1,
+                            flex: 1,
+                            minWidth: 0,
+                            width: { xs: '100%', sm: 'auto' },
                           }}
                         >
                           {jornada.todasFasesAbertas ? (
@@ -653,54 +674,90 @@ const Jornadas: React.FC = () => {
                               label="Fases Abertas"
                               color="success"
                               size="small"
-                              sx={{ fontWeight: 600 }}
+                              sx={{ fontWeight: 600, fontSize: '0.75rem' }}
                             />
                           ) : jornada.faseAtual ? (
-                            <Chip
-                              label={`${jornada.faseAtual.ordem}ª - ${jornada.faseAtual.titulo}`}
-                              color="primary"
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontWeight: 600 }}
-                            />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 500, 
+                                color: '#011b49', 
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              Fase {jornada.faseAtual.ordem}
+                            </Typography>
                           ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary" 
+                              sx={{ 
+                                fontWeight: 500, 
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                              }}
+                            >
                               {jornada._count.fases} fase{jornada._count.fases !== 1 ? 's' : ''}
                             </Typography>
                           )}
                         </Box>
+
+                        {/* Pontuação */}
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 0.5,
+                            flexShrink: 0,
+                            alignSelf: { xs: 'flex-end', sm: 'auto' },
+                          }}
+                        >
+                          <TrophyIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#FFC107' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 700, 
+                              color: '#011b49', 
+                              fontSize: { xs: '0.8rem', sm: '0.85rem' }, 
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {jornada.pontuacaoObtida || 0}/{jornada.pontuacaoTotal || 0}
+                          </Typography>
+                        </Box>
                       </Box>
                     </CardContent>
-                    <CardActions sx={{ justifyContent: 'center', p: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.75, flexShrink: 0 }}>
+                    <CardActions sx={{ justifyContent: 'center', p: 1.5, pt: 0, borderTop: 'none', gap: 0.75, flexShrink: 0 }}>
                       <Button
-                        size="small"
+                        fullWidth
+                        size="medium"
                         onClick={() => navigate(`/participante/jornadas/${jornada.id}/fases`)}
                         startIcon={<PlayArrowIcon />}
                         sx={{
-                          color: '#2196F3',
-                          bgcolor: 'rgba(33, 150, 243, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(33, 150, 243, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
+                          color: '#fff',
+                          bgcolor: '#2196F3',
+                          border: 'none',
+                          borderRadius: 2,
+                          px: 2,
+                          py: 1,
                           textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          fontSize: '0.875rem',
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: '0 2px 8px rgba(33, 150, 243, 0.25)',
                           '& .MuiSvgIcon-root': {
-                            fontSize: 18,
+                            fontSize: 20,
                           },
                           '&:hover': {
-                            backgroundColor: '#2196F3',
-                            color: '#fff',
-                            borderColor: '#2196F3',
+                            backgroundColor: '#1976D2',
                             transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
+                            boxShadow: '0 4px 16px rgba(33, 150, 243, 0.4)',
                           },
                         }}
                       >
-                        Acessar
+                        Acessar Jornada
                       </Button>
                     </CardActions>
                   </Card>

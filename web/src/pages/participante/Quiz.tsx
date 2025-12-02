@@ -59,14 +59,19 @@ const ParticipanteQuiz: React.FC = () => {
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [perguntaAtualIndex, setPerguntaAtualIndex] = useState(0);
   const [alternativaSelecionada, setAlternativaSelecionada] = useState<number | null>(null);
-  const [tempoRestante, setTempoRestante] = useState(0);
+  const [tempoRestante, setTempoRestante] = useState(0); // em segundos (lógica)
+  const [tempoDecorrido, setTempoDecorrido] = useState(0); // em % (animação)
+  const [timerIniciado, setTimerIniciado] = useState(false);
   const [respondida, setRespondida] = useState(false);
   const [feedback, setFeedback] = useState<{ acertou: boolean; pontuacao: number; tempoEsgotado: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [mostrarDialogoTempoEsgotado, setMostrarDialogoTempoEsgotado] = useState(false);
+
   const carregandoRef = useRef(false);
-  const intervaloRef = useRef<NodeJS.Timeout | null>(null);
+  const intervaloRef = useRef<NodeJS.Timeout | null>(null);            // timer de segundos
+  const progressoIntervaloRef = useRef<NodeJS.Timeout | null>(null);   // timer da animação da barra
+  const inicioTimerRef = useRef<number | null>(null);                  // timestamp de início da pergunta
 
   const finalizarPerguntas = useCallback(async () => {
     try {
@@ -74,7 +79,6 @@ const ParticipanteQuiz: React.FC = () => {
       navigate(`/participante/resultado/${tentativaId}`);
     } catch (error: any) {
       console.error('Erro ao finalizar perguntas:', error);
-      // Mesmo com erro, navegar para resultado
       navigate(`/participante/resultado/${tentativaId}`);
     }
   }, [tentativaId, navigate]);
@@ -91,7 +95,6 @@ const ParticipanteQuiz: React.FC = () => {
       const perguntasData = tentativaData.quiz.perguntas;
       setPerguntas(perguntasData);
       
-      // Verificar se já existem respostas e avançar para a próxima pergunta não respondida
       if (tentativaData.respostas && tentativaData.respostas.length > 0) {
         const perguntasRespondidas = tentativaData.respostas.map((r: any) => r.perguntaId);
         const proximaPerguntaIndex = perguntasData.findIndex(
@@ -100,8 +103,6 @@ const ParticipanteQuiz: React.FC = () => {
         if (proximaPerguntaIndex !== -1) {
           setPerguntaAtualIndex(proximaPerguntaIndex);
         } else {
-          // Todas as perguntas foram respondidas, finalizar
-          // Usar setTimeout para evitar chamar durante o carregamento
           setTimeout(() => {
             finalizarPerguntas();
           }, 100);
@@ -120,101 +121,101 @@ const ParticipanteQuiz: React.FC = () => {
     }
   }, [tentativaId, finalizarPerguntas]);
 
-  const enviarResposta = useCallback(async (alternativaId: number | null, tempoEsgotado: boolean = false) => {
-    if (respondida || !tentativaId) return;
+  const enviarResposta = useCallback(
+    async (alternativaId: number | null, tempoEsgotado: boolean = false) => {
+      if (respondida || !tentativaId) return;
 
-    const pergunta = perguntas[perguntaAtualIndex];
-    // Usar tempoSegundos da pergunta individual, ou tempoLimitePorQuestao da jornada como fallback
-    const tempoLimitePergunta = pergunta?.tempoSegundos;
-    const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
-    const tempoLimite = tempoLimitePergunta || tempoLimiteJornada || 0;
-    const tempoGasto = tempoLimite > 0 ? Math.max(0, tempoLimite - tempoRestante) : 0;
+      const pergunta = perguntas[perguntaAtualIndex];
+      const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
+      const tempoGasto = tempoLimite > 0 ? Math.max(0, tempoLimite - tempoRestante) : 0;
 
-    setRespondida(true);
+      setRespondida(true);
 
-    try {
-      const resposta = await api.post('/respostas', {
-        tentativaId: parseInt(tentativaId!),
-        perguntaId: pergunta.id,
-        alternativaId: alternativaId,
-        tempoResposta: tempoGasto,
-        tempoEsgotado: tempoEsgotado || !alternativaId,
-      });
-
-      const resultado = resposta.data.data || resposta.data;
-      
-      // Se o tempo esgotou, não mostrar feedback, ir direto para próxima pergunta
-      if (tempoEsgotado || (!alternativaId && tempoLimite > 0)) {
-        // Aguardar 1 segundo antes de passar para próxima pergunta quando tempo esgotar
-        setTimeout(() => {
-          if (perguntaAtualIndex < perguntas.length - 1) {
-            setPerguntaAtualIndex(perguntaAtualIndex + 1);
-            setRespondida(false);
-            setFeedback(null);
-            setAlternativaSelecionada(null);
-          } else {
-            // Perguntas finalizadas
-            finalizarPerguntas();
-          }
-        }, 1000);
-      } else {
-        // Mostrar feedback quando resposta foi enviada manualmente
-        setFeedback({
-          acertou: resultado.acertou,
-          pontuacao: resultado.pontuacao,
-          tempoEsgotado: resultado.tempoEsgotado || tempoEsgotado,
+      try {
+        const resposta = await api.post('/respostas', {
+          tentativaId: parseInt(tentativaId!),
+          perguntaId: pergunta.id,
+          alternativaId: alternativaId,
+          tempoResposta: tempoGasto,
+          tempoEsgotado: tempoEsgotado || !alternativaId,
         });
 
-        // Aguardar 3 segundos antes de passar para próxima pergunta
-        setTimeout(() => {
-          if (perguntaAtualIndex < perguntas.length - 1) {
-            setPerguntaAtualIndex(perguntaAtualIndex + 1);
-            setRespondida(false);
-            setFeedback(null);
-            setAlternativaSelecionada(null);
-          } else {
-            // Perguntas finalizadas
-            finalizarPerguntas();
-          }
-        }, 3000);
+        const resultado = resposta.data.data || resposta.data;
+        
+        if (tempoEsgotado || (!alternativaId && tempoLimite > 0)) {
+          setTimeout(() => {
+            if (perguntaAtualIndex < perguntas.length - 1) {
+              setPerguntaAtualIndex(perguntaAtualIndex + 1);
+              setRespondida(false);
+              setFeedback(null);
+              setAlternativaSelecionada(null);
+            } else {
+              finalizarPerguntas();
+            }
+          }, 1000);
+        } else {
+          setFeedback({
+            acertou: resultado.acertou,
+            pontuacao: resultado.pontuacao,
+            tempoEsgotado: resultado.tempoEsgotado || tempoEsgotado,
+          });
+
+          setTimeout(() => {
+            if (perguntaAtualIndex < perguntas.length - 1) {
+              setPerguntaAtualIndex(perguntaAtualIndex + 1);
+              setRespondida(false);
+              setFeedback(null);
+              setAlternativaSelecionada(null);
+            } else {
+              finalizarPerguntas();
+            }
+          }, 3000);
+        }
+      } catch (error: any) {
+        console.error('Erro ao enviar resposta:', error);
+        setErro(error.response?.data?.error || 'Erro ao enviar resposta');
+        setRespondida(false);
       }
-    } catch (error: any) {
-      console.error('Erro ao enviar resposta:', error);
-      setErro(error.response?.data?.error || 'Erro ao enviar resposta');
-      setRespondida(false);
-    }
-  }, [respondida, tentativaId, perguntas, perguntaAtualIndex, tempoRestante, finalizarPerguntas, tentativa]);
+    },
+    [respondida, tentativaId, perguntas, perguntaAtualIndex, tempoRestante, finalizarPerguntas, tentativa]
+  );
 
   useEffect(() => {
     if (tentativaId && !carregandoRef.current) {
       carregarTentativa();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tentativaId]);
+  }, [tentativaId, carregarTentativa]);
 
   useEffect(() => {
-    // Limpar intervalo anterior se existir
+    // Limpar todos os intervalos anteriores
     if (intervaloRef.current) {
       clearInterval(intervaloRef.current);
       intervaloRef.current = null;
     }
+    if (progressoIntervaloRef.current) {
+      clearInterval(progressoIntervaloRef.current);
+      progressoIntervaloRef.current = null;
+    }
+    inicioTimerRef.current = null;
 
-    // Resetar quando mudar de pergunta ou quando não há mais perguntas
+    // Se não há perguntas válidas, não inicia timer
     if (perguntas.length === 0 || perguntaAtualIndex >= perguntas.length) {
+      setTimerIniciado(false);
+      setTempoDecorrido(0);
       return;
     }
 
-    // Usar tempoSegundos da pergunta atual, ou tempoLimitePorQuestao da jornada como fallback
-    const perguntaAtual = perguntas[perguntaAtualIndex];
-    const tempoLimitePergunta = perguntaAtual?.tempoSegundos;
-    const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
-    const tempoLimite = tempoLimitePergunta || tempoLimiteJornada;
-    
-    if (tempoLimite && tempoLimite > 0 && !respondida) {
-      setTempoRestante(tempoLimite);
-      setAlternativaSelecionada(null);
-      setFeedback(null);
+    const tempoLimiteQuestao = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
 
+    if (tempoLimiteQuestao && tempoLimiteQuestao > 0 && !respondida) {
+      // Configura estados iniciais
+      setTempoRestante(tempoLimiteQuestao);
+      setTempoDecorrido(0);
+      setTimerIniciado(true);
+      setFeedback(null);
+      inicioTimerRef.current = Date.now();
+
+      // Intervalo "lógico" em segundos
       intervaloRef.current = setInterval(() => {
         setTempoRestante((prev) => {
           if (prev <= 1) {
@@ -222,7 +223,11 @@ const ParticipanteQuiz: React.FC = () => {
               clearInterval(intervaloRef.current);
               intervaloRef.current = null;
             }
-            // Tempo esgotou - mostrar diálogo
+            if (progressoIntervaloRef.current) {
+              clearInterval(progressoIntervaloRef.current);
+              progressoIntervaloRef.current = null;
+            }
+            setTempoDecorrido(100);
             if (!respondida) {
               setMostrarDialogoTempoEsgotado(true);
             }
@@ -232,21 +237,35 @@ const ParticipanteQuiz: React.FC = () => {
         });
       }, 1000);
 
+      // Intervalo da animação da barra (mais suave, ~10 FPS)
+      progressoIntervaloRef.current = setInterval(() => {
+        if (!inicioTimerRef.current) return;
+        const elapsedMs = Date.now() - inicioTimerRef.current;
+        const totalMs = tempoLimiteQuestao * 1000;
+        const perc = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
+        setTempoDecorrido(perc);
+      }, 100);
+
+      // Cleanup quando índice de pergunta / tentativa / respondida mudar ou componente desmontar
       return () => {
         if (intervaloRef.current) {
           clearInterval(intervaloRef.current);
           intervaloRef.current = null;
         }
+        if (progressoIntervaloRef.current) {
+          clearInterval(progressoIntervaloRef.current);
+          progressoIntervaloRef.current = null;
+        }
+        inicioTimerRef.current = null;
       };
     } else {
-      // Sem tempo limite, não iniciar timer
+      // Sem tempo limite, não inicia timer
       setTempoRestante(0);
-      if (!respondida) {
-        setAlternativaSelecionada(null);
-        setFeedback(null);
-      }
+      setTempoDecorrido(0);
+      setTimerIniciado(false);
+      setFeedback(null);
     }
-  }, [perguntaAtualIndex, perguntas, respondida, enviarResposta, tentativa]);
+  }, [perguntaAtualIndex, perguntas, respondida, tentativa]);
 
   const handleResponder = () => {
     if (alternativaSelecionada !== null) {
@@ -256,26 +275,11 @@ const ParticipanteQuiz: React.FC = () => {
 
   const handleConfirmarTempoEsgotado = () => {
     setMostrarDialogoTempoEsgotado(false);
-    // Enviar resposta em branco (null) quando tempo esgotar
     enviarResposta(null, true);
   };
 
-  // Calcular tempo limite e progresso antes dos early returns (regra dos hooks)
   const pergunta = perguntas[perguntaAtualIndex] || null;
-  const tempoLimitePergunta = pergunta?.tempoSegundos;
-  const tempoLimiteJornada = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao;
-  const tempoLimite = tempoLimitePergunta || tempoLimiteJornada || 0;
-  
-  // Calcular porcentagem de tempo decorrido (0% no início, 100% no final)
-  // tempoRestante começa em tempoLimite e vai até 0
-  // tempoDecorrido = (tempoLimite - tempoRestante) / tempoLimite * 100
-  const tempoDecorrido = React.useMemo(() => {
-    if (!tempoLimite || tempoLimite <= 0) return 0;
-    if (tempoRestante <= 0) return 100;
-    const decorrido = ((tempoLimite - tempoRestante) / tempoLimite) * 100;
-    return Math.min(100, Math.max(0, decorrido)); // Garantir que está entre 0 e 100
-  }, [tempoLimite, tempoRestante]);
-  
+  const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
   const jornadaId = tentativa?.quiz?.fase?.jornada?.id;
 
   if (loading) {
@@ -305,26 +309,26 @@ const ParticipanteQuiz: React.FC = () => {
 
   return (
     <>
-      {/* Barra de Carregamento - Cresce conforme o tempo passa */}
-      {tempoLimite > 0 && (
+      {tempoLimite > 0 && !respondida && timerIniciado && (
         <Box
           sx={{
             position: 'fixed',
-            top: 64, // Altura do AppBar
-            left: { xs: 0, sm: '80px' }, // Sidebar colapsado por padrão (80px)
+            top: 64,
+            left: { xs: 0, sm: '80px' },
             right: 0,
-            zIndex: (theme) => theme.zIndex.appBar - 1,
+            zIndex: 1200,
           }}
         >
           <LinearProgress
             variant="determinate"
-            value={tempoDecorrido} // Mostra tempo decorrido (cresce de 0% para 100%)
+            value={tempoDecorrido}
             sx={{
-              height: 4,
-              backgroundColor: 'rgba(255, 44, 25, 0.1)',
+              height: 6,
+              backgroundColor: 'rgba(255, 44, 25, 0.15)',
               '& .MuiLinearProgress-bar': {
-                backgroundColor: '#ff2c19',
-                transition: 'transform 0.1s linear',
+                backgroundColor: tempoRestante <= 10 ? '#ff2c19' : '#FFC107',
+                // transição curta, mas com updates a cada 100ms fica bem suave
+                transition: 'transform 0.2s linear, background-color 0.3s ease',
               },
             }}
           />
@@ -332,42 +336,19 @@ const ParticipanteQuiz: React.FC = () => {
       )}
 
       <ParticipantLayout>
-        <Container maxWidth="lg" sx={{ pt: tempoLimite > 0 ? 2 : 0 }}>
-
-        {/* Breadcrumbs */}
-        <Breadcrumbs 
-          sx={{ 
-            mb: 3,
-            '& .MuiBreadcrumbs-separator': {
-              mx: 1.5,
-              color: 'text.disabled',
-            },
-          }}
-        >
-          <Link
-            component="button"
-            onClick={() => navigate('/dashboard')}
+        <Container maxWidth="lg">
+          <Breadcrumbs 
             sx={{ 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              color: 'text.secondary',
-              transition: 'all 0.2s ease',
-              borderRadius: 1,
-              p: 0.5,
-              '&:hover': { 
-                color: 'primary.main',
-                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              mb: 3,
+              '& .MuiBreadcrumbs-separator': {
+                mx: 1.5,
+                color: 'text.disabled',
               },
             }}
-            title="Dashboard"
           >
-            <HomeIcon sx={{ fontSize: 20 }} />
-          </Link>
-          {jornadaId && (
             <Link
               component="button"
-              onClick={() => navigate(`/participante/jornadas/${jornadaId}/fases`)}
+              onClick={() => navigate('/dashboard')}
               sx={{ 
                 cursor: 'pointer', 
                 display: 'flex', 
@@ -381,232 +362,246 @@ const ParticipanteQuiz: React.FC = () => {
                   bgcolor: 'rgba(0, 0, 0, 0.04)',
                 },
               }}
+              title="Dashboard"
             >
-              <Typography 
-                sx={{
-                  fontWeight: 500,
-                  fontSize: '0.95rem',
-                }}
-              >
-                {tentativa?.quiz?.fase?.jornada?.titulo || 'Jornada'}
-              </Typography>
+              <HomeIcon sx={{ fontSize: 20 }} />
             </Link>
-          )}
-          <Typography 
-            color="text.primary"
-            sx={{
-              fontWeight: 500,
-              fontSize: '0.95rem',
-            }}
-          >
-            Responder Perguntas
-          </Typography>
-        </Breadcrumbs>
-
-        {/* Título da Jornada com quantidade de perguntas */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 700,
-              fontSize: '2rem',
-              background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {tentativa?.quiz?.fase?.jornada?.titulo || 'Jornada'}
-          </Typography>
-          <Chip
-            label={`${perguntaAtualIndex + 1}/${perguntas.length}`}
-            sx={{
-              fontWeight: 600,
-              fontSize: '1rem',
-              height: 36,
-              backgroundColor: '#011b49',
-              color: '#fff',
-            }}
-          />
-        </Box>
-
-        {/* Card com a pergunta */}
-        <Paper
-          sx={{
-            p: 5,
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            transition: 'box-shadow 0.2s ease',
-            mb: 3,
-          }}
-        >
-          {/* Texto da Pergunta */}
-          <Typography
-            variant="h4"
-            gutterBottom
-            sx={{
-              fontWeight: 600,
-              color: 'text.primary',
-              mb: 5,
-              fontSize: '1.75rem',
-              lineHeight: 1.5,
-            }}
-          >
-            {pergunta.texto}
-          </Typography>
-
-          {/* Feedback quando resposta foi enviada */}
-          {feedback && (
-            <Alert
-              severity={feedback.acertou ? 'success' : 'error'}
-              sx={{
-                mb: 3,
-                fontSize: '1rem',
-                '& .MuiAlert-icon': {
-                  fontSize: '1.5rem',
-                },
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {feedback.tempoEsgotado
-                  ? '⏱ Tempo Esgotado!'
-                  : feedback.acertou
-                  ? '✓ Resposta Correta!'
-                  : '✗ Resposta Incorreta'}
-              </Typography>
-              <Typography variant="body1">
-                Pontuação: <strong>{feedback.pontuacao} pontos</strong>
-              </Typography>
-              {feedback.tempoEsgotado && (
-                <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                  A pergunta foi marcada como não respondida por falta de tempo.
-                </Typography>
-              )}
-            </Alert>
-          )}
-
-          {/* Alternativas em duas colunas */}
-          {!feedback && (
-            <FormControl component="fieldset" sx={{ width: '100%', mb: 3 }}>
-              <RadioGroup
-                value={alternativaSelecionada || ''}
-                onChange={(e) => setAlternativaSelecionada(parseInt(e.target.value))}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                  gap: 2,
+            {jornadaId && (
+              <Link
+                component="button"
+                onClick={() => navigate(`/participante/jornadas/${jornadaId}/fases`)}
+                sx={{ 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  p: 0.5,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  },
                 }}
               >
-                {pergunta.alternativas.map((alt) => (
-                  <FormControlLabel
-                    key={alt.id}
-                    value={alt.id}
-                    control={
-                      <Radio
-                        sx={{
-                          color: '#011b49',
-                          '&.Mui-checked': {
-                            color: '#ff2c19',
-                          },
-                          '&:hover': {
-                            backgroundColor: 'rgba(1, 27, 73, 0.04)',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          fontWeight: alternativaSelecionada === alt.id ? 600 : 400,
-                          color: alternativaSelecionada === alt.id ? '#011b49' : 'text.primary',
-                          fontSize: '1.1rem',
-                        }}
-                      >
-                        {alt.texto}
-                      </Typography>
-                    }
-                    disabled={respondida}
-                    sx={{
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: alternativaSelecionada === alt.id ? '2px solid #ff2c19' : '2px solid rgba(0, 0, 0, 0.1)',
-                      backgroundColor: alternativaSelecionada === alt.id ? 'rgba(255, 44, 25, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                      '&:hover': {
-                        backgroundColor: alternativaSelecionada === alt.id ? 'rgba(255, 44, 25, 0.1)' : 'rgba(1, 27, 73, 0.04)',
-                        border: alternativaSelecionada === alt.id ? '2px solid #ff2c19' : '2px solid rgba(1, 27, 73, 0.2)',
-                      },
-                      transition: 'all 0.2s ease-in-out',
-                      cursor: respondida ? 'not-allowed' : 'pointer',
-                      m: 0,
-                      width: '100%',
-                    }}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
-          )}
-        </Paper>
+                <Typography 
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  {tentativa?.quiz?.fase?.jornada?.titulo || 'Jornada'}
+                </Typography>
+              </Link>
+            )}
+            <Typography 
+              color="text.primary"
+              sx={{
+                fontWeight: 500,
+                fontSize: '0.95rem',
+              }}
+            >
+              Responder Perguntas
+            </Typography>
+          </Breadcrumbs>
 
-        {/* Botões Cancelar e Responder */}
-        {!feedback && (
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              size="large"
-              onClick={() => navigate('/dashboard')}
-              sx={{
-                py: 1.5,
-                fontSize: '1rem',
-                fontWeight: 600,
-                borderColor: '#011b49',
-                color: '#011b49',
-                '&:hover': {
-                  borderColor: '#011b49',
-                  backgroundColor: 'rgba(1, 27, 73, 0.04)',
-                },
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: '2rem',
+                background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                letterSpacing: '-0.02em',
               }}
             >
-              Cancelar
-            </Button>
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              onClick={handleResponder}
-              disabled={alternativaSelecionada === null || respondida}
+              {tentativa?.quiz?.fase?.jornada?.titulo || 'Jornada'}
+            </Typography>
+            <Chip
+              label={`${perguntaAtualIndex + 1}/${perguntas.length}`}
               sx={{
-                py: 1.5,
-                fontSize: '1rem',
                 fontWeight: 600,
-                bgcolor: '#e62816',
-                '&:hover': {
-                  bgcolor: '#c52214',
-                },
-                '&:disabled': {
-                  bgcolor: 'rgba(0, 0, 0, 0.12)',
-                  color: 'rgba(0, 0, 0, 0.26)',
-                },
+                fontSize: '1rem',
+                height: 36,
+                backgroundColor: '#011b49',
+                color: '#fff',
               }}
-            >
-              Responder
-            </Button>
+            />
           </Box>
-        )}
+
+          <Paper
+            sx={{
+              p: 5,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              transition: 'box-shadow 0.2s ease',
+              mb: 3,
+            }}
+          >
+            <Typography
+              variant="h4"
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                color: 'text.primary',
+                mb: 5,
+                fontSize: '1.75rem',
+                lineHeight: 1.5,
+              }}
+            >
+              {pergunta.texto}
+            </Typography>
+
+            {feedback && (
+              <Alert
+                severity={feedback.acertou ? 'success' : 'error'}
+                sx={{
+                  mb: 3,
+                  fontSize: '1rem',
+                  '& .MuiAlert-icon': {
+                    fontSize: '1.5rem',
+                  },
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  {feedback.tempoEsgotado
+                    ? '⏱ Tempo Esgotado!'
+                    : feedback.acertou
+                    ? '✓ Resposta Correta!'
+                    : '✗ Resposta Incorreta'}
+                </Typography>
+                <Typography variant="body1">
+                  Pontuação: <strong>{feedback.pontuacao} pontos</strong>
+                </Typography>
+                {feedback.tempoEsgotado && (
+                  <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                    A pergunta foi marcada como não respondida por falta de tempo.
+                  </Typography>
+                )}
+              </Alert>
+            )}
+
+            {!feedback && (
+              <FormControl component="fieldset" sx={{ width: '100%', mb: 3 }}>
+                <RadioGroup
+                  value={alternativaSelecionada || ''}
+                  onChange={(e) => setAlternativaSelecionada(parseInt(e.target.value))}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                    gap: 2,
+                  }}
+                >
+                  {pergunta.alternativas.map((alt) => (
+                    <FormControlLabel
+                      key={alt.id}
+                      value={alt.id}
+                      control={
+                        <Radio
+                          sx={{
+                            color: '#011b49',
+                            '&.Mui-checked': {
+                              color: '#ff2c19',
+                            },
+                            '&:hover': {
+                              backgroundColor: 'rgba(1, 27, 73, 0.04)',
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            fontWeight: alternativaSelecionada === alt.id ? 600 : 400,
+                            color: alternativaSelecionada === alt.id ? '#011b49' : 'text.primary',
+                            fontSize: '1.1rem',
+                          }}
+                        >
+                          {alt.texto}
+                        </Typography>
+                      }
+                      disabled={respondida}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 2,
+                        border: alternativaSelecionada === alt.id ? '2px solid #ff2c19' : '2px solid rgba(0, 0, 0, 0.1)',
+                        backgroundColor: alternativaSelecionada === alt.id ? 'rgba(255, 44, 25, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                        '&:hover': {
+                          backgroundColor: alternativaSelecionada === alt.id ? 'rgba(255, 44, 25, 0.1)' : 'rgba(1, 27, 73, 0.04)',
+                          border: alternativaSelecionada === alt.id ? '2px solid #ff2c19' : '2px solid rgba(1, 27, 73, 0.2)',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                        cursor: respondida ? 'not-allowed' : 'pointer',
+                        m: 0,
+                        width: '100%',
+                      }}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            )}
+          </Paper>
+
+          {!feedback && (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                fullWidth
+                size="large"
+                onClick={() => navigate('/dashboard')}
+                sx={{
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  borderColor: '#011b49',
+                  color: '#011b49',
+                  '&:hover': {
+                    borderColor: '#011b49',
+                    backgroundColor: 'rgba(1, 27, 73, 0.04)',
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                onClick={handleResponder}
+                disabled={alternativaSelecionada === null || respondida}
+                sx={{
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  bgcolor: '#e62816',
+                  '&:hover': {
+                    bgcolor: '#c52214',
+                  },
+                  '&:disabled': {
+                    bgcolor: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.26)',
+                  },
+                }}
+              >
+                Responder
+              </Button>
+            </Box>
+          )}
         </Container>
       </ParticipantLayout>
 
-      {/* Diálogo de Tempo Esgotado */}
       <ConfirmDialog
         open={mostrarDialogoTempoEsgotado}
         title="Tempo Limite Excedido"
         message="O tempo limite para responder esta pergunta foi excedido. A pergunta será marcada como não respondida e você será direcionado para a próxima pergunta."
-        confirmText="Entendi"
         type="warning"
         onConfirm={handleConfirmarTempoEsgotado}
         onCancel={handleConfirmarTempoEsgotado}
+        hideButtons={true}
       />
     </>
   );

@@ -170,7 +170,7 @@ const FasesJornada: React.FC = () => {
       <Container maxWidth="lg">
         <Box sx={{ position: 'relative', mb: 3 }}>
           <IconButton 
-            onClick={() => navigate('/dashboard')} 
+            onClick={() => navigate('/participante/jornadas')} 
             size="small"
             sx={{
               position: 'absolute',
@@ -212,6 +212,27 @@ const FasesJornada: React.FC = () => {
               title="Dashboard"
             >
               <HomeIcon sx={{ fontSize: 20 }} />
+            </Link>
+            <Link
+              component="button"
+              onClick={() => navigate('/participante/jornadas')}
+              sx={{ 
+                cursor: 'pointer',
+                textDecoration: 'none',
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                borderRadius: 1,
+                px: 0.75,
+                py: 0.5,
+                fontWeight: 400,
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  textDecoration: 'none',
+                },
+              }}
+            >
+              Jornadas
             </Link>
             <Typography 
               color="text.primary"

@@ -2,7 +2,11 @@ import React, { useMemo } from 'react';
 import { QuestionIconFloating } from './QuestionIconFloating';
 import './animated-background.css';
 
-export const AnimatedBackground: React.FC = () => {
+interface AnimatedBackgroundProps {
+  dark?: boolean;
+}
+
+export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ dark = false }) => {
   // Gerar formas geométricas aleatórias (valores estáveis)
   const shapes = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
     id: i,
@@ -77,7 +81,14 @@ export const AnimatedBackground: React.FC = () => {
   return (
     <div className="animated-background">
       {/* Gradiente de fundo */}
-      <div className="bg-gradient" />
+      <div 
+        className="bg-gradient" 
+        style={{
+          background: dark 
+            ? 'linear-gradient(135deg, #011b49 0%, #0a2a5a 25%, #132f5e 50%, #1a3a6b 75%, #2d5a8f 100%)'
+            : undefined,
+        }}
+      />
       
       {/* Formas geométricas flutuantes */}
       {shapes.map((shape) => (

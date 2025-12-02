@@ -122,11 +122,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       if (isConfigurarJornadaPath) {
         return false; // Não ativar Jornadas para rota de configurar
       }
-      const isJornadasPath =
+      
+      // Para admin
+      const isAdminJornadasPath =
         location.pathname === '/admin/jornadas' ||
         /^\/admin\/jornadas\/\d+$/.test(location.pathname) || // /admin/jornadas/:id
         /^\/admin\/jornadas\/\d+\//.test(location.pathname); // /admin/jornadas/:id/...
-      if (isJornadasPath && !location.pathname.includes('/fases')) {
+      
+      // Para participante
+      const isParticipanteJornadasPath =
+        location.pathname === '/participante/jornadas' ||
+        /^\/participante\/jornadas\/\d+\/fases$/.test(location.pathname); // /participante/jornadas/:id/fases
+      
+      if ((isAdminJornadasPath && !location.pathname.includes('/fases')) || isParticipanteJornadasPath) {
         return true;
       }
     }

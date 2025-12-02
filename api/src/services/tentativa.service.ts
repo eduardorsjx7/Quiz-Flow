@@ -304,6 +304,12 @@ export class TentativaService {
               matricula: true,
             },
           },
+          respostas: {
+            select: {
+              acertou: true,
+              tempoResposta: true,
+            },
+          },
         },
         orderBy: [
           { pontuacaoTotal: 'desc' },
@@ -312,10 +318,22 @@ export class TentativaService {
         take: limit,
       });
 
-      return ranking.map((tentativa, index) => ({
-        ...tentativa,
-        posicaoRanking: index + 1,
-      }));
+      return ranking.map((tentativa, index) => {
+        const acertos = tentativa.respostas.filter((r) => r.acertou).length;
+        const totalPerguntas = tentativa.respostas.length;
+        
+        return {
+          posicao: index + 1,
+          usuario: tentativa.usuario,
+          pontuacaoTotal: tentativa.pontuacaoTotal,
+          tempoTotal: tentativa.tempoTotal,
+          acertos,
+          totalPerguntas,
+          percentualAcertos: totalPerguntas > 0 
+            ? Math.round((acertos / totalPerguntas) * 100) 
+            : 0,
+        };
+      });
     } catch (error) {
       logger.error('Error getting ranking', { error, quizId });
       throw error;

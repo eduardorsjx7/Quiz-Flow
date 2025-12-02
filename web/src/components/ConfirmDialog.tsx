@@ -24,6 +24,7 @@ interface ConfirmDialogProps {
   onCancel: () => void;
   type?: 'delete' | 'warning' | 'info';
   loading?: boolean;
+  hideButtons?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -36,6 +37,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   type = 'warning',
   loading = false,
+  hideButtons = false,
 }) => {
   const getColor = () => {
     switch (type) {
@@ -111,52 +113,54 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 3, pb: 2 }}>
+      <DialogContent sx={{ pt: 3, pb: hideButtons ? 3 : 2 }}>
         <Typography variant="body1" sx={{ color: '#6b7280', lineHeight: 1.6 }}>
           {message}
         </Typography>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3, gap: 2 }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={loading}
-          sx={{
-            minWidth: 120,
-            py: 1,
-            borderColor: 'grey.300',
-            color: '#011b49',
-            fontWeight: 500,
-            '&:hover': {
-              borderColor: 'grey.400',
-              backgroundColor: 'rgba(0, 0, 0, 0.04)',
-            },
-          }}
-        >
-          {cancelText}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={onConfirm}
-          disabled={loading}
-          sx={{
-            minWidth: 120,
-            py: 1,
-            bgcolor: getColor(),
-            color: '#ffffff',
-            fontWeight: 600,
-            '&:hover': {
-              bgcolor: type === 'delete' ? '#d32f2f' : type === 'warning' ? '#f57c00' : '#1976d2',
-            },
-            '&:disabled': {
-              bgcolor: '#bdbdbd',
-            },
-          }}
-        >
-          {loading ? 'Processando...' : confirmText}
-        </Button>
-      </DialogActions>
+      {!hideButtons && (
+        <DialogActions sx={{ px: 3, pb: 3, gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={onCancel}
+            disabled={loading}
+            sx={{
+              minWidth: 120,
+              py: 1,
+              borderColor: 'grey.300',
+              color: '#011b49',
+              fontWeight: 500,
+              '&:hover': {
+                borderColor: 'grey.400',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onConfirm}
+            disabled={loading}
+            sx={{
+              minWidth: 120,
+              py: 1,
+              bgcolor: getColor(),
+              color: '#ffffff',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: type === 'delete' ? '#d32f2f' : type === 'warning' ? '#f57c00' : '#1976d2',
+              },
+              '&:disabled': {
+                bgcolor: '#bdbdbd',
+              },
+            }}
+          >
+            {loading ? 'Processando...' : confirmText}
+          </Button>
+        </DialogActions>
+      )}
     </Dialog>
   );
 };

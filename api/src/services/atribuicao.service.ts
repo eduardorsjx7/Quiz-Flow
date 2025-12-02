@@ -217,7 +217,12 @@ export class AtribuicaoService {
       const jornadaTemDesbloqueio = fasesDaJornada.some((f) => f.dataDesbloqueio !== null);
 
       if (!jornadaTemDesbloqueio) {
-        // Se não tem sequência de desbloqueio, todas as fases estão abertas
+        // Se não tem sequência de desbloqueio, todas as fases ativas estão abertas
+        return true;
+      }
+
+      // Se a fase não tem data de desbloqueio nem bloqueio, está aberta
+      if (!quiz.fase.dataDesbloqueio && !quiz.fase.dataBloqueio) {
         return true;
       }
 

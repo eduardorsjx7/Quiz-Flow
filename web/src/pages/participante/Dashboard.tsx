@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
+import AlertFixed from '../../components/AlertFixed';
 
 interface Jornada {
   id: number;
@@ -345,9 +346,11 @@ const DashboardColaborador: React.FC = () => {
         </Box>
 
         {erro && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErro('')}>
-            {erro}
-          </Alert>
+          <AlertFixed 
+            severity="error"
+            message={erro}
+            onClose={() => setErro('')}
+          />
         )}
 
         {loading ? (

@@ -278,7 +278,7 @@ const FasesJornada: React.FC = () => {
         </Box>
 
         {fases.length === 0 ? (
-          <Alert severity="info">
+          <Alert severity="info" sx={{ mb: 3 }}>
             Nenhuma fase disponível nesta jornada no momento.
           </Alert>
         ) : (

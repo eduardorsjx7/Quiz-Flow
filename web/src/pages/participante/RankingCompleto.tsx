@@ -88,7 +88,9 @@ const RankingCompleto: React.FC = () => {
     return (
       <ParticipantLayout title="Ranking">
         <Container maxWidth="md" sx={{ mt: 4 }}>
-          <Alert severity="error">{erro}</Alert>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
+            {erro}
+          </Alert>
           <Button onClick={() => navigate('/dashboard')} sx={{ mt: 2 }}>
             Voltar ao Dashboard
           </Button>

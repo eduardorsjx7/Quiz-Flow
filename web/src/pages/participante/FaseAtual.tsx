@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
+import AlertFixed from '../../components/AlertFixed';
 
 interface Fase {
   id: number;
@@ -94,10 +95,13 @@ const FaseAtual: React.FC = () => {
     <ParticipantLayout title="Fase Atual">
       <Container maxWidth="lg">
         {erro ? (
-          <Alert severity="warning" sx={{ mb: 3 }}>
-            {erro}
-          </Alert>
-        ) : fase ? (
+          <AlertFixed 
+            severity="warning"
+            message={erro}
+            onClose={() => setErro('')}
+          />
+        ) : null}
+        {fase ? (
           <>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h4" gutterBottom>
@@ -125,7 +129,7 @@ const FaseAtual: React.FC = () => {
             </Typography>
 
             {(!fase.quizzes || fase.quizzes.length === 0) ? (
-              <Alert severity="info">
+              <Alert severity="info" sx={{ mb: 3 }}>
                 Nenhum quiz disponível nesta fase no momento.
               </Alert>
             ) : (

@@ -19,6 +19,7 @@ import { Home as HomeIcon, Quiz as QuizIcon } from '@mui/icons-material';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import AlertFixed from '../../components/AlertFixed';
 
 interface Quiz {
   id: number;
@@ -124,7 +125,7 @@ const QuizzesFase: React.FC = () => {
   if (!fase || !fase.desbloqueada) {
     return (
       <Container>
-        <Alert severity="warning" sx={{ mt: 4 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
           Esta fase não está disponível para você.
         </Alert>
         <Button onClick={() => navigate('/fases')} sx={{ mt: 2 }}>
@@ -166,13 +167,15 @@ const QuizzesFase: React.FC = () => {
       </Box>
 
       {erro && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {erro}
-        </Alert>
+        <AlertFixed 
+          severity="error"
+          message={erro}
+          onClose={() => setErro('')}
+        />
       )}
 
       {quizzes.length === 0 ? (
-        <Alert severity="info">
+        <Alert severity="info" sx={{ mb: 3 }}>
           Nenhum quiz disponível nesta fase.
         </Alert>
       ) : (

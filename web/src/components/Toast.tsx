@@ -84,6 +84,7 @@ export const Toast: React.FC<ToastProps> = ({
         right: '24px !important',
         left: 'auto !important',
         transform: 'none !important',
+        zIndex: 99999, // Sempre na frente de tudo
       }}
     >
       <Alert

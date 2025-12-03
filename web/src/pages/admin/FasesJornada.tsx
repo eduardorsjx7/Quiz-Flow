@@ -437,7 +437,7 @@ const FasesJornada: React.FC = () => {
         )}
 
         {jornada.fases.length === 0 ? (
-          <Alert severity="info">
+          <Alert severity="info" sx={{ mb: 3 }}>
             Nenhuma fase cadastrada nesta jornada ainda.
           </Alert>
         ) : (

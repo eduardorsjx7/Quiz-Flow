@@ -89,7 +89,9 @@ const RankingQuiz: React.FC = () => {
     return (
       <ParticipantLayout title="Ranking">
         <Container maxWidth="lg" sx={{ mt: 4 }}>
-          <Alert severity="error">{erro}</Alert>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
+            {erro}
+          </Alert>
           <IconButton onClick={() => navigate(-1)} sx={{ mt: 2 }}>
             <ArrowBackIcon />
           </IconButton>

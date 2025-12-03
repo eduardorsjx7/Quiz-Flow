@@ -298,7 +298,9 @@ const ParticipanteQuiz: React.FC = () => {
     return (
       <ParticipantLayout>
         <Container>
-          <Alert severity="error">{erro || 'Erro ao carregar perguntas'}</Alert>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
+            {erro || 'Erro ao carregar perguntas'}
+          </Alert>
           <Button onClick={() => navigate('/dashboard')} sx={{ mt: 2 }}>
             Voltar ao Dashboard
           </Button>

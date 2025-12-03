@@ -200,7 +200,7 @@ const AdminFases: React.FC = () => {
         )}
 
         {jornadas.length === 0 ? (
-          <Alert severity="info">
+          <Alert severity="info" sx={{ mb: 3 }}>
             Nenhuma jornada cadastrada. Crie uma jornada primeiro para cadastrar fases e perguntas.
           </Alert>
         ) : (

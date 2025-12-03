@@ -780,7 +780,9 @@ const ConfigurarJornada: React.FC = () => {
             </Typography>
 
             {fases.length === 0 ? (
-              <Alert severity="info">Nenhuma fase cadastrada nesta jornada.</Alert>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Nenhuma fase cadastrada nesta jornada.
+              </Alert>
             ) : (
               <Box sx={{ position: 'relative' }}>
                 <DragDropContext onDragEnd={onDragEnd}>

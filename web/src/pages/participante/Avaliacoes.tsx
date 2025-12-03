@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
+import AlertFixed from '../../components/AlertFixed';
 
 interface Quiz {
   id: number;
@@ -121,9 +122,11 @@ const Avaliacoes: React.FC = () => {
         </Box>
 
         {erro && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {erro}
-          </Alert>
+          <AlertFixed 
+            severity="error"
+            message={erro}
+            onClose={() => setErro('')}
+          />
         )}
 
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -147,7 +150,7 @@ const Avaliacoes: React.FC = () => {
         </Box>
 
         {quizzesExibidos.length === 0 ? (
-          <Alert severity="info">
+          <Alert severity="info" sx={{ mb: 3 }}>
             {abaAtiva === 0
               ? 'Nenhuma avaliação pendente no momento.'
               : abaAtiva === 1

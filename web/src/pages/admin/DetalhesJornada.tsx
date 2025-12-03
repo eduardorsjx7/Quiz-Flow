@@ -558,7 +558,7 @@ const DetalhesJornada: React.FC = () => {
           </Box>
           
           {ranking.length === 0 ? (
-            <Alert severity="info">
+            <Alert severity="info" sx={{ mb: 3 }}>
               Ainda não há participantes nesta jornada.
             </Alert>
           ) : (

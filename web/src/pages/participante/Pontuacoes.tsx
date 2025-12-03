@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
+import AlertFixed from '../../components/AlertFixed';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface RankingItem {
@@ -109,9 +110,11 @@ const Pontuacoes: React.FC = () => {
         </Typography>
 
         {erro && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {erro}
-          </Alert>
+          <AlertFixed 
+            severity="error"
+            message={erro}
+            onClose={() => setErro('')}
+          />
         )}
 
         {estatisticas && (
@@ -191,7 +194,7 @@ const Pontuacoes: React.FC = () => {
                 {rankingGeral.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} align="center">
-                      <Alert severity="info" sx={{ my: 2 }}>
+                      <Alert severity="info" sx={{ mb: 3 }}>
                         Nenhum ranking disponível no momento.
                       </Alert>
                     </TableCell>

@@ -81,8 +81,10 @@ const ParticipanteResultado: React.FC = () => {
     return (
       <Box sx={{ minHeight: '100vh', position: 'relative', m: 0, p: 0 }}>
         <AnimatedBackground dark dimmed />
-        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', px: 2 }}>
-          <Alert severity="error">{erro}</Alert>
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', px: 2 }}>
+          <Alert severity="error" sx={{ mb: 2, maxWidth: '600px' }} onClose={() => setErro('')}>
+            {erro}
+          </Alert>
         </Box>
       </Box>
     );

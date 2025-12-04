@@ -147,7 +147,16 @@ const Jornadas: React.FC = () => {
   }, [pesquisa, visualizacao]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando jornadas disponíveis..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Buscando suas jornadas',
+          'Preparando os desafios',
+          'Você está pronto para começar?'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

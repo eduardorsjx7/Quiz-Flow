@@ -407,7 +407,16 @@ const ParticipanteQuiz: React.FC = () => {
   const jornadaId = tentativa?.quiz?.fase?.jornada?.id;
 
   if (loading) {
-    return <LoadingScreen message="Carregando perguntas..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Preparando as perguntas',
+          'Misturando as alternativas',
+          'Você consegue acertar todas?'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro || !tentativa || perguntas.length === 0) {

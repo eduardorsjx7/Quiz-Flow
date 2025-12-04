@@ -112,7 +112,16 @@ const AdminFases: React.FC = () => {
 
 
   if (loading) {
-    return <LoadingScreen message="Carregando fases..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando todas as fases',
+          'Verificando configurações',
+          'Tudo está sob controle!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

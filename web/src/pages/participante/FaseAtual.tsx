@@ -83,7 +83,16 @@ const FaseAtual: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando sua fase atual..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Buscando sua fase atual',
+          'Verificando seu progresso',
+          'Continue assim, você está indo bem!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

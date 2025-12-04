@@ -491,7 +491,16 @@ const AdminPerguntasFase: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando perguntas da fase..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando perguntas',
+          'Organizando alternativas',
+          'Preparando o editor'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (redirecting) {

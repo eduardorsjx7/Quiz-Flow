@@ -68,7 +68,16 @@ const AdminUsuarios: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando usuários..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando lista de usuários',
+          'Verificando permissões',
+          'Organizando os dados'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

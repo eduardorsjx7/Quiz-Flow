@@ -76,7 +76,16 @@ const RankingCompleto: React.FC = () => {
   }, [carregarRanking]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando ranking..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando o ranking',
+          'Preparando o pódio',
+          'Você está entre os melhores?'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro) {

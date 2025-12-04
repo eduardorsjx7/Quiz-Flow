@@ -94,7 +94,16 @@ const Pontuacoes: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando suas pontuações..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Calculando suas pontuações',
+          'Verificando seu ranking',
+          'Você está subindo na classificação!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

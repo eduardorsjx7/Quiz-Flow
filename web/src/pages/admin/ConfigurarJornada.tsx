@@ -346,7 +346,16 @@ const ConfigurarJornada: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando configurações da jornada..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando configurações',
+          'Verificando as fases',
+          'Preparando tudo para você!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro && !jornada) {

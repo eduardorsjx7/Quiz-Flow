@@ -168,7 +168,16 @@ const AdminJornadas: React.FC = () => {
   }, [pesquisa, visualizacao]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando jornadas..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando jornadas',
+          'Organizando os dados',
+          'Preparando o painel administrativo'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

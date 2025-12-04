@@ -246,7 +246,16 @@ const FasesJornada: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando fases..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando fases da jornada',
+          'Preparando o tabuleiro',
+          'Quase tudo pronto!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro || !jornada) {

@@ -128,7 +128,16 @@ const DetalhesJornada: React.FC = () => {
   }, [carregarEstatisticas]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando detalhes da jornada..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando detalhes',
+          'Analisando estatísticas',
+          'Preparando relatórios'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro || !dados) {

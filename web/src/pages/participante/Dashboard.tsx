@@ -173,7 +173,16 @@ const DashboardColaborador: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando seu dashboard..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Preparando seu painel de controle',
+          'Carregando suas conquistas',
+          'Quase lá... não desista agora!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

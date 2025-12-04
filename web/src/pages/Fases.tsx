@@ -75,7 +75,16 @@ const Fases: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando fases..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando as fases',
+          'Organizando os desafios',
+          'Vamos ver o que temos aqui!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

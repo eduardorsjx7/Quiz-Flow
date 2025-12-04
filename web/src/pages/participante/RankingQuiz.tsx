@@ -77,7 +77,16 @@ const RankingQuiz: React.FC = () => {
   }, [carregarRanking]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando ranking do quiz..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Processando resultados',
+          'Calculando posições',
+          'Hora de ver quem é o melhor!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro) {

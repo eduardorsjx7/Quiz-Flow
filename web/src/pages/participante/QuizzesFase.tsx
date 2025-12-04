@@ -114,7 +114,16 @@ const QuizzesFase: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Carregando quizzes da fase..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Carregando os quizzes',
+          'Preparando os desafios',
+          'Será que você está preparado?'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (!fase || !fase.desbloqueada) {

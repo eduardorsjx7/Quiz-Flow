@@ -103,7 +103,16 @@ const Avaliacoes: React.FC = () => {
       : quizzesConcluidos;
 
   if (loading) {
-    return <LoadingScreen message="Carregando suas avaliações..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Buscando suas avaliações',
+          'Revisando seu desempenho',
+          'Hora de ver como você está indo!'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   return (

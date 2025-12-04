@@ -79,7 +79,16 @@ const ParticipanteResultado: React.FC = () => {
   }, [dados, loading, erro, telaCheia]);
 
   if (loading) {
-    return <LoadingScreen message="Carregando resultado..." />;
+    return (
+      <LoadingScreen 
+        messages={[
+          'Corrigindo suas respostas',
+          'Calculando sua pontuação',
+          'Preparando a surpresa... 🎉'
+        ]}
+        messageInterval={1500}
+      />
+    );
   }
 
   if (erro) {

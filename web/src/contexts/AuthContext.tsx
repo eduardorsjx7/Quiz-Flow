@@ -6,6 +6,8 @@ interface Usuario {
   nome: string;
   email: string;
   tipo: string;
+  matricula?: string;
+  nomeExibicao?: string;
 }
 
 interface AuthContextType {

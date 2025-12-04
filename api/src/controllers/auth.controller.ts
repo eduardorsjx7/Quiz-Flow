@@ -238,6 +238,8 @@ export const getMe = asyncHandler(async (req: Request, res: Response, next: Next
         nome: true,
         email: true,
         tipo: true,
+        matricula: true,
+        nomeExibicao: true,
       },
     });
 
@@ -339,6 +341,101 @@ export const criarUsuario = asyncHandler(async (req: Request, res: Response, nex
     success: true,
     message: 'Usuário criado com sucesso',
     data: usuario,
+  });
+});
+
+export const atualizarUsuario = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { nome, email, matricula } = req.body;
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: Number(id) },
+  });
+
+  if (!usuario) {
+    throw new CustomError('Usuário não encontrado', 404);
+  }
+
+  // Verificar se o email já está em uso por outro usuário
+  if (email && email !== usuario.email) {
+    const emailExistente = await prisma.usuario.findUnique({
+      where: { email },
+    });
+
+    if (emailExistente) {
+      throw new CustomError('Email já está em uso', 409);
+    }
+  }
+
+  const usuarioAtualizado = await prisma.usuario.update({
+    where: { id: Number(id) },
+    data: {
+      nome: nome || usuario.nome,
+      email: email || usuario.email,
+      matricula: matricula !== undefined ? matricula : usuario.matricula,
+      nomeExibicao: (req.body.nomeExibicao !== undefined ? req.body.nomeExibicao : usuario.nomeExibicao) as any,
+    },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      matricula: true,
+      nomeExibicao: true,
+      tipo: true,
+    },
+  });
+
+  logger.info('User updated', { userId: usuarioAtualizado.id });
+
+  res.json({
+    success: true,
+    message: 'Usuário atualizado com sucesso',
+    data: usuarioAtualizado,
+  });
+});
+
+export const alterarSenha = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { senhaAtual, novaSenha } = req.body;
+
+  if (!senhaAtual || !novaSenha) {
+    throw new CustomError('Senha atual e nova senha são obrigatórias', 400);
+  }
+
+  if (novaSenha.length < 6) {
+    throw new CustomError('A nova senha deve ter pelo menos 6 caracteres', 400);
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: Number(id) },
+  });
+
+  if (!usuario || !usuario.senha) {
+    throw new CustomError('Usuário não encontrado', 404);
+  }
+
+  // Verificar senha atual
+  const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha);
+
+  if (!senhaValida) {
+    throw new CustomError('Senha atual incorreta', 401);
+  }
+
+  // Hash da nova senha
+  const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
+
+  await prisma.usuario.update({
+    where: { id: Number(id) },
+    data: {
+      senha: novaSenhaHash,
+    },
+  });
+
+  logger.info('Password changed', { userId: usuario.id });
+
+  res.json({
+    success: true,
+    message: 'Senha alterada com sucesso',
   });
 });
 

@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Usuario {
-  id        Int         @id @default(autoincrement())
-  nome      String
-  email     String?     @unique
-  matricula String?
-  senha     String?
-  tipo      TipoUsuario @default(COLABORADOR)
-  grupoId   Int? // Departamento/grupo do colaborador
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id           Int         @id @default(autoincrement())
+  nome         String
+  email        String?     @unique
+  matricula    String?
+  nomeExibicao String? // Nome que aparece no ranking
+  senha        String?
+  tipo         TipoUsuario @default(COLABORADOR)
+  grupoId      Int? // Departamento/grupo do colaborador
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   grupo              Grupo?              @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   tentativas         TentativaQuiz[]

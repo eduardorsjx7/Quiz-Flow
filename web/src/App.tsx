@@ -27,6 +27,7 @@ import Pontuacoes from './pages/participante/Pontuacoes';
 import Avaliacoes from './pages/participante/Avaliacoes';
 import ResponderAvaliacao from './pages/participante/ResponderAvaliacao';
 import JornadasParticipante from './pages/participante/Jornadas';
+import Perfil from './pages/Perfil';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -190,6 +191,22 @@ function App() {
           element={
             <PrivateRoute>
               <AvaliacaoJornada />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/perfil"
+          element={
+            <PrivateRoute>
+              <Perfil />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <PrivateRoute>
+              <Perfil />
             </PrivateRoute>
           }
         />

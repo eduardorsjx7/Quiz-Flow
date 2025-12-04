@@ -272,6 +272,8 @@ const AdminDashboard: React.FC = () => {
     try {
       let totalAcertos = 0;
       let totalPerguntas = 0;
+      let totalTempoResposta = 0;
+      let totalRespostas = 0;
       
       // Adicionar delay entre requisições para evitar rate limiting
       for (let i = 0; i < jornadasArray.length; i++) {
@@ -290,6 +292,18 @@ const AdminDashboard: React.FC = () => {
             totalAcertos += stats.estatisticasGerais.totalAcertos || 0;
             totalPerguntas += stats.estatisticasGerais.totalPerguntas || 0;
           }
+
+          // Calcular tempo médio real das respostas
+          if (stats?.ranking) {
+            // Processar ranking fora do loop
+            const rankingData = stats.ranking;
+            for (const item of rankingData) {
+              if (item.tempoMedio && item.totalPerguntas) {
+                totalTempoResposta += item.tempoMedio * item.totalPerguntas;
+                totalRespostas += item.totalPerguntas;
+              }
+            }
+          }
         } catch (err: any) {
           // Tratar erro 429 especificamente
           if (err.response?.status === 429) {
@@ -302,20 +316,20 @@ const AdminDashboard: React.FC = () => {
       
       const acertividade = totalPerguntas > 0 ? Math.round((totalAcertos / totalPerguntas) * 100) : 0;
       const erro = totalPerguntas > 0 ? Math.round(((totalPerguntas - totalAcertos) / totalPerguntas) * 100) : 0;
+      const tempoMedio = totalRespostas > 0 ? Math.round((totalTempoResposta / totalRespostas) * 10) / 10 : 0;
       
       setAcertividadeGeral(acertividade);
       setNivelErro(erro);
-      // Tempo médio mockado (em segundos) - pode ser calculado se houver dados de tempo
-      setTempoMedioResposta(12.5);
+      setTempoMedioResposta(tempoMedio);
     } catch (error: any) {
       // Tratar erro 429
       if (error.response?.status === 429) {
         console.warn('Rate limit atingido ao carregar métricas');
       }
-      // Valores mockados em caso de erro
-      setAcertividadeGeral(75);
-      setNivelErro(25);
-      setTempoMedioResposta(12.5);
+      // Se houver erro, deixar em 0 ao invés de valores mockados
+      setAcertividadeGeral(0);
+      setNivelErro(0);
+      setTempoMedioResposta(0);
     }
   };
 
@@ -1024,7 +1038,7 @@ const AdminDashboard: React.FC = () => {
                                 </Box>
                                 <Box>
                                   <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                                    {usuario.nome}
+                                    {(usuario as any).nomeExibicao || usuario.nome}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
                                     {usuario.email}

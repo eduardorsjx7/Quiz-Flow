@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import { getAdminMenuItems } from '../config/menuConfig';
+import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const { confirm } = useConfirmDialog();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(true); // Começa colapsado por padrão
 
@@ -37,9 +39,19 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     setDesktopCollapsed(!desktopCollapsed);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    const resultado = await confirm({
+      title: 'Deseja sair da aplicação?',
+      message: 'Você será desconectado e redirecionado para a tela de login.',
+      confirmText: 'Sim, sair',
+      cancelText: 'Cancelar',
+      type: 'warning',
+    });
+
+    if (resultado) {
+      logout();
+      navigate('/login');
+    }
   };
 
   return (

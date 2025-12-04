@@ -7,7 +7,6 @@ import {
   People as PeopleIcon,
   School as SchoolIcon,
   Settings as SettingsIcon,
-  Group as GroupIcon,
   ExitToApp as ExitToAppIcon,
   EmojiEvents as TrophyIcon,
   Quiz as QuizIcon,
@@ -111,15 +110,8 @@ export const getAdminMenuItems = (
       id: 'configuracoes',
       text: 'Configurações',
       icon: <SettingsIcon />,
+      path: '/admin/perfil',
       roles: ['ADMINISTRADOR'],
-      children: [
-        {
-          id: 'grupos',
-          text: 'Grupos',
-          icon: <GroupIcon />,
-          path: '/admin/grupos',
-        },
-      ],
     },
     {
       id: 'sair',
@@ -178,6 +170,12 @@ export const getParticipanteMenuItems = (onLogout?: () => void): MenuItem[] => [
     text: '',
     icon: <></>,
     divider: true,
+  },
+  {
+    id: 'configuracoes',
+    text: 'Configurações',
+    icon: <SettingsIcon />,
+    path: '/perfil',
   },
   {
     id: 'sair',

@@ -552,12 +552,14 @@ export class JornadaService {
         tentativas: number;
         acertos: number;
         totalPerguntas: number;
+        tempoTotal: number;
       }>();
 
       todasTentativasJornada.forEach((tentativa) => {
         const usuarioId = tentativa.usuarioId;
         const acertos = tentativa.respostas?.filter((r) => r.acertou).length || 0;
         const totalPerguntas = tentativa.respostas?.length || 0;
+        const tempoTotal = tentativa.respostas?.reduce((sum, r) => sum + (r.tempoResposta || 0), 0) || 0;
 
         if (pontuacaoPorUsuario.has(usuarioId)) {
           const atual = pontuacaoPorUsuario.get(usuarioId)!;
@@ -565,6 +567,7 @@ export class JornadaService {
           atual.tentativas += 1;
           atual.acertos += acertos;
           atual.totalPerguntas += totalPerguntas;
+          atual.tempoTotal += tempoTotal;
         } else {
           pontuacaoPorUsuario.set(usuarioId, {
             usuario: tentativa.usuario,
@@ -572,6 +575,7 @@ export class JornadaService {
             tentativas: 1,
             acertos,
             totalPerguntas,
+            tempoTotal,
           });
         }
       });
@@ -582,6 +586,9 @@ export class JornadaService {
           ...item,
           percentualAcertos: item.totalPerguntas > 0
             ? Math.round((item.acertos / item.totalPerguntas) * 100)
+            : 0,
+          tempoMedio: item.totalPerguntas > 0
+            ? Math.round((item.tempoTotal / item.totalPerguntas) * 10) / 10
             : 0,
         }))
         .sort((a, b) => {

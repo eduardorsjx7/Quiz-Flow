@@ -34,7 +34,6 @@ import FasesTabuleiro from '../../components/FasesTabuleiro';
 import { useToast } from '../../contexts/ToastContext';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Fase {
   id: number;
@@ -247,14 +246,11 @@ const FasesJornada: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando fases da jornada',
-          'Preparando o tabuleiro',
-          'Quase tudo pronto!'
-        ]}
-        messageInterval={1500}
-      />
+      <AdminLayout title="Fases da Jornada">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </AdminLayout>
     );
   }
 

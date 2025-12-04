@@ -29,7 +29,6 @@ import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import TituloRankingFinal from '../../components/TituloRankingFinal';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 const getPosicaoColor = (posicao: number) => {
   if (posicao === 1) return '#FFD700'; // Ouro
@@ -77,14 +76,11 @@ const RankingCompleto: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando o ranking',
-          'Preparando o pódio',
-          'Você está entre os melhores?'
-        ]}
-        messageInterval={1500}
-      />
+      <ParticipantLayout title="Ranking">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </ParticipantLayout>
     );
   }
 

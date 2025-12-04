@@ -20,7 +20,6 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import AlertFixed from '../../components/AlertFixed';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Quiz {
   id: number;
@@ -115,14 +114,11 @@ const QuizzesFase: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando os quizzes',
-          'Preparando os desafios',
-          'Será que você está preparado?'
-        ]}
-        messageInterval={1500}
-      />
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
 

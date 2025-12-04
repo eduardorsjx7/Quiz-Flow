@@ -39,7 +39,6 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface EstatisticasFase {
   faseId: number;
@@ -129,14 +128,11 @@ const DetalhesJornada: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando detalhes',
-          'Analisando estatísticas',
-          'Preparando relatórios'
-        ]}
-        messageInterval={1500}
-      />
+      <AdminLayout title="Carregando...">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress sx={{ color: '#ff2c19' }} />
+        </Box>
+      </AdminLayout>
     );
   }
 

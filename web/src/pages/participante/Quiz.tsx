@@ -25,7 +25,6 @@ import ParticipantLayout from '../../components/ParticipantLayout';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Pergunta {
   id: number;
@@ -408,14 +407,13 @@ const ParticipanteQuiz: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Preparando as perguntas',
-          'Misturando as alternativas',
-          'Você consegue acertar todas?'
-        ]}
-        messageInterval={1500}
-      />
+      <ParticipantLayout>
+        <Container>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+            <CircularProgress />
+          </Box>
+        </Container>
+      </ParticipantLayout>
     );
   }
 

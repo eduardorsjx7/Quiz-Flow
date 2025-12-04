@@ -492,14 +492,11 @@ const AdminPerguntasFase: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando perguntas',
-          'Organizando alternativas',
-          'Preparando o editor'
-        ]}
-        messageInterval={1500}
-      />
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
 

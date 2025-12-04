@@ -185,14 +185,11 @@ const FasesJornada: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando as fases',
-          'Preparando os desafios',
-          'Vamos ver o que você sabe!'
-        ]}
-        messageInterval={1500}
-      />
+      <ParticipantLayout title="Fases da Jornada">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </ParticipantLayout>
     );
   }
 

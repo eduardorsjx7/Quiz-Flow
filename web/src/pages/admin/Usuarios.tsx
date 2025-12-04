@@ -23,7 +23,6 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Usuario {
   id: number;
@@ -69,14 +68,11 @@ const AdminUsuarios: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Carregando lista de usuários',
-          'Verificando permissões',
-          'Organizando os dados'
-        ]}
-        messageInterval={1500}
-      />
+      <AdminLayout title="Usuários">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </AdminLayout>
     );
   }
 

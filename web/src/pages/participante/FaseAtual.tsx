@@ -20,7 +20,6 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Fase {
   id: number;
@@ -84,14 +83,11 @@ const FaseAtual: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Buscando sua fase atual',
-          'Verificando seu progresso',
-          'Continue assim, você está indo bem!'
-        ]}
-        messageInterval={1500}
-      />
+      <ParticipantLayout title="Fase Atual">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </ParticipantLayout>
     );
   }
 

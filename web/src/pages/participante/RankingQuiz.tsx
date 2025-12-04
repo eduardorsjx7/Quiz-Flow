@@ -27,7 +27,6 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingScreen } from '../../components/LoadingScreen';
 
 const getPosicaoColor = (posicao: number) => {
   if (posicao === 1) return '#FFD700'; // Ouro
@@ -78,14 +77,11 @@ const RankingQuiz: React.FC = () => {
 
   if (loading) {
     return (
-      <LoadingScreen 
-        messages={[
-          'Processando resultados',
-          'Calculando posições',
-          'Hora de ver quem é o melhor!'
-        ]}
-        messageInterval={1500}
-      />
+      <ParticipantLayout title="Ranking">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </ParticipantLayout>
     );
   }
 

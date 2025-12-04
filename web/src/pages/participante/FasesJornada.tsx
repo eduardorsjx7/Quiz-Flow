@@ -19,6 +19,7 @@ import ParticipantLayout from '../../components/ParticipantLayout';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import { useToast } from '../../contexts/ToastContext';
 import FasesTabuleiro from '../../components/FasesTabuleiro';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Fase {
   id: number;
@@ -50,6 +51,8 @@ const FasesJornada: React.FC = () => {
   const [jornada, setJornada] = useState<Jornada | null>(null);
   const [fases, setFases] = useState<Fase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mostrarLoadingFase, setMostrarLoadingFase] = useState(false);
+  const [tentativaIdParaNavegar, setTentativaIdParaNavegar] = useState<string | null>(null);
 
   const carregarFases = useCallback(async () => {
     if (!jornadaId) return;
@@ -129,8 +132,9 @@ const FasesJornada: React.FC = () => {
       const tentativaResponse = await api.post(`/tentativas/quiz/${primeiroQuiz.id}/iniciar`);
       const tentativa = tentativaResponse.data.data;
       
-      // Navegar direto para as perguntas
-      navigate(`/participante/quiz/${tentativa.id}`);
+      // Guardar ID da tentativa e mostrar loading com mensagens
+      setTentativaIdParaNavegar(tentativa.id);
+      setMostrarLoadingFase(true);
     } catch (error: any) {
       let mensagemErro = 'Erro ao iniciar fase';
       
@@ -155,14 +159,32 @@ const FasesJornada: React.FC = () => {
     }
   };
 
-  if (loading) {
+  // Função chamada quando o loading termina
+  const handleLoadingFaseComplete = () => {
+    if (tentativaIdParaNavegar) {
+      navigate(`/participante/quiz/${tentativaIdParaNavegar}`);
+    }
+  };
+
+  // Mostrar loading com mensagens divertidas ao iniciar fase
+  if (mostrarLoadingFase) {
     return (
-      <ParticipantLayout title="Fases da Jornada">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
+      <LoadingScreen 
+        messages={[
+          'Preparando as perguntas',
+          'Você está pronto?',
+          'Lembre-se: não há resposta errada... só perguntas difíceis!',
+          'Concentre-se e boa sorte!',
+          'Vamos começar!',
+        ]}
+        messageInterval={1000}
+        onComplete={handleLoadingFaseComplete}
+      />
     );
+  }
+
+  if (loading) {
+    return <LoadingScreen message="Carregando fases da jornada..." />;
   }
 
   return (

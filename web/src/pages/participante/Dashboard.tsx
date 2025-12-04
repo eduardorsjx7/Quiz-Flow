@@ -31,6 +31,7 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Jornada {
   id: number;
@@ -172,13 +173,7 @@ const DashboardColaborador: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Dashboard">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando seu dashboard..." />;
   }
 
   return (

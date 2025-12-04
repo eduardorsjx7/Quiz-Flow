@@ -491,13 +491,7 @@ const AdminPerguntasFase: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
+    return <LoadingScreen message="Carregando perguntas da fase..." />;
   }
 
   if (redirecting) {
@@ -509,6 +503,7 @@ const AdminPerguntasFase: React.FC = () => {
       <LoadingOverlay 
         open={salvando} 
         messages={['Salvando perguntas', 'Processando alternativas', 'Validando dados', 'Finalizando']}
+        messageInterval={1000}
       />
       <AdminLayout title={`Gerenciar Perguntas - ${fase?.titulo || 'Fase'}`}>
         <Container maxWidth="md">

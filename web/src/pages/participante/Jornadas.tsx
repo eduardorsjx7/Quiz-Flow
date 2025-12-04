@@ -40,6 +40,7 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Jornada {
   id: number;
@@ -146,13 +147,7 @@ const Jornadas: React.FC = () => {
   }, [pesquisa, visualizacao]);
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Jornadas">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando jornadas disponíveis..." />;
   }
 
   return (

@@ -20,6 +20,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import AlertFixed from '../../components/AlertFixed';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Quiz {
   id: number;
@@ -113,13 +114,7 @@ const QuizzesFase: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
+    return <LoadingScreen message="Carregando quizzes da fase..." />;
   }
 
   if (!fase || !fase.desbloqueada) {

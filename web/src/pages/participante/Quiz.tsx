@@ -23,6 +23,9 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useNavigation } from '../../contexts/NavigationContext';
+import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Pergunta {
   id: number;
@@ -55,6 +58,8 @@ interface Tentativa {
 const ParticipanteQuiz: React.FC = () => {
   const { tentativaId } = useParams<{ tentativaId: string }>();
   const navigate = useNavigate();
+  const { registerInterceptor, checkNavigation } = useNavigation();
+  const { confirm } = useConfirmDialog();
   const [tentativa, setTentativa] = useState<Tentativa | null>(null);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [perguntaAtualIndex, setPerguntaAtualIndex] = useState(0);
@@ -67,14 +72,36 @@ const ParticipanteQuiz: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [mostrarDialogoTempoEsgotado, setMostrarDialogoTempoEsgotado] = useState(false);
+  const [permitirNavegacao, setPermitirNavegacao] = useState(false);
 
   const carregandoRef = useRef(false);
   const intervaloRef = useRef<NodeJS.Timeout | null>(null);            // timer de segundos
   const progressoIntervaloRef = useRef<NodeJS.Timeout | null>(null);   // timer da animação da barra
   const inicioTimerRef = useRef<number | null>(null);                  // timestamp de início da pergunta
 
+  const salvarRespostaNaoRespondida = useCallback(async () => {
+    if (!respondida && !loading && perguntas.length > 0 && perguntaAtualIndex < perguntas.length) {
+      const pergunta = perguntas[perguntaAtualIndex];
+      const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
+      const tempoGasto = tempoLimite > 0 ? Math.max(0, tempoLimite - tempoRestante) : 0;
+
+      try {
+        await api.post('/respostas', {
+          tentativaId: parseInt(tentativaId!),
+          perguntaId: pergunta.id,
+          alternativaId: null,
+          tempoResposta: tempoGasto,
+          tempoEsgotado: true,
+        });
+      } catch (error) {
+        console.error('Erro ao salvar resposta não respondida:', error);
+      }
+    }
+  }, [respondida, loading, perguntas, perguntaAtualIndex, tentativa, tempoRestante, tentativaId]);
+
   const finalizarPerguntas = useCallback(async () => {
     try {
+      setPermitirNavegacao(true);
       await api.post(`/tentativas/${tentativaId}/finalizar`);
       navigate(`/participante/resultado/${tentativaId}`);
     } catch (error: any) {
@@ -186,6 +213,96 @@ const ParticipanteQuiz: React.FC = () => {
     }
   }, [tentativaId, carregarTentativa]);
 
+  // Interceptador de navegação
+  useEffect(() => {
+    const handleNavigation = async (path: string) => {
+      // Se já permitiu navegação ou está indo para a página de resultado, permitir
+      if (permitirNavegacao || path.includes(`/participante/resultado/${tentativaId}`)) {
+        return true;
+      }
+
+      // Mostrar diálogo de confirmação
+      const confirmarSaida = await confirm({
+        title: 'Deseja sair da avaliação?',
+        message: 'Seu progresso será salvo. Se você não respondeu a pergunta atual, ela será marcada como não respondida.',
+        confirmText: 'Sim, sair',
+        cancelText: 'Continuar respondendo',
+        type: 'warning',
+      });
+
+      if (confirmarSaida) {
+        // Salvar a resposta não respondida se necessário
+        await salvarRespostaNaoRespondida();
+        setPermitirNavegacao(true);
+        return true;
+      }
+
+      return false;
+    };
+
+    registerInterceptor(handleNavigation);
+
+    // Cleanup: remover interceptador ao desmontar
+    return () => {
+      registerInterceptor(null);
+    };
+  }, [permitirNavegacao, tentativaId, confirm, salvarRespostaNaoRespondida, registerInterceptor]);
+
+  // Prevenir fechamento/recarregamento da página
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!permitirNavegacao) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [permitirNavegacao]);
+
+  // Interceptar botão de voltar do navegador
+  useEffect(() => {
+    if (permitirNavegacao) return;
+
+    // Adicionar uma entrada no histórico
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = async (event: PopStateEvent) => {
+      if (!permitirNavegacao) {
+        // Adicionar novamente a entrada no histórico para manter o usuário na página
+        window.history.pushState(null, '', window.location.href);
+
+        // Mostrar diálogo de confirmação
+        const confirmarSaida = await confirm({
+          title: 'Deseja sair da avaliação?',
+          message: 'Seu progresso será salvo. Se você não respondeu a pergunta atual, ela será marcada como não respondida.',
+          confirmText: 'Sim, sair',
+          cancelText: 'Continuar respondendo',
+          type: 'warning',
+        });
+
+        if (confirmarSaida) {
+          // Salvar a resposta não respondida se necessário
+          await salvarRespostaNaoRespondida();
+          setPermitirNavegacao(true);
+          // Navegar de volta
+          window.history.back();
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [permitirNavegacao, confirm, salvarRespostaNaoRespondida]);
+
   useEffect(() => {
     // Limpar todos os intervalos anteriores
     if (intervaloRef.current) {
@@ -278,20 +395,19 @@ const ParticipanteQuiz: React.FC = () => {
     enviarResposta(null, true);
   };
 
+  const handleNavigateTo = async (path: string) => {
+    const canNavigate = await checkNavigation(path);
+    if (canNavigate) {
+      navigate(path);
+    }
+  };
+
   const pergunta = perguntas[perguntaAtualIndex] || null;
   const tempoLimite = tentativa?.quiz?.fase?.jornada?.tempoLimitePorQuestao || 0;
   const jornadaId = tentativa?.quiz?.fase?.jornada?.id;
 
   if (loading) {
-    return (
-      <ParticipantLayout>
-        <Container>
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-            <CircularProgress />
-          </Box>
-        </Container>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando perguntas..." />;
   }
 
   if (erro || !tentativa || perguntas.length === 0) {
@@ -301,7 +417,7 @@ const ParticipanteQuiz: React.FC = () => {
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErro('')}>
             {erro || 'Erro ao carregar perguntas'}
           </Alert>
-          <Button onClick={() => navigate('/dashboard')} sx={{ mt: 2 }}>
+          <Button onClick={() => handleNavigateTo('/dashboard')} sx={{ mt: 2 }}>
             Voltar ao Dashboard
           </Button>
         </Container>
@@ -350,12 +466,13 @@ const ParticipanteQuiz: React.FC = () => {
           >
             <Link
               component="button"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => handleNavigateTo('/dashboard')}
               sx={{ 
                 cursor: 'pointer', 
                 display: 'flex', 
                 alignItems: 'center',
                 color: 'text.secondary',
+                textDecoration: 'none',
                 transition: 'all 0.2s ease',
                 borderRadius: 1,
                 p: 0.5,
@@ -371,12 +488,13 @@ const ParticipanteQuiz: React.FC = () => {
             {jornadaId && (
               <Link
                 component="button"
-                onClick={() => navigate(`/participante/jornadas/${jornadaId}/fases`)}
+                onClick={() => handleNavigateTo(`/participante/jornadas/${jornadaId}/fases`)}
                 sx={{ 
                   cursor: 'pointer', 
                   display: 'flex', 
                   alignItems: 'center',
                   color: 'text.secondary',
+                  textDecoration: 'none',
                   transition: 'all 0.2s ease',
                   borderRadius: 1,
                   p: 0.5,

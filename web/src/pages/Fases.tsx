@@ -17,6 +17,7 @@ import { Lock as LockIconMUI, LockOpen as LockOpenIconMUI } from '@mui/icons-mat
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ParticipantLayout from '../components/ParticipantLayout';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 interface Fase {
   id: number;
@@ -74,13 +75,7 @@ const Fases: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Fases">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando fases..." />;
   }
 
   return (

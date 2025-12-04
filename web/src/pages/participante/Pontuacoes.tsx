@@ -28,6 +28,7 @@ import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
 import { useAuth } from '../../contexts/AuthContext';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface RankingItem {
   posicao: number;
@@ -93,13 +94,7 @@ const Pontuacoes: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Pontuações">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando suas pontuações..." />;
   }
 
   return (

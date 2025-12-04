@@ -101,6 +101,7 @@ const CriarUsuario: React.FC = () => {
       <LoadingOverlay 
         open={salvando} 
         messages={['Criando usuário', 'Validando dados', 'Processando', 'Finalizando']}
+        messageInterval={1000}
       />
       <AdminLayout title="Criar Usuário">
         <Container maxWidth="md">

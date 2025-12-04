@@ -454,7 +454,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
             zIndex: 0,
             pointerEvents: 'none',
             filter: 'blur(4px)',
-            opacity: 0.6,
+            opacity: 1,
           }}
           className="animated-background"
         >
@@ -778,7 +778,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                     cx={pos.x}
                     cy={pos.y}
                     r={circleRadius}
-                    fill="rgba(14, 222, 90, 0.85)"
+                    fill="#22c55e"
                     style={{ 
                       pointerEvents: 'none',
                     }}
@@ -798,8 +798,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                   />
                 )}
 
-                {/* Número da fase - 100% de opacidade, sem blur - não aparece quando bloqueada ou aguardando */}
-                {status !== 'bloqueada' && status !== 'aguardando' && (
+                {/* Número da fase - não aparece quando bloqueada, aguardando ou finalizada */}
+                {status !== 'bloqueada' && status !== 'aguardando' && status !== 'finalizada' && (
                   <text
                     x={pos.x}
                     y={pos.y + 12}
@@ -807,7 +807,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                     fontFamily='"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
                     fontSize="32"
                     fontWeight="700"
-                    fill={status === 'finalizada' ? '#14532d' : '#011b49'}
+                    fill="#011b49"
                     opacity={1}
                     style={{
                       pointerEvents: 'none',
@@ -1122,7 +1122,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       style={{ pointerEvents: 'none' }}
                     />
                     
-                    {/* Ícone de check com efeitos visuais aprimorados */}
+                    {/* Ícone de check com efeito pulsante */}
                     <foreignObject
                       x={pos.x - 18}
                       y={pos.y - 18}
@@ -1139,17 +1139,15 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          transform: 'scale(1)',
-                          transition: 'all 0.3s ease-in-out',
-                          animation: 'iconGlow 2.5s ease-in-out infinite',
-                          '@keyframes iconGlow': {
+                          animation: 'iconPulse 2s ease-in-out infinite',
+                          '@keyframes iconPulse': {
                             '0%, 100%': {
                               transform: 'scale(1)',
-                              opacity: 0.95,
+                              opacity: 1,
                             },
                             '50%': {
-                              transform: 'scale(1.08)',
-                              opacity: 1,
+                              transform: 'scale(1.15)',
+                              opacity: 0.9,
                             },
                           },
                         }}
@@ -1158,8 +1156,6 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                           sx={{ 
                             fontSize: '36px',
                             color: '#ffffff',
-                            filter: 'drop-shadow(0 3px 8px rgba(34, 197, 94, 0.6)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5))',
-                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                           }} 
                         />
                       </Box>

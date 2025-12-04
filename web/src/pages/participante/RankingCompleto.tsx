@@ -29,6 +29,7 @@ import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import TituloRankingFinal from '../../components/TituloRankingFinal';
 import { useAuth } from '../../contexts/AuthContext';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 const getPosicaoColor = (posicao: number) => {
   if (posicao === 1) return '#FFD700'; // Ouro
@@ -75,13 +76,7 @@ const RankingCompleto: React.FC = () => {
   }, [carregarRanking]);
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Ranking">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando ranking..." />;
   }
 
   if (erro) {
@@ -164,21 +159,31 @@ const RankingCompleto: React.FC = () => {
       </IconButton>
 
       <ParticipantLayout title="Ranking Geral" noPadding={true}>
+        {/* Título Fixo no Topo */}
+        <Box
+          sx={{
+            position: 'fixed',
+            top: { xs: 80, sm: 90, md: 100 },
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            px: { xs: 1, sm: 2 },
+          }}
+        >
+          <TituloRankingFinal texto="Ranking Geral" />
+        </Box>
+
         <Box
           sx={{
             maxWidth: '1200px',
             mx: 'auto',
             px: { xs: 2, sm: 3 },
-            py: 4,
+            pt: { xs: '200px', sm: '220px', md: '240px' }, // Espaço para o título fixo
+            pb: 4,
             position: 'relative',
             zIndex: 1,
           }}
         >
-
-        {/* Título */}
-        <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <TituloRankingFinal texto="Ranking Geral" />
-        </Box>
 
         {/* Tabela de Ranking */}
         <Paper
@@ -187,10 +192,11 @@ const RankingCompleto: React.FC = () => {
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             overflow: 'hidden',
             mb: 4,
+            mt: '60px',
             border: '1px solid rgba(0, 0, 0, 0.08)',
           }}
         >
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#011b49' }}>

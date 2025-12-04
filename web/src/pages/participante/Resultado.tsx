@@ -14,6 +14,7 @@ import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import PodiumWithConfetti from '../../components/PodiumWithConfetti';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 const ParticipanteResultado: React.FC = () => {
   const { tentativaId } = useParams<{ tentativaId: string }>();
@@ -23,6 +24,7 @@ const ParticipanteResultado: React.FC = () => {
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [mostrarBotaoSair, setMostrarBotaoSair] = useState(false);
 
   const carregarResultado = useCallback(async () => {
     try {
@@ -66,15 +68,18 @@ const ParticipanteResultado: React.FC = () => {
     }
   }, [dados, loading, erro, tentativaId, navigate, telaCheia]);
 
+  // Mostrar botão de sair após a animação (5 segundos)
+  useEffect(() => {
+    if (dados && !loading && !erro && telaCheia) {
+      const timer = setTimeout(() => {
+        setMostrarBotaoSair(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [dados, loading, erro, telaCheia]);
+
   if (loading) {
-    return (
-      <Box sx={{ minHeight: '100vh', position: 'relative', m: 0, p: 0 }}>
-        <AnimatedBackground dark dimmed />
-        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <CircularProgress sx={{ color: '#fff' }} />
-        </Box>
-      </Box>
-    );
+    return <LoadingScreen message="Carregando resultado..." />;
   }
 
   if (erro) {
@@ -100,7 +105,7 @@ const ParticipanteResultado: React.FC = () => {
       sx={{
         position: 'relative',
         width: '100%',
-        height: 'calc(100vh - 64px)', // Desconta altura do header
+        height: '100%',
         overflow: 'hidden',
         p: 0,
         m: 0,
@@ -137,28 +142,35 @@ const ParticipanteResultado: React.FC = () => {
       >
         <AnimatedBackground dark dimmed />
         
-        {/* Botão de Sair no canto superior direito */}
-        <IconButton
-          onClick={() => navigate('/dashboard')}
-          sx={{
-            position: 'fixed',
-            top: { xs: 80, sm: 90, md: 100 },
-            right: 20,
-            zIndex: 10002,
-            bgcolor: '#fff',
-            width: { xs: 48, md: 56 },
-            height: { xs: 48, md: 56 },
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            '&:hover': {
+        {/* Botão de Sair no canto superior direito - Aparece após a animação */}
+        {mostrarBotaoSair && (
+          <IconButton
+            onClick={() => navigate('/dashboard')}
+            sx={{
+              position: 'fixed',
+              top: { xs: 80, sm: 90, md: 100 },
+              right: 20,
+              zIndex: 10002,
               bgcolor: '#fff',
-              transform: 'scale(1.1)',
-              boxShadow: '0 6px 30px rgba(0, 0, 0, 0.4)',
-            },
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <ExitIcon sx={{ color: '#E62816', fontSize: { xs: 28, md: 32 } }} />
-        </IconButton>
+              width: { xs: 48, md: 56 },
+              height: { xs: 48, md: 56 },
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              '&:hover': {
+                bgcolor: '#fff',
+                transform: 'scale(1.1)',
+                boxShadow: '0 6px 30px rgba(0, 0, 0, 0.4)',
+              },
+              transition: 'all 0.3s ease',
+              animation: 'fadeIn 0.5s ease-in',
+              '@keyframes fadeIn': {
+                '0%': { opacity: 0, transform: 'scale(0.8)' },
+                '100%': { opacity: 1, transform: 'scale(1)' },
+              },
+            }}
+          >
+            <ExitIcon sx={{ color: '#E62816', fontSize: { xs: 28, md: 32 } }} />
+          </IconButton>
+        )}
         
         {PodiumContent}
       </Box>

@@ -24,6 +24,7 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Quiz {
   id: number;
@@ -102,13 +103,7 @@ const Avaliacoes: React.FC = () => {
       : quizzesConcluidos;
 
   if (loading) {
-    return (
-      <ParticipantLayout title="Avaliações">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </ParticipantLayout>
-    );
+    return <LoadingScreen message="Carregando suas avaliações..." />;
   }
 
   return (

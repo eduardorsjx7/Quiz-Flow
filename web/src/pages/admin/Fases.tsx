@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Jornada {
   id: number;
@@ -111,13 +112,7 @@ const AdminFases: React.FC = () => {
 
 
   if (loading) {
-    return (
-      <AdminLayout title="Fases das Jornadas">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </AdminLayout>
-    );
+    return <LoadingScreen message="Carregando fases..." />;
   }
 
   return (

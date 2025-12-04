@@ -871,6 +871,7 @@ const CriarJornada: React.FC = () => {
       <LoadingOverlay 
         open={salvando} 
         messages={['Salvando jornada', 'Criando fases', 'Processando dados', 'Finalizando']}
+        messageInterval={1000}
       />
       <AdminLayout title="Criar Jornada">
         <Container maxWidth="md" sx={{ py: 4 }}>

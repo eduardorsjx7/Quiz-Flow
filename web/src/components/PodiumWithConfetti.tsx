@@ -435,26 +435,6 @@ const PodiumWithConfetti: React.FC<PodiumWithConfettiProps> = ({
         >
           {/* Título Ranking Final */}
           <TituloRankingFinal texto={nomeFase} />
-
-          {/* Texto de redirecionamento */}
-          {showRedirectMessage && (
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'rgba(255, 255, 255, 0.6)',
-                mt: 4,
-                fontSize: '0.9rem',
-                textAlign: 'center',
-                animation: 'fadeIn 1s ease-out 2s both',
-                '@keyframes fadeIn': {
-                  '0%': { opacity: 0 },
-                  '100%': { opacity: 1 },
-                },
-              }}
-            >
-              Próxima tela em 5 segundos...
-            </Typography>
-          )}
         </Box>
 
       {/* Conteúdo do Pódio - Alinhado ao fundo */}

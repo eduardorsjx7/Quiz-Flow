@@ -34,6 +34,7 @@ import FasesTabuleiro from '../../components/FasesTabuleiro';
 import { useToast } from '../../contexts/ToastContext';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface Fase {
   id: number;
@@ -245,13 +246,7 @@ const FasesJornada: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <AdminLayout title="Fases da Jornada">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </AdminLayout>
-    );
+    return <LoadingScreen message="Carregando fases..." />;
   }
 
   if (erro || !jornada) {
@@ -274,6 +269,7 @@ const FasesJornada: React.FC = () => {
       <LoadingOverlay 
         open={salvando} 
         messages={['Criando fase', 'Salvando dados', 'Processando', 'Finalizando']}
+        messageInterval={1000}
       />
       <AdminLayout title={`Fases - ${jornada.titulo}`}>
         <Container maxWidth="lg">

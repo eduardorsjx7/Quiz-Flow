@@ -52,6 +52,7 @@ import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 interface FaseConfig {
   id: number;
@@ -345,13 +346,7 @@ const ConfigurarJornada: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <AdminLayout title="Configurar Jornada">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </AdminLayout>
-    );
+    return <LoadingScreen message="Carregando configurações da jornada..." />;
   }
 
   if (erro && !jornada) {
@@ -587,6 +582,7 @@ const ConfigurarJornada: React.FC = () => {
       <LoadingOverlay 
         open={saving} 
         messages={['Salvando configurações', 'Atualizando fases', 'Processando dados', 'Finalizando']}
+        messageInterval={1000}
       />
       <AdminLayout title={`Configurar Jornada - ${jornada?.titulo || ''}`}>
         <Container maxWidth="lg">

@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { LoadingScreen } from '../../components/LoadingScreen';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
 
 interface Jornada {
@@ -167,13 +168,7 @@ const AdminJornadas: React.FC = () => {
   }, [pesquisa, visualizacao]);
 
   if (loading) {
-    return (
-      <AdminLayout title="Jornadas">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </AdminLayout>
-    );
+    return <LoadingScreen message="Carregando jornadas..." />;
   }
 
   return (

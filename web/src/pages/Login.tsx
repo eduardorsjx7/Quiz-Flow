@@ -27,6 +27,8 @@ const Login: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [errosCampos, setErrosCampos] = useState<{ email?: string; senha?: string }>({});
   const [enviando, setEnviando] = useState(false);
+  const [mostrarLoadingPosLogin, setMostrarLoadingPosLogin] = useState(false);
+  const [loginAcabouDeAcontecer, setLoginAcabouDeAcontecer] = useState(false);
   const { login, usuario, isAuthenticated, isLoading } = useAuth();
   const { showError } = useToast();
   const navigate = useNavigate();
@@ -34,13 +36,30 @@ const Login: React.FC = () => {
   // Redirecionar se já estiver autenticado
   useEffect(() => {
     if (isAuthenticated && usuario) {
+      // Se o login acabou de acontecer, mostrar loading (tempo calculado automaticamente)
+      if (loginAcabouDeAcontecer) {
+        setMostrarLoadingPosLogin(true);
+      } else {
+        // Se já estava autenticado (reload da página), redirecionar imediatamente
+        if (usuario.tipo === 'ADMINISTRADOR') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    }
+  }, [isAuthenticated, usuario, navigate, loginAcabouDeAcontecer]);
+
+  // Função para redirecionar após o loading
+  const handleLoadingComplete = () => {
+    if (usuario) {
       if (usuario.tipo === 'ADMINISTRADOR') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [isAuthenticated, usuario, navigate]);
+  };
 
   const validarEmail = (email: string): boolean => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,8 +96,13 @@ const Login: React.FC = () => {
     try {
       setEnviando(true);
       await login(email, senha);
+      // Marcar que o login acabou de acontecer (não é um reload)
+      setLoginAcabouDeAcontecer(true);
       // O redirecionamento será feito pelo useEffect quando o contexto atualizar
     } catch (error: any) {
+      // Resetar flag em caso de erro
+      setLoginAcabouDeAcontecer(false);
+      
       // Verificar se é erro de rede primeiro
       if (error.isNetworkError || !error.response) {
         showError('Erro de conexão. Verifique sua internet e tente novamente.', 'Erro de conexão');
@@ -129,9 +153,27 @@ const Login: React.FC = () => {
     }
   };
 
-  // Mostrar tela de loading durante o processo de login ou verificação inicial
+  // Mostrar tela de loading durante o processo de login, verificação inicial ou após login bem-sucedido
   if (enviando || isLoading) {
     return <LoadingScreen message={enviando ? "Entrando..." : "Verificando autenticação..."} />;
+  }
+
+  // Loading pós-login com mensagens rotativas (tempo calculado automaticamente)
+  // 5 mensagens * 1000ms = 5 segundos total
+  if (mostrarLoadingPosLogin) {
+    return (
+      <LoadingScreen 
+        messages={[
+          'Preparado para o seu teste',
+          'Carregando as jornadas',
+          'Quiz não é fácil, mas é divertido',
+          'Você está sabendo de tudo ?',
+          'Bem-vindo ao Quiz Flow',
+        ]}
+        messageInterval={1500} // Trocar mensagem a cada 1 segundo
+        onComplete={handleLoadingComplete} // Redireciona automaticamente ao terminar
+      />
+    );
   }
 
   return (

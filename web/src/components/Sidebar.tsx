@@ -132,7 +132,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       // Para participante
       const isParticipanteJornadasPath =
         location.pathname === '/participante/jornadas' ||
-        /^\/participante\/jornadas\/\d+\/fases$/.test(location.pathname); // /participante/jornadas/:id/fases
+        /^\/participante\/jornadas\/\d+\/fases$/.test(location.pathname) || // /participante/jornadas/:id/fases
+        /^\/fases\/\d+\/quizzes/.test(location.pathname) || // /fases/:faseId/quizzes
+        /^\/participante\/quiz\/\d+/.test(location.pathname) || // /participante/quiz/:tentativaId
+        /^\/participante\/resultado\/\d+/.test(location.pathname) || // /participante/resultado/:tentativaId
+        /^\/participante\/ranking\/\d+/.test(location.pathname); // /participante/ranking/:tentativaId
       
       if ((isAdminJornadasPath && !location.pathname.includes('/fases')) || isParticipanteJornadasPath) {
         return true;

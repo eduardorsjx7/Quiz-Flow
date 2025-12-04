@@ -15,6 +15,8 @@ export const LogoLoading: React.FC<LogoLoadingProps> = ({ size = 140, className 
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: size,
+        height: size,
       }}
     >
       {/* Anel girando atrás da logo */}
@@ -45,7 +47,8 @@ export const LogoLoading: React.FC<LogoLoadingProps> = ({ size = 140, className 
         sx={{
           position: 'relative',
           width: size * 0.7,
-          height: 'auto',
+          height: size * 0.7,
+          objectFit: 'contain',
           animation: 'logo-pulse 1.6s ease-in-out infinite',
           '@keyframes logo-pulse': {
             '0%': {

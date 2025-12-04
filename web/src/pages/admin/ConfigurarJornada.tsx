@@ -27,6 +27,10 @@ import {
   DialogActions,
   Breadcrumbs,
   Link,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -40,6 +44,10 @@ import {
   Delete as DeleteIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
+  Assessment as AssessmentIcon,
+  Add as AddIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
 import {
   DragDropContext,
@@ -51,6 +59,7 @@ import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirmDialog } from '../../contexts/ConfirmDialogContext';
+import { useNavigation } from '../../contexts/NavigationContext';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 interface FaseConfig {
@@ -80,6 +89,7 @@ const ConfigurarJornada: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const { confirm } = useConfirmDialog();
+  const { registerInterceptor } = useNavigation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState('');
@@ -89,6 +99,28 @@ const ConfigurarJornada: React.FC = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [mostrarSeta, setMostrarSeta] = useState(false);
   const [temAlteracoes, setTemAlteracoes] = useState(false);
+  const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
+  const [avaliacoesOriginais, setAvaliacoesOriginais] = useState<any[]>([]);
+  const [modalAvaliacaoAberto, setModalAvaliacaoAberto] = useState(false);
+  const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState<any>(null);
+  const [modalPerguntaAberto, setModalPerguntaAberto] = useState(false);
+  const [novaPergunta, setNovaPergunta] = useState<any>({
+    texto: '',
+    tipo: 'MULTIPLA_ESCOLHA',
+    obrigatoria: true,
+    peso: 10,
+  });
+  const [alteracoesAvaliacoes, setAlteracoesAvaliacoes] = useState<{
+    perguntasAdicionadas: any[];
+    perguntasExcluidas: number[];
+    perguntasMovidas: Array<{ origem: number; destino: number }>;
+    statusAlterado: boolean;
+  }>({
+    perguntasAdicionadas: [],
+    perguntasExcluidas: [],
+    perguntasMovidas: [],
+    statusAlterado: false,
+  });
   const [configuracao, setConfiguracao] = useState<ConfiguracaoJornada>({
     ativo: true,
     mostrarQuestaoCerta: true,
@@ -98,6 +130,89 @@ const ConfigurarJornada: React.FC = () => {
     permitirTentativasIlimitadas: false,
     tempoLimitePorQuestao: null,
   });
+
+  // Registrar interceptor de navegação para o menu lateral
+  useEffect(() => {
+    if (temAlteracoes) {
+      const interceptor = async () => {
+        const resultado = await confirm({
+          title: 'Sair sem salvar?',
+          message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+          confirmText: 'Sim, sair',
+          cancelText: 'Não',
+          type: 'warning',
+        });
+
+        if (resultado) {
+          setTemAlteracoes(false);
+          return true;
+        }
+        return false;
+      };
+      
+      registerInterceptor(interceptor);
+    } else {
+      registerInterceptor(null);
+    }
+
+    return () => {
+      registerInterceptor(null);
+    };
+  }, [temAlteracoes, registerInterceptor, confirm]);
+
+  // Aviso ao fechar/recarregar a página
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (temAlteracoes) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [temAlteracoes]);
+
+  // Proteção contra botão voltar do navegador
+  useEffect(() => {
+    if (!temAlteracoes) return;
+
+    // Adicionar entrada no histórico para interceptar o voltar
+    window.history.pushState(null, '', window.location.pathname);
+
+    const handlePopState = async (e: PopStateEvent) => {
+      if (temAlteracoes) {
+        // Impedir navegação imediatamente
+        window.history.pushState(null, '', window.location.pathname);
+
+        // Mostrar confirmação
+        const resultado = await confirm({
+          title: 'Sair sem salvar?',
+          message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+          confirmText: 'Sim, sair',
+          cancelText: 'Não',
+          type: 'warning',
+        });
+
+        if (resultado) {
+          setTemAlteracoes(false);
+          // Permitir voltar removendo o listener temporariamente
+          window.removeEventListener('popstate', handlePopState);
+          window.history.back();
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [temAlteracoes, confirm]);
 
   const ordenarFasesPorDataDesbloqueio = (fasesArray: FaseConfig[]): FaseConfig[] => {
     return [...fasesArray].sort((a, b) => {
@@ -254,6 +369,24 @@ const ConfigurarJornada: React.FC = () => {
         setFases([]);
         showError('Esta jornada não possui fases cadastradas');
       }
+
+      // Carregar avaliações da jornada
+      try {
+        const avaliacoesRes = await api.get(`/avaliacoes/jornada/${jornadaId}`);
+        const avaliacoesData = avaliacoesRes.data.data || avaliacoesRes.data || [];
+        setAvaliacoes(JSON.parse(JSON.stringify(avaliacoesData)));
+        setAvaliacoesOriginais(JSON.parse(JSON.stringify(avaliacoesData)));
+        setAlteracoesAvaliacoes({
+          perguntasAdicionadas: [],
+          perguntasExcluidas: [],
+          perguntasMovidas: [],
+          statusAlterado: false,
+        });
+      } catch (error) {
+        console.warn('Erro ao carregar avaliações:', error);
+        setAvaliacoes([]);
+        setAvaliacoesOriginais([]);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar dados da jornada:', error);
       console.error('Detalhes do erro:', {
@@ -329,6 +462,45 @@ const ConfigurarJornada: React.FC = () => {
       };
 
       await api.put(`/jornadas/${jornadaId}/configuracao`, dadosEnvio);
+
+      // Aplicar alterações nas avaliações
+      if (avaliacoes.length > 0) {
+        try {
+          // 1. Adicionar perguntas novas
+          for (const pergunta of alteracoesAvaliacoes.perguntasAdicionadas) {
+            await api.post(`/avaliacoes/jornada/${jornadaId}/perguntas`, pergunta);
+          }
+
+          // 2. Excluir perguntas
+          for (const indice of alteracoesAvaliacoes.perguntasExcluidas.sort((a, b) => b - a)) {
+            await api.delete(`/avaliacoes/jornada/${jornadaId}/perguntas/${indice}`);
+          }
+
+          // 3. Mover perguntas
+          for (const movimento of alteracoesAvaliacoes.perguntasMovidas) {
+            await api.put(`/avaliacoes/jornada/${jornadaId}/perguntas/mover`, {
+              indiceOrigem: movimento.origem,
+              indiceDestino: movimento.destino,
+            });
+          }
+
+          // 4. Atualizar status das avaliações
+          if (alteracoesAvaliacoes.statusAlterado) {
+            for (const avaliacao of avaliacoes) {
+              const avaliacaoOriginal = avaliacoesOriginais.find((a: any) => a.id === avaliacao.id);
+              if (avaliacaoOriginal && avaliacaoOriginal.ativo !== avaliacao.ativo) {
+                await api.put(`/avaliacoes/${avaliacao.id}`, {
+                  ativo: avaliacao.ativo,
+                });
+              }
+            }
+          }
+        } catch (avaliacaoError: any) {
+          console.error('Erro ao salvar avaliações:', avaliacaoError);
+          showError('Configurações salvas, mas houve erro ao atualizar avaliações');
+        }
+      }
+
       setTemAlteracoes(false);
       showSuccess('Configurações salvas com sucesso!', 'Sucesso');
       // Redirecionar para a tela anterior após salvar
@@ -575,6 +747,15 @@ const ConfigurarJornada: React.FC = () => {
       });
       
       if (resultado) {
+        // Reverter alterações nas avaliações
+        setAvaliacoes(JSON.parse(JSON.stringify(avaliacoesOriginais)));
+        setAlteracoesAvaliacoes({
+          perguntasAdicionadas: [],
+          perguntasExcluidas: [],
+          perguntasMovidas: [],
+          statusAlterado: false,
+        });
+        setTemAlteracoes(false);
         navigate(`/admin/jornadas/${jornadaId}/fases`);
       }
     } else {
@@ -593,7 +774,23 @@ const ConfigurarJornada: React.FC = () => {
         <Container maxWidth="lg">
           <Box sx={{ position: 'relative', mb: 3 }}>
             <IconButton 
-              onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+              onClick={async () => {
+                if (temAlteracoes) {
+                  const resultado = await confirm({
+                    title: 'Sair sem salvar?',
+                    message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+                    confirmText: 'Sim, sair',
+                    cancelText: 'Não',
+                    type: 'warning',
+                  });
+                  if (resultado) {
+                    setTemAlteracoes(false);
+                    navigate(`/admin/jornadas/${jornadaId}/fases`);
+                  }
+                } else {
+                  navigate(`/admin/jornadas/${jornadaId}/fases`);
+                }
+              }}
               size="small"
               sx={{
                 position: 'absolute',
@@ -618,7 +815,23 @@ const ConfigurarJornada: React.FC = () => {
             >
               <Link
                 component="button"
-                onClick={() => navigate('/admin')}
+                onClick={async () => {
+                  if (temAlteracoes) {
+                    const resultado = await confirm({
+                      title: 'Sair sem salvar?',
+                      message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+                      confirmText: 'Sim, sair',
+                      cancelText: 'Não',
+                      type: 'warning',
+                    });
+                    if (resultado) {
+                      setTemAlteracoes(false);
+                      navigate('/admin');
+                    }
+                  } else {
+                    navigate('/admin');
+                  }
+                }}
                 sx={{ 
                   cursor: 'pointer', 
                   display: 'flex', 
@@ -638,7 +851,23 @@ const ConfigurarJornada: React.FC = () => {
               </Link>
               <Link
                 component="button"
-                onClick={() => navigate('/admin/fases')}
+                onClick={async () => {
+                  if (temAlteracoes) {
+                    const resultado = await confirm({
+                      title: 'Sair sem salvar?',
+                      message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+                      confirmText: 'Sim, sair',
+                      cancelText: 'Não',
+                      type: 'warning',
+                    });
+                    if (resultado) {
+                      setTemAlteracoes(false);
+                      navigate('/admin/fases');
+                    }
+                  } else {
+                    navigate('/admin/fases');
+                  }
+                }}
                 sx={{ 
                   cursor: 'pointer', 
                   textDecoration: 'none',
@@ -659,7 +888,23 @@ const ConfigurarJornada: React.FC = () => {
               </Link>
               <Link
                 component="button"
-                onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+                onClick={async () => {
+                  if (temAlteracoes) {
+                    const resultado = await confirm({
+                      title: 'Sair sem salvar?',
+                      message: 'Você tem alterações não salvas. Se sair agora, todas as alterações serão perdidas. Deseja continuar?',
+                      confirmText: 'Sim, sair',
+                      cancelText: 'Não',
+                      type: 'warning',
+                    });
+                    if (resultado) {
+                      setTemAlteracoes(false);
+                      navigate(`/admin/jornadas/${jornadaId}/fases`);
+                    }
+                  } else {
+                    navigate(`/admin/jornadas/${jornadaId}/fases`);
+                  }
+                }}
                 sx={{ 
                   cursor: 'pointer', 
                   textDecoration: 'none',
@@ -988,6 +1233,344 @@ const ConfigurarJornada: React.FC = () => {
               </Box>
             )}
           </Paper>
+
+          {/* Avaliações de Fases */}
+          {avaliacoes.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '1.5rem',
+                    color: '#011b49',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <AssessmentIcon sx={{ fontSize: 24 }} />
+                  Avaliações de Fases
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {avaliacoes[0] && (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={() => setModalPerguntaAberto(true)}
+                        sx={{
+                          color: '#ff2c19',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 44, 25, 0.1)',
+                          },
+                        }}
+                        title="Adicionar pergunta"
+                      >
+                        <AddIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const novoStatus = !avaliacoes[0].ativo;
+                          const avaliacoesAtualizadas = avaliacoes.map(a => ({
+                            ...a,
+                            ativo: novoStatus,
+                          }));
+                          setAvaliacoes(avaliacoesAtualizadas);
+                          setAlteracoesAvaliacoes({
+                            ...alteracoesAvaliacoes,
+                            statusAlterado: true,
+                          });
+                          setTemAlteracoes(true);
+                        }}
+                        sx={{
+                          color: avaliacoes[0].ativo ? '#4caf50' : '#9e9e9e',
+                          '&:hover': {
+                            backgroundColor: avaliacoes[0].ativo 
+                              ? 'rgba(76, 175, 80, 0.1)' 
+                              : 'rgba(158, 158, 158, 0.1)',
+                          },
+                        }}
+                        title={avaliacoes[0].ativo ? 'Desativar todas' : 'Ativar todas'}
+                      >
+                        {avaliacoes[0].ativo ? <LockOpenIcon /> : <LockIcon />}
+                      </IconButton>
+                    </>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Lista de Perguntas */}
+              {avaliacoes[0]?.perguntas && avaliacoes[0].perguntas.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {avaliacoes[0].perguntas.map((pergunta: any, index: number) => (
+                    <Box 
+                      key={pergunta.id} 
+                      sx={{ 
+                        p: 2, 
+                        bgcolor: '#f9f9f9',
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: '#f0f0f0',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        },
+                      }}
+                    >
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          minWidth: '24px',
+                          fontWeight: 600,
+                          color: 'text.secondary'
+                        }}
+                      >
+                        {index + 1}.
+                      </Typography>
+                      <Typography variant="body2" sx={{ flex: 1 }}>
+                        {pergunta.texto}
+                      </Typography>
+                      <Chip 
+                        label={`${pergunta.peso || 0}%`} 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: '#e3f2fd',
+                          color: '#1976d2',
+                          fontWeight: 600,
+                          minWidth: '50px'
+                        }} 
+                      />
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            if (index === 0) return;
+                            
+                            // Mover localmente
+                            const avaliacoesAtualizadas = avaliacoes.map(av => {
+                              const perguntasAtualizadas = [...av.perguntas];
+                              [perguntasAtualizadas[index], perguntasAtualizadas[index - 1]] = 
+                              [perguntasAtualizadas[index - 1], perguntasAtualizadas[index]];
+                              return { ...av, perguntas: perguntasAtualizadas };
+                            });
+                            
+                            setAvaliacoes(avaliacoesAtualizadas);
+                            setAlteracoesAvaliacoes({
+                              ...alteracoesAvaliacoes,
+                              perguntasMovidas: [
+                                ...alteracoesAvaliacoes.perguntasMovidas,
+                                { origem: index, destino: index - 1 }
+                              ],
+                            });
+                            setTemAlteracoes(true);
+                          }}
+                          disabled={index === 0}
+                          sx={{
+                            color: 'action.active',
+                            '&:hover': { bgcolor: 'action.hover' },
+                            '&:disabled': { color: 'action.disabled' }
+                          }}
+                          title="Mover para cima"
+                        >
+                          <ArrowUpwardIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            if (index === (avaliacoes[0].perguntas?.length || 0) - 1) return;
+                            
+                            // Mover localmente
+                            const avaliacoesAtualizadas = avaliacoes.map(av => {
+                              const perguntasAtualizadas = [...av.perguntas];
+                              [perguntasAtualizadas[index], perguntasAtualizadas[index + 1]] = 
+                              [perguntasAtualizadas[index + 1], perguntasAtualizadas[index]];
+                              return { ...av, perguntas: perguntasAtualizadas };
+                            });
+                            
+                            setAvaliacoes(avaliacoesAtualizadas);
+                            setAlteracoesAvaliacoes({
+                              ...alteracoesAvaliacoes,
+                              perguntasMovidas: [
+                                ...alteracoesAvaliacoes.perguntasMovidas,
+                                { origem: index, destino: index + 1 }
+                              ],
+                            });
+                            setTemAlteracoes(true);
+                          }}
+                          disabled={index === (avaliacoes[0].perguntas?.length || 0) - 1}
+                          sx={{
+                            color: 'action.active',
+                            '&:hover': { bgcolor: 'action.hover' },
+                            '&:disabled': { color: 'action.disabled' }
+                          }}
+                          title="Mover para baixo"
+                        >
+                          <ArrowDownwardIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setAvaliacaoSelecionada(avaliacoes[0]);
+                            setModalAvaliacaoAberto(true);
+                          }}
+                          sx={{ 
+                            color: 'info.main',
+                            '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.1)' }
+                          }}
+                          title="Editar pergunta"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={async () => {
+                            const resultado = await confirm({
+                              title: 'Excluir Pergunta?',
+                              message: `Tem certeza que deseja excluir a pergunta "${pergunta.texto}"? Esta ação será aplicada em TODAS as fases ao salvar.`,
+                              confirmText: 'Sim, excluir',
+                              cancelText: 'Cancelar',
+                              type: 'delete',
+                            });
+
+                            if (!resultado) return;
+
+                            // Excluir localmente
+                            const avaliacoesAtualizadas = avaliacoes.map(av => ({
+                              ...av,
+                              perguntas: av.perguntas.filter((_: any, i: number) => i !== index),
+                            }));
+                            
+                            setAvaliacoes(avaliacoesAtualizadas);
+                            setAlteracoesAvaliacoes({
+                              ...alteracoesAvaliacoes,
+                              perguntasExcluidas: [...alteracoesAvaliacoes.perguntasExcluidas, index],
+                            });
+                            setTemAlteracoes(true);
+                          }}
+                          sx={{
+                            color: 'error.main',
+                            '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' }
+                          }}
+                          title="Excluir pergunta"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Alert severity="info">
+                  Nenhuma pergunta configurada nas avaliações
+                </Alert>
+              )}
+            </Paper>
+          )}
+
+          {/* Modal Ver Perguntas da Avaliação */}
+          <Dialog
+            open={modalAvaliacaoAberto}
+            onClose={() => {
+              setModalAvaliacaoAberto(false);
+              setAvaliacaoSelecionada(null);
+            }}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+              },
+            }}
+          >
+            <DialogTitle sx={{ fontWeight: 600, color: '#011b49', pb: 2 }}>
+              {avaliacaoSelecionada?.titulo || 'Perguntas da Avaliação'}
+            </DialogTitle>
+            <DialogContent>
+              {avaliacaoSelecionada && (
+                <Box sx={{ pt: 2 }}>
+                  {avaliacaoSelecionada.perguntas && avaliacaoSelecionada.perguntas.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {avaliacaoSelecionada.perguntas.map((pergunta: any, index: number) => (
+                        <Box 
+                          key={pergunta.id} 
+                          sx={{ 
+                            p: 2, 
+                            bgcolor: '#f9f9f9',
+                            borderRadius: 1,
+                            border: '1px solid #e0e0e0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2
+                          }}
+                        >
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              minWidth: '24px',
+                              fontWeight: 600,
+                              color: 'text.secondary'
+                            }}
+                          >
+                            {index + 1}.
+                          </Typography>
+                          <Typography variant="body2" sx={{ flex: 1 }}>
+                            {pergunta.texto}
+                          </Typography>
+                          <Chip 
+                            label={`${pergunta.peso || 0}%`} 
+                            size="small" 
+                            sx={{ 
+                              bgcolor: '#e3f2fd',
+                              color: '#1976d2',
+                              fontWeight: 600,
+                              minWidth: '50px'
+                            }} 
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Alert severity="info">
+                      Nenhuma pergunta configurada nesta avaliação
+                    </Alert>
+                  )}
+
+                  <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Observação:</strong> Para editar as perguntas das avaliações, 
+                      acesse o botão "Avaliação" na página de fases da jornada.
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ p: 2.5, pt: 1 }}>
+              <Button 
+                onClick={() => {
+                  setModalAvaliacaoAberto(false);
+                  setAvaliacaoSelecionada(null);
+                }} 
+                color="inherit"
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={() => navigate(`/admin/jornadas/${jornadaId}/avaliacao`)}
+                sx={{
+                  bgcolor: '#ff2c19',
+                  '&:hover': { bgcolor: '#e62816' },
+                }}
+              >
+                Editar Avaliações
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Modal de Edição de Fase */}
           <Dialog
@@ -1434,6 +2017,165 @@ const ConfigurarJornada: React.FC = () => {
                 }}
               >
                 Salvar
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Modal Adicionar Pergunta */}
+          <Dialog
+            open={modalPerguntaAberto}
+            onClose={() => {
+              setModalPerguntaAberto(false);
+              setNovaPergunta({
+                texto: '',
+                tipo: 'MULTIPLA_ESCOLHA',
+                obrigatoria: true,
+                peso: 10,
+              });
+            }}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>Adicionar Pergunta</DialogTitle>
+            <DialogContent>
+              <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
+                Esta pergunta será adicionada a todas as avaliações de fases
+              </Alert>
+              <TextField
+                fullWidth
+                label="Texto da Pergunta"
+                value={novaPergunta.texto}
+                onChange={(e) =>
+                  setNovaPergunta({ ...novaPergunta, texto: e.target.value })
+                }
+                margin="normal"
+                required
+                multiline
+                rows={2}
+              />
+
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Tipo de Pergunta</InputLabel>
+                <Select
+                  value={novaPergunta.tipo}
+                  onChange={(e: any) => {
+                    setNovaPergunta({ ...novaPergunta, tipo: e.target.value });
+                  }}
+                  label="Tipo de Pergunta"
+                >
+                  <MenuItem value="MULTIPLA_ESCOLHA">Múltipla Escolha</MenuItem>
+                  <MenuItem value="TEXTO_LIVRE">Texto Livre</MenuItem>
+                  <MenuItem value="NOTA">Nota (0-10)</MenuItem>
+                  <MenuItem value="SIM_NAO">Sim/Não</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Peso da Pergunta (%)"
+                type="number"
+                value={novaPergunta.peso}
+                onChange={(e) => {
+                  const valor = parseInt(e.target.value) || 0;
+                  setNovaPergunta({ ...novaPergunta, peso: Math.min(Math.max(valor, 0), 100) });
+                }}
+                inputProps={{ min: 0, max: 100 }}
+                helperText="Peso de 0% a 100%"
+                margin="normal"
+                InputProps={{
+                  endAdornment: <Typography sx={{ color: 'text.secondary' }}>%</Typography>,
+                }}
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={novaPergunta.obrigatoria}
+                    onChange={(e) =>
+                      setNovaPergunta({ ...novaPergunta, obrigatoria: e.target.checked })
+                    }
+                  />
+                }
+                label="Pergunta Obrigatória"
+                sx={{ mt: 2 }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ p: 2.5 }}>
+              <Button 
+                onClick={() => {
+                  setModalPerguntaAberto(false);
+                  setNovaPergunta({
+                    texto: '',
+                    tipo: 'MULTIPLA_ESCOLHA',
+                    obrigatoria: true,
+                    peso: 10,
+                  });
+                }} 
+                color="inherit"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  if (!novaPergunta.texto.trim()) {
+                    showError('O texto da pergunta é obrigatório');
+                    return;
+                  }
+
+                  // Criar alternativas baseadas no tipo
+                  let alternativas: any[] = [];
+                  
+                  if (novaPergunta.tipo === 'MULTIPLA_ESCOLHA') {
+                    alternativas = [
+                      { texto: '1 - Muito Insatisfeito', valor: 1, ordem: 0 },
+                      { texto: '2 - Insatisfeito', valor: 2, ordem: 1 },
+                      { texto: '3 - Neutro', valor: 3, ordem: 2 },
+                      { texto: '4 - Satisfeito', valor: 4, ordem: 3 },
+                      { texto: '5 - Muito Satisfeito', valor: 5, ordem: 4 },
+                    ];
+                  } else if (novaPergunta.tipo === 'SIM_NAO') {
+                    alternativas = [
+                      { texto: 'Não', valor: 1, ordem: 0 },
+                      { texto: 'Sim', valor: 5, ordem: 1 },
+                    ];
+                  }
+
+                  const novaPerguntaData = {
+                    texto: novaPergunta.texto,
+                    tipo: novaPergunta.tipo,
+                    obrigatoria: novaPergunta.obrigatoria,
+                    peso: novaPergunta.peso,
+                    alternativas,
+                  };
+
+                  // Adicionar localmente
+                  const avaliacoesAtualizadas = avaliacoes.map(av => ({
+                    ...av,
+                    perguntas: [...av.perguntas, novaPerguntaData],
+                  }));
+
+                  setAvaliacoes(avaliacoesAtualizadas);
+                  setAlteracoesAvaliacoes({
+                    ...alteracoesAvaliacoes,
+                    perguntasAdicionadas: [...alteracoesAvaliacoes.perguntasAdicionadas, novaPerguntaData],
+                  });
+                  setTemAlteracoes(true);
+                  
+                  setModalPerguntaAberto(false);
+                  setNovaPergunta({
+                    texto: '',
+                    tipo: 'MULTIPLA_ESCOLHA',
+                    obrigatoria: true,
+                    peso: 10,
+                  });
+                }}
+                sx={{
+                  bgcolor: '#ff2c19',
+                  '&:hover': { bgcolor: '#e62816' },
+                }}
+              >
+                Adicionar
               </Button>
             </DialogActions>
           </Dialog>

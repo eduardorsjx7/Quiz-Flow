@@ -21,6 +21,7 @@ import respostaRoutes from './routes/resposta.routes';
 import relatorioRoutes from './routes/relatorio.routes';
 import grupoRoutes from './routes/grupo.routes';
 import atribuicaoRoutes from './routes/atribuicao.routes';
+import avaliacaoRoutes from './routes/avaliacao.routes';
 
 // Importar rotas v1 (nova estrutura com Design Patterns)
 import v1Routes from './routes/v1';
@@ -94,6 +95,7 @@ app.use('/api/respostas', respostaRoutes);
 app.use('/api/relatorios', relatorioRoutes);
 app.use('/api/grupos', grupoRoutes);
 app.use('/api/atribuicoes', atribuicaoRoutes);
+app.use('/api/avaliacoes', avaliacaoRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

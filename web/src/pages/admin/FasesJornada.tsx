@@ -27,6 +27,7 @@ import {
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
   Delete as DeleteIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -407,6 +408,26 @@ const FasesJornada: React.FC = () => {
               title="Adicionar Fase"
             >
               <AddIcon />
+            </IconButton>
+            <IconButton
+              onClick={() => navigate(`/admin/jornadas/${jornadaId}/avaliacao`)}
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: '#ff2c19',
+                color: '#ffffff',
+                border: '2px solid #e62816',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: '#e62816',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                },
+              }}
+              title="Avaliação da Jornada"
+            >
+              <AssessmentIcon />
             </IconButton>
             <IconButton
               onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar`)}

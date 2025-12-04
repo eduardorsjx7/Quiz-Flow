@@ -8,20 +8,21 @@ datasource db {
 }
 
 model Usuario {
-  id        Int      @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   nome      String
-  email     String?  @unique
+  email     String?     @unique
   matricula String?
   senha     String?
   tipo      TipoUsuario @default(COLABORADOR)
-  grupoId   Int?     // Departamento/grupo do colaborador
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  grupoId   Int? // Departamento/grupo do colaborador
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  grupo             Grupo?   @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  grupo              Grupo?              @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   tentativas         TentativaQuiz[]
   fasesDesbloqueadas DesbloqueioFase[]
   atribuicoes        AtribuicaoQuiz[]
+  respostasAvaliacao RespostaAvaliacao[]
 
   @@map("usuarios")
 }
@@ -32,65 +33,66 @@ enum TipoUsuario {
 }
 
 model Jornada {
-  id          Int      @id @default(autoincrement())
-  titulo      String
-  descricao   String?
-  imagemCapa  String?
-  ordem       Int      @default(0)
-  ativo       Boolean  @default(true)
-  criadoPor   Int?
+  id                           Int      @id @default(autoincrement())
+  titulo                       String
+  descricao                    String?
+  imagemCapa                   String?
+  ordem                        Int      @default(0)
+  ativo                        Boolean  @default(true)
+  criadoPor                    Int?
   // Configurações da jornada
-  mostrarQuestaoCerta      Boolean  @default(true)
-  mostrarTaxaErro          Boolean  @default(true)
-  mostrarPodio             Boolean  @default(true)
-  mostrarRanking           Boolean  @default(true)
-  permitirTentativasIlimitadas Boolean @default(false)
-  tempoLimitePorQuestao    Int?     // em segundos
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  mostrarQuestaoCerta          Boolean  @default(true)
+  mostrarTaxaErro              Boolean  @default(true)
+  mostrarPodio                 Boolean  @default(true)
+  mostrarRanking               Boolean  @default(true)
+  permitirTentativasIlimitadas Boolean  @default(false)
+  tempoLimitePorQuestao        Int? // em segundos
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 
-  fases       Fase[]
+  fases      Fase[]
+  avaliacoes AvaliacaoJornada[]
 
   @@map("jornadas")
 }
 
 model Fase {
-  id          Int      @id @default(autoincrement())
-  jornadaId   Int      // Fase pertence a uma jornada
-  titulo      String
-  descricao   String?
-  ordem       Int      @default(0)
-  ativo       Boolean  @default(true)
+  id              Int       @id @default(autoincrement())
+  jornadaId       Int // Fase pertence a uma jornada
+  titulo          String
+  descricao       String?
+  ordem           Int       @default(0)
+  ativo           Boolean   @default(true)
   dataDesbloqueio DateTime? // Data e hora de desbloqueio da fase
-  dataBloqueio DateTime? // Data e hora de bloqueio da fase
-  pontuacao   Int      @default(0) // Pontuação da fase
-  criadoPor   Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  dataBloqueio    DateTime? // Data e hora de bloqueio da fase
+  pontuacao       Int       @default(0) // Pontuação da fase
+  criadoPor       Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  jornada     Jornada  @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
-  quizzes     Quiz[]
+  jornada      Jornada           @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
+  quizzes      Quiz[]
   desbloqueios DesbloqueioFase[]
 
   @@map("fases")
 }
 
 model Quiz {
-  id          Int      @id @default(autoincrement())
-  titulo      String
-  descricao   String?
-  faseId      Int
-  ordem       Int      @default(0)
-  ativo       Boolean  @default(true)
-  pontosBase  Int      @default(100)
-  tags        String?  // Tags/temas separadas por vírgula
-  dataInicio  DateTime? // Data de início da disponibilidade
-  dataFim     DateTime? // Data de fim da disponibilidade
-  criadoPor   Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         Int       @id @default(autoincrement())
+  titulo     String
+  descricao  String?
+  faseId     Int
+  ordem      Int       @default(0)
+  ativo      Boolean   @default(true)
+  pontosBase Int       @default(100)
+  tags       String? // Tags/temas separadas por vírgula
+  dataInicio DateTime? // Data de início da disponibilidade
+  dataFim    DateTime? // Data de fim da disponibilidade
+  criadoPor  Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  fase        Fase     @relation(fields: [faseId], references: [id], onDelete: Cascade)
+  fase        Fase             @relation(fields: [faseId], references: [id], onDelete: Cascade)
   perguntas   Pergunta[]
   tentativas  TentativaQuiz[]
   atribuicoes AtribuicaoQuiz[]
@@ -99,28 +101,28 @@ model Quiz {
 }
 
 model DesbloqueioFase {
-  id          Int      @id @default(autoincrement())
-  faseId      Int
-  usuarioId   Int
-  faseAtual   Boolean  @default(false) // Indica se esta é a fase atual do PDC do usuário
+  id              Int      @id @default(autoincrement())
+  faseId          Int
+  usuarioId       Int
+  faseAtual       Boolean  @default(false) // Indica se esta é a fase atual do PDC do usuário
   desbloqueadoPor Int?
-  desbloqueadoEm DateTime @default(now())
-  createdAt   DateTime @default(now())
+  desbloqueadoEm  DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  fase        Fase     @relation(fields: [faseId], references: [id], onDelete: Cascade)
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  fase    Fase    @relation(fields: [faseId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([faseId, usuarioId])
   @@map("desbloqueios_fase")
 }
 
 model Grupo {
-  id          Int      @id @default(autoincrement())
-  nome        String
-  descricao   String?
-  ativo       Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   usuarios    Usuario[]
   atribuicoes AtribuicaoQuiz[]
@@ -129,66 +131,66 @@ model Grupo {
 }
 
 model AtribuicaoQuiz {
-  id          Int      @id @default(autoincrement())
-  quizId      Int
-  usuarioId   Int?     // Se null, é atribuição por grupo
-  grupoId     Int?
+  id           Int      @id @default(autoincrement())
+  quizId       Int
+  usuarioId    Int? // Se null, é atribuição por grupo
+  grupoId      Int?
   atribuidoPor Int?
-  atribuidoEm DateTime @default(now())
-  createdAt   DateTime @default(now())
+  atribuidoEm  DateTime @default(now())
+  createdAt    DateTime @default(now())
 
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  grupo       Grupo?   @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  grupo   Grupo?   @relation(fields: [grupoId], references: [id], onDelete: Cascade)
 
   @@map("atribuicoes_quiz")
 }
 
 model Pergunta {
-  id          Int      @id @default(autoincrement())
-  quizId      Int
-  texto       String
-  tempoSegundos Int    @default(30)
-  ordem       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  quizId        Int
+  texto         String
+  tempoSegundos Int      @default(30)
+  ordem         Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz         Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
   alternativas Alternativa[]
-  respostas   Resposta[]
+  respostas    Resposta[]
 
   @@map("perguntas")
 }
 
 model Alternativa {
-  id          Int      @id @default(autoincrement())
-  perguntaId  Int
-  texto       String
-  correta     Boolean  @default(false)
-  ordem       Int
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  perguntaId Int
+  texto      String
+  correta    Boolean  @default(false)
+  ordem      Int
+  createdAt  DateTime @default(now())
 
-  pergunta    Pergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  pergunta Pergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
 
   @@map("alternativas")
 }
 
 model TentativaQuiz {
-  id          Int      @id @default(autoincrement())
-  quizId      Int
-  usuarioId   Int      // Sempre vinculado a um usuário específico
-  status      StatusTentativa @default(EM_ANDAMENTO)
-  iniciadaEm  DateTime @default(now())
-  finalizadaEm DateTime?
-  pontuacaoTotal Int   @default(0)
-  tempoTotal  Int     @default(0)
+  id             Int             @id @default(autoincrement())
+  quizId         Int
+  usuarioId      Int // Sempre vinculado a um usuário específico
+  status         StatusTentativa @default(EM_ANDAMENTO)
+  iniciadaEm     DateTime        @default(now())
+  finalizadaEm   DateTime?
+  pontuacaoTotal Int             @default(0)
+  tempoTotal     Int             @default(0)
   posicaoRanking Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  respostas   Resposta[]
+  quiz      Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  respostas Resposta[]
 
   @@unique([quizId, usuarioId]) // Um usuário pode ter apenas uma tentativa por quiz
   @@map("tentativas_quiz")
@@ -201,19 +203,112 @@ enum StatusTentativa {
 }
 
 model Resposta {
-  id          Int      @id @default(autoincrement())
-  tentativaId Int
-  perguntaId  Int
+  id            Int      @id @default(autoincrement())
+  tentativaId   Int
+  perguntaId    Int
   alternativaId Int?
-  tempoResposta Int    // Tempo em segundos que levou para responder
-  pontuacao   Int      @default(0)
-  acertou     Boolean  @default(false)
-  tempoEsgotado Boolean @default(false) // Se o tempo expirou antes de responder
-  respondidaEm DateTime @default(now())
+  tempoResposta Int // Tempo em segundos que levou para responder
+  pontuacao     Int      @default(0)
+  acertou       Boolean  @default(false)
+  tempoEsgotado Boolean  @default(false) // Se o tempo expirou antes de responder
+  respondidaEm  DateTime @default(now())
 
-  tentativa   TentativaQuiz @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
-  pergunta    Pergunta      @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  tentativa TentativaQuiz @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
+  pergunta  Pergunta      @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
 
   @@map("respostas")
 }
 
+// ============================================
+// MODELOS DE AVALIAÇÃO DE JORNADA
+// ============================================
+
+model AvaliacaoJornada {
+  id          Int      @id @default(autoincrement())
+  jornadaId   Int
+  titulo      String // Ex: "Avaliação de Qualidade da Jornada"
+  descricao   String?
+  ativo       Boolean  @default(true)
+  obrigatorio Boolean  @default(false) // Se é obrigatório responder
+  criadoPor   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jornada   Jornada             @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
+  perguntas PerguntaAvaliacao[]
+  respostas RespostaAvaliacao[]
+
+  @@map("avaliacoes_jornada")
+}
+
+model PerguntaAvaliacao {
+  id          Int                   @id @default(autoincrement())
+  avaliacaoId Int
+  texto       String // Texto da pergunta
+  tipo        TipoPerguntaAvaliacao @default(MULTIPLA_ESCOLHA)
+  ordem       Int                   @default(0)
+  obrigatoria Boolean               @default(true)
+  peso        Int                   @default(1) // Peso da pergunta (1-10)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  avaliacao    AvaliacaoJornada            @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  alternativas AlternativaAvaliacao[]
+  respostas    RespostaAvaliacaoPergunta[]
+
+  @@map("perguntas_avaliacao")
+}
+
+enum TipoPerguntaAvaliacao {
+  MULTIPLA_ESCOLHA // Ex: Escala de 1 a 5
+  TEXTO_LIVRE // Resposta aberta
+  NOTA // Nota de 0 a 10
+  SIM_NAO // Sim ou Não
+}
+
+model AlternativaAvaliacao {
+  id         Int      @id @default(autoincrement())
+  perguntaId Int
+  texto      String // Ex: "Muito Satisfeito", "Satisfeito", etc.
+  valor      Int      @default(0) // Valor numérico associado (ex: 1-5)
+  ordem      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  pergunta  PerguntaAvaliacao           @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  respostas RespostaAvaliacaoPergunta[]
+
+  @@map("alternativas_avaliacao")
+}
+
+model RespostaAvaliacao {
+  id           Int      @id @default(autoincrement())
+  avaliacaoId  Int
+  usuarioId    Int
+  jornadaId    Int // Para facilitar relatórios
+  respondidaEm DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  avaliacao AvaliacaoJornada            @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  usuario   Usuario                     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  respostas RespostaAvaliacaoPergunta[]
+
+  @@unique([avaliacaoId, usuarioId]) // Um usuário responde apenas uma vez
+  @@map("respostas_avaliacao")
+}
+
+model RespostaAvaliacaoPergunta {
+  id                  Int      @id @default(autoincrement())
+  respostaAvaliacaoId Int
+  perguntaId          Int
+  alternativaId       Int? // Para perguntas de múltipla escolha
+  textoResposta       String? // Para perguntas de texto livre
+  valorNota           Int? // Para perguntas tipo nota
+  respondidaEm        DateTime @default(now())
+
+  respostaAvaliacao RespostaAvaliacao     @relation(fields: [respostaAvaliacaoId], references: [id], onDelete: Cascade)
+  pergunta          PerguntaAvaliacao     @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  alternativa       AlternativaAvaliacao? @relation(fields: [alternativaId], references: [id], onDelete: SetNull)
+
+  @@map("respostas_avaliacao_perguntas")
+}

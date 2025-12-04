@@ -16,6 +16,7 @@ import AdminJornadas from './pages/admin/Jornadas';
 import CriarJornada from './pages/admin/CriarJornada';
 import DetalhesJornada from './pages/admin/DetalhesJornada';
 import ConfigurarJornada from './pages/admin/ConfigurarJornada';
+import AvaliacaoJornada from './pages/admin/AvaliacaoJornada';
 import ParticipanteQuiz from './pages/participante/Quiz';
 import ParticipanteResultado from './pages/participante/Resultado';
 import RankingCompleto from './pages/participante/RankingCompleto';
@@ -24,6 +25,7 @@ import DashboardColaborador from './pages/participante/Dashboard';
 import FasesJornadaParticipante from './pages/participante/FasesJornada';
 import Pontuacoes from './pages/participante/Pontuacoes';
 import Avaliacoes from './pages/participante/Avaliacoes';
+import ResponderAvaliacao from './pages/participante/ResponderAvaliacao';
 import JornadasParticipante from './pages/participante/Jornadas';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -86,6 +88,14 @@ function App() {
         <Route path="/participante/quiz/:tentativaId" element={<ParticipanteQuiz />} />
         <Route path="/participante/resultado/:tentativaId" element={<ParticipanteResultado />} />
         <Route path="/participante/ranking/:tentativaId" element={<RankingCompleto />} />
+        <Route
+          path="/participante/avaliacao/:avaliacaoId/jornada/:jornadaId"
+          element={
+            <PrivateRoute>
+              <ResponderAvaliacao />
+            </PrivateRoute>
+          }
+        />
         
         <Route
           path="/admin"
@@ -172,6 +182,14 @@ function App() {
           element={
             <PrivateRoute>
               <ConfigurarJornada />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/jornadas/:jornadaId/avaliacao"
+          element={
+            <PrivateRoute>
+              <AvaliacaoJornada />
             </PrivateRoute>
           }
         />

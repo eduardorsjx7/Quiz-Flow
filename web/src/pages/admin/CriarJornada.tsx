@@ -36,6 +36,9 @@ import {
   Home as HomeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import {
   DragDropContext,
@@ -46,7 +49,7 @@ import {
   DraggableProvided,
   DraggableStateSnapshot,
 } from '@hello-pangea/dnd';
-import { Switch, Grid } from '@mui/material';
+import { Switch, Grid, FormControlLabel, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
 import { useToast } from '../../contexts/ToastContext';
@@ -60,6 +63,22 @@ interface Fase {
   dataDesbloqueio: Date | null;
   dataBloqueio: Date | null;
   pontuacao?: number;
+}
+
+interface Alternativa {
+  texto: string;
+  valor: number;
+  ordem: number;
+}
+
+interface PerguntaAvaliacao {
+  id: string;
+  texto: string;
+  tipo: 'MULTIPLA_ESCOLHA' | 'TEXTO_LIVRE' | 'NOTA' | 'SIM_NAO';
+  ordem: number;
+  obrigatoria: boolean;
+  peso: number; // Peso da pergunta (1-10)
+  alternativas?: Alternativa[];
 }
 
 interface AddPhaseDialogProps {
@@ -632,8 +651,9 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({ open, onClose, onSave }
 
 const CriarJornada: React.FC = () => {
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [titulo, setTitulo] = useState('');
   const [imagemCapa, setImagemCapa] = useState<File | null>(null);
@@ -641,6 +661,14 @@ const CriarJornada: React.FC = () => {
   const [fases, setFases] = useState<Fase[]>([]);
 
   const [abrirModalFase, setAbrirModalFase] = useState(false);
+
+  // Estados para Avaliação (Step 3)
+  const [pularAvaliacao, setPularAvaliacao] = useState(false);
+  const [avaliacaoObrigatoria, setAvaliacaoObrigatoria] = useState(false);
+  const [perguntasAvaliacao, setPerguntasAvaliacao] = useState<PerguntaAvaliacao[]>([]);
+  const [abrirModalPergunta, setAbrirModalPergunta] = useState(false);
+  const [perguntaEditando, setPerguntaEditando] = useState<PerguntaAvaliacao | null>(null);
+  const [perguntaMovendo, setPerguntaMovendo] = useState<string | null>(null);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -675,14 +703,23 @@ const CriarJornada: React.FC = () => {
 
   const handleNextStep = () => {
     setErro('');
-    if (!validarTitulo()) return;
-    setStep(2);
+    if (step === 1) {
+      if (!validarTitulo()) return;
+      setStep(2);
+    } else if (step === 2) {
+      if (!validarFases()) return;
+      setStep(3);
+    }
   };
 
   const handleBackStep = () => {
     setErro('');
-    setErrosCampos((prev) => ({ ...prev, fases: undefined }));
-    setStep(1);
+    if (step === 2) {
+      setErrosCampos((prev) => ({ ...prev, fases: undefined }));
+      setStep(1);
+    } else if (step === 3) {
+      setStep(2);
+    }
   };
 
   const ordenarFasesPorDataDesbloqueio = (fasesArray: Fase[]): Fase[] => {
@@ -811,6 +848,143 @@ const CriarJornada: React.FC = () => {
     setPreviewImagem(null);
   };
 
+  const [novaPergunta, setNovaPergunta] = useState<{
+    texto: string;
+    tipo: 'MULTIPLA_ESCOLHA' | 'TEXTO_LIVRE' | 'NOTA' | 'SIM_NAO';
+    obrigatoria: boolean;
+    peso: number;
+    alternativas: Alternativa[];
+  }>({
+    texto: '',
+    tipo: 'MULTIPLA_ESCOLHA',
+    obrigatoria: true,
+    peso: 10,
+    alternativas: [],
+  });
+
+  // Criar alternativas padrão de 1 a 5
+  const criarAlternativasEscala = (): Alternativa[] => {
+    return [
+      { texto: '1 - Muito Insatisfeito', valor: 1, ordem: 0 },
+      { texto: '2 - Insatisfeito', valor: 2, ordem: 1 },
+      { texto: '3 - Neutro', valor: 3, ordem: 2 },
+      { texto: '4 - Satisfeito', valor: 4, ordem: 3 },
+      { texto: '5 - Muito Satisfeito', valor: 5, ordem: 4 },
+    ];
+  };
+
+  const handleMoverPergunta = (index: number, direcao: 'up' | 'down') => {
+    const novasPerguntasArray = [...perguntasAvaliacao];
+    const novaPosicao = direcao === 'up' ? index - 1 : index + 1;
+
+    if (novaPosicao < 0 || novaPosicao >= novasPerguntasArray.length) {
+      return; // Não pode mover além dos limites
+    }
+
+    // Marcar pergunta como movendo para animação
+    setPerguntaMovendo(novasPerguntasArray[index].id);
+
+    // Trocar as perguntas de posição
+    [novasPerguntasArray[index], novasPerguntasArray[novaPosicao]] = 
+    [novasPerguntasArray[novaPosicao], novasPerguntasArray[index]];
+
+    // Atualizar ordem
+    const perguntasAtualizadas = novasPerguntasArray.map((p, i) => ({
+      ...p,
+      ordem: i,
+    }));
+
+    setPerguntasAvaliacao(perguntasAtualizadas);
+
+    // Remover marcador de animação após a transição
+    setTimeout(() => {
+      setPerguntaMovendo(null);
+    }, 300);
+  };
+
+  const handleEditarPergunta = (pergunta: PerguntaAvaliacao) => {
+    setPerguntaEditando(pergunta);
+    setNovaPergunta({
+      texto: pergunta.texto,
+      tipo: pergunta.tipo,
+      obrigatoria: pergunta.obrigatoria,
+      peso: pergunta.peso,
+      alternativas: pergunta.alternativas || [],
+    });
+    setAbrirModalPergunta(true);
+  };
+
+  const handleFecharModalPergunta = () => {
+    setAbrirModalPergunta(false);
+    setPerguntaEditando(null);
+    setNovaPergunta({
+      texto: '',
+      tipo: 'MULTIPLA_ESCOLHA',
+      obrigatoria: true,
+      peso: 10,
+      alternativas: [],
+    });
+  };
+
+  const handleAdicionarPergunta = () => {
+    if (!novaPergunta.texto.trim()) {
+      showError('O texto da pergunta é obrigatório');
+      return;
+    }
+
+    if (novaPergunta.peso < 0 || novaPergunta.peso > 100) {
+      showError('O peso da pergunta deve estar entre 0% e 100%');
+      return;
+    }
+
+    // Para múltipla escolha, sempre usar escala 1-5
+    let alternativasFinais = novaPergunta.alternativas;
+    if (novaPergunta.tipo === 'MULTIPLA_ESCOLHA') {
+      alternativasFinais = criarAlternativasEscala();
+    } else if (novaPergunta.tipo === 'SIM_NAO') {
+      alternativasFinais = [
+        { texto: 'Não', valor: 1, ordem: 0 },
+        { texto: 'Sim', valor: 5, ordem: 1 },
+      ];
+    } else {
+      alternativasFinais = [];
+    }
+
+    if (perguntaEditando) {
+      // Modo edição - atualizar pergunta existente
+      const perguntasAtualizadas = perguntasAvaliacao.map((p) =>
+        p.id === perguntaEditando.id
+          ? {
+              ...p,
+              texto: novaPergunta.texto,
+              tipo: novaPergunta.tipo,
+              obrigatoria: novaPergunta.obrigatoria,
+              peso: novaPergunta.peso,
+              alternativas: alternativasFinais,
+            }
+          : p
+      );
+      setPerguntasAvaliacao(perguntasAtualizadas);
+      showSuccess('Pergunta atualizada!');
+    } else {
+      // Modo criar - adicionar nova pergunta
+      const perguntaComId: PerguntaAvaliacao = {
+        id: `pergunta-${Date.now()}-${Math.random()}`,
+        texto: novaPergunta.texto,
+        tipo: novaPergunta.tipo,
+        ordem: perguntasAvaliacao.length,
+        obrigatoria: novaPergunta.obrigatoria,
+        peso: novaPergunta.peso,
+        alternativas: alternativasFinais,
+      };
+      setPerguntasAvaliacao([...perguntasAvaliacao, perguntaComId]);
+      showSuccess('Pergunta adicionada!');
+    }
+
+    handleFecharModalPergunta();
+  };
+
+
   const handleSalvar = async () => {
     setErro('');
     setErrosCampos({});
@@ -851,6 +1025,41 @@ const CriarJornada: React.FC = () => {
 
       // Obter o ID da jornada criada
       const jornadaId = response.data.data?.id || response.data.id;
+      const jornadaData = response.data.data || response.data;
+      
+      // Criar avaliação para cada fase se não foi pulada
+      if (!pularAvaliacao && perguntasAvaliacao.length > 0 && jornadaId) {
+        try {
+          // Buscar as fases criadas da jornada
+          const fasesCriadas = jornadaData.fases || [];
+          
+          // Criar uma avaliação para cada fase
+          for (const fase of fasesCriadas) {
+            await api.post('/avaliacoes', {
+              jornadaId: jornadaId,
+              titulo: `Avaliação da Fase: ${fase.titulo}`,
+              descricao: `Avalie sua experiência com a fase "${fase.titulo}"`,
+              ativo: true,
+              obrigatorio: avaliacaoObrigatoria,
+              perguntas: perguntasAvaliacao.map((p, index) => ({
+                texto: p.texto,
+                tipo: p.tipo,
+                ordem: index,
+                obrigatoria: p.obrigatoria,
+                peso: p.peso,
+                alternativas: p.alternativas || [],
+              })),
+            });
+          }
+          
+          showSuccess(`Jornada criada com ${fasesCriadas.length} avaliação(ões) de fase!`);
+        } catch (error) {
+          console.error('Erro ao criar avaliações:', error);
+          showError('Jornada criada, mas houve erro ao criar as avaliações');
+        }
+      } else {
+        showSuccess('Jornada criada com sucesso!');
+      }
       
       if (jornadaId) {
         // Redirecionar para a tela de configurações da jornada
@@ -1322,9 +1531,222 @@ const CriarJornada: React.FC = () => {
                 </Button>
                 <Button
                   variant="contained"
+                  endIcon={<NavigateNextIcon />}
+                  onClick={handleNextStep}
+                  disabled={salvando || fases.length === 0}
+                  sx={{
+                    minWidth: 180,
+                    py: 1.2,
+                    bgcolor: '#e62816',
+                    '&:hover': {
+                      bgcolor: '#c52214',
+                    },
+                    '&:disabled': {
+                      bgcolor: 'grey.300',
+                    },
+                  }}
+                >
+                  Próximo: Avaliação
+                </Button>
+              </Box>
+            </>
+          )}
+
+          {/* STEP 3: Avaliação de Fases */}
+          {step === 3 && (
+            <>
+              <Box sx={{ position: 'relative', mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton onClick={handleBackStep} size="small">
+                    <ArrowBackIcon fontSize="small" />
+                  </IconButton>
+                  <Typography variant="h6">Avaliação de Fases (Opcional)</Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={!pularAvaliacao}
+                      onChange={(e) => {
+                        setPularAvaliacao(!e.target.checked);
+                        if (!e.target.checked) {
+                          setPerguntasAvaliacao([]);
+                        }
+                      }}
+                    />
+                  }
+                  label="Criar avaliação de fases"
+                />
+              </Box>
+
+              {!pularAvaliacao && (
+                <>
+                  <Box sx={{ mb: 3 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={avaliacaoObrigatoria}
+                          onChange={(e) => setAvaliacaoObrigatoria(e.target.checked)}
+                        />
+                      }
+                      label="Avaliação obrigatória"
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        Perguntas ({perguntasAvaliacao.length})
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => setAbrirModalPergunta(true)}
+                      >
+                        Adicionar
+                      </Button>
+                    </Box>
+
+                    {perguntasAvaliacao.length === 0 ? (
+                      <Alert severity="info">
+                        Nenhuma pergunta adicionada
+                      </Alert>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {perguntasAvaliacao.map((pergunta, index) => (
+                          <Box 
+                            key={pergunta.id} 
+                            sx={{ 
+                              p: 2, 
+                              bgcolor: perguntaMovendo === pergunta.id ? '#e3f2fd' : '#f9f9f9',
+                              borderRadius: 1,
+                              border: perguntaMovendo === pergunta.id ? '2px solid #2196f3' : '1px solid #e0e0e0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              transform: perguntaMovendo === pergunta.id ? 'scale(1.02)' : 'scale(1)',
+                              boxShadow: perguntaMovendo === pergunta.id 
+                                ? '0 4px 12px rgba(33, 150, 243, 0.3)' 
+                                : 'none',
+                              '&:hover': {
+                                bgcolor: perguntaMovendo === pergunta.id ? '#e3f2fd' : '#f0f0f0',
+                                boxShadow: perguntaMovendo === pergunta.id 
+                                  ? '0 4px 12px rgba(33, 150, 243, 0.3)' 
+                                  : '0 2px 8px rgba(0,0,0,0.1)',
+                              },
+                            }}
+                          >
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                minWidth: '24px',
+                                fontWeight: 600,
+                                color: 'text.secondary'
+                              }}
+                            >
+                              {index + 1}.
+                            </Typography>
+                            <Typography variant="body2" sx={{ flex: 1 }}>
+                              {pergunta.texto}
+                            </Typography>
+                            <Chip 
+                              label={`${pergunta.peso}%`} 
+                              size="small" 
+                              sx={{ 
+                                bgcolor: '#e3f2fd',
+                                color: '#1976d2',
+                                fontWeight: 600,
+                                minWidth: '50px'
+                              }} 
+                            />
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleMoverPergunta(index, 'up')}
+                                disabled={index === 0}
+                                sx={{ 
+                                  color: 'action.active',
+                                  '&:hover': { bgcolor: 'action.hover' },
+                                  '&:disabled': { color: 'action.disabled' }
+                                }}
+                                title="Mover para cima"
+                              >
+                                <ArrowUpwardIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleMoverPergunta(index, 'down')}
+                                disabled={index === perguntasAvaliacao.length - 1}
+                                sx={{ 
+                                  color: 'action.active',
+                                  '&:hover': { bgcolor: 'action.hover' },
+                                  '&:disabled': { color: 'action.disabled' }
+                                }}
+                                title="Mover para baixo"
+                              >
+                                <ArrowDownwardIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEditarPergunta(pergunta)}
+                                sx={{ 
+                                  color: 'info.main',
+                                  '&:hover': { bgcolor: 'info.light' }
+                                }}
+                                title="Editar pergunta"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setPerguntasAvaliacao(perguntasAvaliacao.filter(p => p.id !== pergunta.id));
+                                }}
+                                sx={{ 
+                                  color: 'error.main',
+                                  '&:hover': { bgcolor: 'error.light' }
+                                }}
+                                title="Excluir pergunta"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                </>
+              )}
+
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={handleBackStep}
+                  disabled={salvando}
+                  startIcon={<ArrowBackIcon />}
+                  sx={{
+                    minWidth: 140,
+                    py: 1.2,
+                    borderColor: 'grey.300',
+                    '&:hover': {
+                      borderColor: 'grey.400',
+                      bgcolor: 'grey.50',
+                    },
+                  }}
+                >
+                  Voltar
+                </Button>
+                <Button
+                  variant="contained"
                   startIcon={salvando ? <CircularProgress size={20} /> : <SaveIcon />}
                   onClick={handleSalvar}
-                  disabled={salvando || fases.length === 0}
+                  disabled={salvando}
                   sx={{
                     minWidth: 180,
                     py: 1.2,
@@ -1349,6 +1771,134 @@ const CriarJornada: React.FC = () => {
           onClose={() => setAbrirModalFase(false)}
           onSave={handleAddFase}
         />
+
+        {/* Dialog Adicionar/Editar Pergunta de Avaliação */}
+        <Dialog
+          open={abrirModalPergunta}
+          onClose={handleFecharModalPergunta}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{perguntaEditando ? 'Editar Pergunta' : 'Adicionar Pergunta'}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              <TextField
+                fullWidth
+                label="Texto da Pergunta"
+                value={novaPergunta.texto}
+                onChange={(e) =>
+                  setNovaPergunta({ ...novaPergunta, texto: e.target.value })
+                }
+                margin="normal"
+                required
+                multiline
+                rows={2}
+              />
+
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Tipo de Pergunta</InputLabel>
+                <Select
+                  value={novaPergunta.tipo}
+                  onChange={(e: any) => {
+                    const novoTipo = e.target.value;
+                    setNovaPergunta({
+                      ...novaPergunta,
+                      tipo: novoTipo,
+                      alternativas: novoTipo === 'TEXTO_LIVRE' || novoTipo === 'NOTA' ? [] : novaPergunta.alternativas,
+                    });
+                  }}
+                  label="Tipo de Pergunta"
+                >
+                  <MenuItem value="MULTIPLA_ESCOLHA">Múltipla Escolha</MenuItem>
+                  <MenuItem value="TEXTO_LIVRE">Texto Livre</MenuItem>
+                  <MenuItem value="NOTA">Nota (0-10)</MenuItem>
+                  <MenuItem value="SIM_NAO">Sim/Não</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Peso da Pergunta (%)"
+                type="number"
+                value={novaPergunta.peso}
+                onChange={(e) => {
+                  const valor = parseInt(e.target.value) || 0;
+                  setNovaPergunta({ ...novaPergunta, peso: Math.min(Math.max(valor, 0), 100) });
+                }}
+                inputProps={{ min: 0, max: 100 }}
+                helperText="Peso de 0% a 100% (quanto maior, mais importante a pergunta)"
+                margin="normal"
+                InputProps={{
+                  endAdornment: <Typography sx={{ color: 'text.secondary' }}>%</Typography>,
+                }}
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={novaPergunta.obrigatoria}
+                    onChange={(e) =>
+                      setNovaPergunta({ ...novaPergunta, obrigatoria: e.target.checked })
+                    }
+                  />
+                }
+                label="Pergunta Obrigatória"
+                sx={{ mt: 2 }}
+              />
+
+              {/* Informação sobre as alternativas */}
+              {novaPergunta.tipo === 'MULTIPLA_ESCOLHA' && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Esta pergunta usará automaticamente uma escala de 1 a 5:
+                  <br />
+                  1 - Muito Insatisfeito
+                  <br />
+                  2 - Insatisfeito
+                  <br />
+                  3 - Neutro
+                  <br />
+                  4 - Satisfeito
+                  <br />
+                  5 - Muito Satisfeito
+                </Alert>
+              )}
+
+              {novaPergunta.tipo === 'SIM_NAO' && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Esta pergunta terá duas opções: Não (valor 1) e Sim (valor 5)
+                </Alert>
+              )}
+
+              {novaPergunta.tipo === 'NOTA' && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  O participante poderá dar uma nota de 0 a 10
+                </Alert>
+              )}
+
+              {novaPergunta.tipo === 'TEXTO_LIVRE' && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <strong>Atenção:</strong> Perguntas de texto livre não são contabilizadas na pontuação da avaliação.
+                  São apenas para feedback qualitativo.
+                </Alert>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5 }}>
+            <Button onClick={handleFecharModalPergunta} color="inherit">
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleAdicionarPergunta}
+              sx={{
+                bgcolor: '#ff2c19',
+                '&:hover': { bgcolor: '#e62816' },
+              }}
+            >
+              {perguntaEditando ? 'Salvar' : 'Adicionar'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </AdminLayout>
     </>

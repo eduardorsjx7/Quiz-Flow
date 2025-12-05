@@ -13,6 +13,7 @@ model Usuario {
   email        String?     @unique
   matricula    String?
   nomeExibicao String? // Nome que aparece no ranking
+  fotoPerfil   String? // URL da foto de perfil
   senha        String?
   tipo         TipoUsuario @default(COLABORADOR)
   grupoId      Int? // Departamento/grupo do colaborador
@@ -74,6 +75,7 @@ model Fase {
   jornada      Jornada           @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
   quizzes      Quiz[]
   desbloqueios DesbloqueioFase[]
+  avaliacoes   AvaliacaoJornada[]
 
   @@map("fases")
 }
@@ -227,6 +229,7 @@ model Resposta {
 model AvaliacaoJornada {
   id          Int      @id @default(autoincrement())
   jornadaId   Int
+  faseId      Int?     // ID da fase que esta avaliação avalia (null se for avaliação geral da jornada)
   titulo      String // Ex: "Avaliação de Qualidade da Jornada"
   descricao   String?
   ativo       Boolean  @default(true)
@@ -236,6 +239,7 @@ model AvaliacaoJornada {
   updatedAt   DateTime @updatedAt
 
   jornada   Jornada             @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
+  fase      Fase?               @relation(fields: [faseId], references: [id], onDelete: Cascade)
   perguntas PerguntaAvaliacao[]
   respostas RespostaAvaliacao[]
 

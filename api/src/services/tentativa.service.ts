@@ -302,6 +302,8 @@ export class TentativaService {
               nome: true,
               email: true,
               matricula: true,
+              nomeExibicao: true,
+              fotoPerfil: true,
             },
           },
           respostas: {

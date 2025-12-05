@@ -8,6 +8,7 @@ interface Usuario {
   tipo: string;
   matricula?: string;
   nomeExibicao?: string;
+  fotoPerfil?: string;
 }
 
 interface AuthContextType {
@@ -37,6 +38,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listener para atualizar usuário quando houver mudanças
+  useEffect(() => {
+    const handleUserUpdate = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken && !verificandoRef.current) {
+        await verificarToken(storedToken);
+      }
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

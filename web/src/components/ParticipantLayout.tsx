@@ -76,6 +76,7 @@ const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
         onToggleCollapse={handleDesktopToggle}
         usuarioNome={usuario?.nome}
         usuarioTipo={usuario?.tipo}
+        usuarioFotoPerfil={usuario?.fotoPerfil}
       />
 
       {/* AppBar */}

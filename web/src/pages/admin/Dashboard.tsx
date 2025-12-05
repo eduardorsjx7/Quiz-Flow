@@ -26,7 +26,7 @@ import {
   IconButton,
 } from '@mui/material';
 import {
-  Visibility as VisibilityIcon,
+  Assessment as AssessmentIcon,
   Route as RouteIcon,
   Search as SearchIcon,
   EmojiEvents as TrophyIcon,
@@ -36,11 +36,11 @@ import {
   Close as CloseIcon,
   Flag as FlagIcon,
   Add as AddIcon,
-  PlayArrow as PlayArrowIcon,
   LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
+import { construirUrlFotoPerfil } from '../../utils/fotoPerfil';
 
 interface Jornada {
   id: number;
@@ -65,6 +65,8 @@ interface UsuarioRanking {
   id: number;
   nome: string;
   email: string;
+  nomeExibicao?: string;
+  fotoPerfil?: string;
   pontuacaoTotal: number;
   tentativas: number;
   acertos: number;
@@ -222,6 +224,8 @@ const AdminDashboard: React.FC = () => {
                   id: item.usuario.id,
                   nome: item.usuario.nome,
                   email: item.usuario.email,
+                  nomeExibicao: (item.usuario as any).nomeExibicao || undefined,
+                  fotoPerfil: (item.usuario as any).fotoPerfil || undefined,
                   pontuacaoTotal: item.pontuacaoTotal,
                   tentativas: item.tentativas,
                   acertos: item.acertos,
@@ -709,16 +713,16 @@ const AdminDashboard: React.FC = () => {
                       )}
                     </Box>
 
-                    {/* Título e Status */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    {/* Título */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 1 }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
                           fontWeight: 'bold', 
                           color: !jornada.ativo ? '#9e9e9e' : '#011b49',
-                          flex: 1,
                           fontSize: '1rem',
                           cursor: 'pointer',
+                          textAlign: 'center',
                           '&:hover': {
                             color: jornada.ativo ? '#e62816' : '#9e9e9e',
                           },
@@ -734,12 +738,6 @@ const AdminDashboard: React.FC = () => {
                       >
                         {jornada.titulo}
                       </Typography>
-                      <Chip
-                        label={jornada.ativo ? 'Ativa' : 'Inativa'}
-                        color={jornada.ativo ? 'success' : 'default'}
-                        size="small"
-                        sx={{ fontWeight: 600, ml: 1 }}
-                      />
                     </Box>
 
                     {/* Descrição */}
@@ -762,7 +760,7 @@ const AdminDashboard: React.FC = () => {
                     )}
 
                     {/* Chip - Fase atual */}
-                    <Box sx={{ mb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Box sx={{ mb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
                       {jornada.todasFasesAbertas ? (
                         <Chip
                           icon={<LockOpenIcon sx={{ fontSize: 16 }} />}
@@ -770,17 +768,20 @@ const AdminDashboard: React.FC = () => {
                           color="success"
                           size="small"
                           sx={{
-                            fontWeight: 600,
+                            fontWeight: 500,
+                            backgroundColor: '#011b49',
+                            color: '#fff',
                           }}
                         />
                       ) : jornada.faseAtual ? (
                         <Chip
-                          icon={<PlayArrowIcon sx={{ fontSize: 16 }} />}
                           label={`${jornada.faseAtual.ordem}ª - ${jornada.faseAtual.titulo}`}
                           color="primary"
                           size="small"
                           variant="outlined"
                           sx={{
+                            border: '1px solid #011b49',
+                            color: '#011b49',
                             fontWeight: 600,
                           }}
                         />
@@ -802,8 +803,7 @@ const AdminDashboard: React.FC = () => {
                     <Box sx={{ mt: 'auto', pt: 1 }}>
                     <Button
                       fullWidth
-                      variant="contained"
-                      startIcon={<VisibilityIcon />}
+                      startIcon={<AssessmentIcon />}
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/admin/jornadas/${jornada.id}`);
@@ -813,13 +813,16 @@ const AdminDashboard: React.FC = () => {
                         py: 1,
                         borderRadius: 2,
                         fontSize: '0.85rem',
-                        background: !jornada.ativo 
-                          ? 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)'
-                          : 'linear-gradient(135deg, #ff2c19 0%, #e62816 100%)',
+                        backgroundColor: !jornada.ativo 
+                          ? '#9e9e9e'
+                          : '#011b49',
+                        color: !jornada.ativo
+                          ? '#ffffff'
+                          : '#fff3e0',
                         '&:hover': {
-                          background: !jornada.ativo
-                            ? 'linear-gradient(135deg, #757575 0%, #9e9e9e 100%)'
-                            : 'linear-gradient(135deg, #e62816 0%, #ff2c19 100%)',
+                          backgroundColor: !jornada.ativo
+                            ? '#757575'
+                            : '#ff2c19',
                           transform: jornada.ativo ? 'translateY(-2px)' : 'none',
                           boxShadow: jornada.ativo 
                             ? '0 6px 16px rgba(255, 44, 25, 0.3)' 
@@ -827,9 +830,9 @@ const AdminDashboard: React.FC = () => {
                         },
                         transition: 'all 0.3s ease-in-out',
                       }}
-                      aria-label={`Ver detalhes da jornada ${jornada.titulo}`}
+                      aria-label={`Analisar jornada ${jornada.titulo}`}
                     >
-                      Ver Jornada
+                      Analisar Jornada
                     </Button>
                     </Box>
                   </Paper>
@@ -1012,8 +1015,11 @@ const AdminDashboard: React.FC = () => {
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative' }}>
                                 <Box sx={{ position: 'relative' }}>
-                                  <Avatar sx={{ bgcolor: '#e62816', width: 45, height: 45, fontSize: '1.1rem' }}>
-                                    {usuario.nome.charAt(0).toUpperCase()}
+                                  <Avatar 
+                                    src={construirUrlFotoPerfil(usuario.fotoPerfil) || undefined}
+                                    sx={{ bgcolor: '#e62816', width: 45, height: 45, fontSize: '1.1rem' }}
+                                  >
+                                    {!usuario.fotoPerfil && (usuario.nomeExibicao || usuario.nome).charAt(0).toUpperCase()}
                                   </Avatar>
                                   {index < 3 && (
                                     <Box
@@ -1038,7 +1044,7 @@ const AdminDashboard: React.FC = () => {
                                 </Box>
                                 <Box>
                                   <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                                    {(usuario as any).nomeExibicao || usuario.nome}
+                                    {usuario.nomeExibicao || usuario.nome}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
                                     {usuario.email}

@@ -18,6 +18,7 @@ import {
   Paper,
   Tabs,
   Tab,
+  Avatar,
 } from '@mui/material';
 import {
   EmojiEvents as TrophyIcon,
@@ -28,12 +29,15 @@ import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
 import { useAuth } from '../../contexts/AuthContext';
+import { construirUrlFotoPerfil } from '../../utils/fotoPerfil';
 
 interface RankingItem {
   posicao: number;
   usuario: {
     id: number;
     nome: string;
+    nomeExibicao?: string;
+    fotoPerfil?: string;
   };
   pontuacaoTotal: number;
 }
@@ -221,10 +225,27 @@ const Pontuacoes: React.FC = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        {item.usuario.nome}
-                        {item.usuario.id === usuario?.id && (
-                          <Chip label="Você" size="small" color="primary" sx={{ ml: 1 }} />
-                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            src={construirUrlFotoPerfil(item.usuario.fotoPerfil) || undefined}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              bgcolor: 'primary.main',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            {!item.usuario.fotoPerfil && (item.usuario.nomeExibicao || item.usuario.nome).charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" component="span">
+                              {item.usuario.nomeExibicao || item.usuario.nome}
+                            </Typography>
+                            {item.usuario.id === usuario?.id && (
+                              <Chip label="Você" size="small" color="primary" sx={{ ml: 1 }} />
+                            )}
+                          </Box>
+                        </Box>
                       </TableCell>
                       <TableCell align="right">
                         <strong>{item.pontuacaoTotal}</strong>

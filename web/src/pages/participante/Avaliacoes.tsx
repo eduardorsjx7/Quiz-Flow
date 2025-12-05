@@ -10,61 +10,64 @@ import {
   Button,
   Box,
   Chip,
-  Tabs,
-  Tab,
   CircularProgress,
-  Alert,
+  Paper,
 } from '@mui/material';
 import {
-  PlayArrow as PlayIcon,
-  CheckCircle as CheckIcon,
-  AccessTime as TimeIcon,
-  Quiz as QuizIcon,
+  RateReview as RateReviewIcon,
+  Assignment as AssignmentIcon,
+  Route as RouteIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import AlertFixed from '../../components/AlertFixed';
 
-interface Quiz {
+interface AvaliacaoFase {
   id: number;
   titulo: string;
   descricao?: string;
-  status: 'pendente' | 'em_andamento' | 'concluido';
-  tentativa?: {
+  ativo: boolean;
+  obrigatorio: boolean;
+  faseCompletada: boolean;
+  jornada: {
     id: number;
-    status: string;
-    pontuacaoTotal: number;
-    finalizadaEm?: string;
+    titulo: string;
   };
   fase: {
     id: number;
     titulo: string;
-    jornada?: {
-      id: number;
-      titulo: string;
-    };
+    ordem: number;
   };
+  perguntas: Array<{
+    id: number;
+    texto: string;
+    tipo: string;
+    ordem: number;
+    obrigatoria: boolean;
+    peso: number;
+  }>;
   _count: {
-    perguntas: number;
+    respostas: number;
   };
 }
 
 const Avaliacoes: React.FC = () => {
   const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFase[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
-  const [abaAtiva, setAbaAtiva] = useState(0);
 
   useEffect(() => {
-    carregarQuizzes();
+    carregarAvaliacoes();
   }, []);
 
-  const carregarQuizzes = async () => {
+  const carregarAvaliacoes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/quizzes/disponiveis');
-      setQuizzes(response.data.data || response.data);
+      setErro('');
+      const response = await api.get('/avaliacoes/disponiveis');
+      const data = response.data.data || response.data;
+      setAvaliacoes(data);
     } catch (error: any) {
       setErro(error.response?.data?.error || 'Erro ao carregar avaliações');
     } finally {
@@ -72,38 +75,13 @@ const Avaliacoes: React.FC = () => {
     }
   };
 
-  const handleIniciarQuiz = async (quizId: number) => {
-    try {
-      const response = await api.post(`/tentativas/quiz/${quizId}/iniciar`);
-      const tentativa = response.data.data;
-      navigate(`/participante/quiz/${tentativa.id}`);
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao iniciar quiz');
-    }
+  const handleResponderAvaliacao = (avaliacaoId: number) => {
+    navigate(`/participante/responder-avaliacao/${avaliacaoId}`);
   };
-
-  const handleContinuarQuiz = (tentativaId: number) => {
-    navigate(`/participante/quiz/${tentativaId}`);
-  };
-
-  const handleVerResultado = (tentativaId: number) => {
-    navigate(`/participante/resultado/${tentativaId}`);
-  };
-
-  const quizzesPendentes = quizzes.filter((q) => q.status === 'pendente');
-  const quizzesEmAndamento = quizzes.filter((q) => q.status === 'em_andamento');
-  const quizzesConcluidos = quizzes.filter((q) => q.status === 'concluido');
-
-  const quizzesExibidos =
-    abaAtiva === 0
-      ? quizzesPendentes
-      : abaAtiva === 1
-      ? quizzesEmAndamento
-      : quizzesConcluidos;
 
   if (loading) {
     return (
-      <ParticipantLayout title="Avaliações">
+      <ParticipantLayout title="Avaliações de Fases">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
           <CircularProgress />
         </Box>
@@ -112,13 +90,18 @@ const Avaliacoes: React.FC = () => {
   }
 
   return (
-    <ParticipantLayout title="Avaliações">
+    <ParticipantLayout title="Avaliações de Fases">
       <Container maxWidth="lg">
         <Box display="flex" alignItems="center" gap={2} mb={3}>
-          <QuizIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-          <Typography variant="h4" component="h1">
-            Minhas Avaliações
-          </Typography>
+          <RateReviewIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+          <Box>
+            <Typography variant="h4" component="h1">
+              Avaliações de Fases
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Avalie as fases que você já completou
+            </Typography>
+          </Box>
         </Box>
 
         {erro && (
@@ -129,119 +112,91 @@ const Avaliacoes: React.FC = () => {
           />
         )}
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={abaAtiva} onChange={(_, novoValor) => setAbaAtiva(novoValor)}>
-            <Tab
-              label={`Pendentes (${quizzesPendentes.length})`}
-              icon={<TimeIcon />}
-              iconPosition="start"
-            />
-            <Tab
-              label={`Em Andamento (${quizzesEmAndamento.length})`}
-              icon={<PlayIcon />}
-              iconPosition="start"
-            />
-            <Tab
-              label={`Concluídos (${quizzesConcluidos.length})`}
-              icon={<CheckIcon />}
-              iconPosition="start"
-            />
-          </Tabs>
-        </Box>
-
-        {quizzesExibidos.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            {abaAtiva === 0
-              ? 'Nenhuma avaliação pendente no momento.'
-              : abaAtiva === 1
-              ? 'Nenhuma avaliação em andamento.'
-              : 'Nenhuma avaliação concluída ainda.'}
-          </Alert>
+        {avaliacoes.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <AssignmentIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Nenhuma avaliação disponível
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Complete as fases das jornadas para desbloquear as avaliações.
+            </Typography>
+          </Paper>
         ) : (
           <Grid container spacing={3}>
-            {quizzesExibidos.map((quiz) => (
-              <Grid item xs={12} md={6} lg={4} key={quiz.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {avaliacoes.map((avaliacao) => (
+              <Grid item xs={12} md={6} lg={4} key={avaliacao.id}>
+                <Card 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      boxShadow: 4,
+                      transform: 'translateY(-4px)',
+                    },
+                  }}
+                >
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
-                      <Typography variant="h6" component="h2">
-                        {quiz.titulo}
+                      <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                        {avaliacao.fase.titulo}
                       </Typography>
-                      <Chip
-                        label={
-                          quiz.status === 'pendente'
-                            ? 'Pendente'
-                            : quiz.status === 'em_andamento'
-                            ? 'Em Andamento'
-                            : 'Concluído'
-                        }
-                        color={
-                          quiz.status === 'pendente'
-                            ? 'default'
-                            : quiz.status === 'em_andamento'
-                            ? 'warning'
-                            : 'success'
-                        }
-                        size="small"
-                      />
+                      {avaliacao.obrigatorio && (
+                        <Chip
+                          label="Obrigatória"
+                          color="error"
+                          size="small"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      )}
                     </Box>
-                    {quiz.descricao && (
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        <RouteIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {avaliacao.jornada.titulo}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <AssignmentIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Fase {avaliacao.fase.ordem}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {avaliacao.descricao && (
                       <Typography variant="body2" color="text.secondary" paragraph>
-                        {quiz.descricao}
+                        {avaliacao.descricao}
                       </Typography>
                     )}
-                    {quiz.fase.jornada && (
+
+                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="body2" color="text.secondary">
-                        Jornada: {quiz.fase.jornada.titulo}
+                        <strong>{avaliacao.perguntas.length}</strong> {avaliacao.perguntas.length === 1 ? 'pergunta' : 'perguntas'}
                       </Typography>
-                    )}
-                    <Typography variant="body2" color="text.secondary">
-                      Fase: {quiz.fase.titulo}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {quiz._count.perguntas} {quiz._count.perguntas === 1 ? 'pergunta' : 'perguntas'}
-                    </Typography>
-                    {quiz.tentativa && quiz.status === 'concluido' && (
-                      <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-                        Pontuação: {quiz.tentativa.pontuacaoTotal} pontos
-                      </Typography>
-                    )}
+                    </Box>
                   </CardContent>
-                  <CardActions>
-                    {quiz.status === 'pendente' && (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<PlayIcon />}
-                        onClick={() => handleIniciarQuiz(quiz.id)}
-                        fullWidth
-                      >
-                        Iniciar Avaliação
-                      </Button>
-                    )}
-                    {quiz.status === 'em_andamento' && quiz.tentativa && (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="warning"
-                        startIcon={<PlayIcon />}
-                        onClick={() => handleContinuarQuiz(quiz.tentativa!.id)}
-                        fullWidth
-                      >
-                        Continuar Avaliação
-                      </Button>
-                    )}
-                    {quiz.status === 'concluido' && quiz.tentativa && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<CheckIcon />}
-                        onClick={() => handleVerResultado(quiz.tentativa!.id)}
-                        fullWidth
-                      >
-                        Ver Resultado
-                      </Button>
-                    )}
+                  <CardActions sx={{ p: 2, pt: 0 }}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      startIcon={<RateReviewIcon />}
+                      onClick={() => handleResponderAvaliacao(avaliacao.id)}
+                      sx={{
+                        bgcolor: '#ff2c19',
+                        '&:hover': {
+                          bgcolor: '#e62816',
+                        },
+                      }}
+                    >
+                      Responder Avaliação
+                    </Button>
                   </CardActions>
                 </Card>
               </Grid>
@@ -254,4 +209,3 @@ const Avaliacoes: React.FC = () => {
 };
 
 export default Avaliacoes;
-

@@ -470,6 +470,8 @@ export class JornadaService {
                           nome: true,
                           email: true,
                           matricula: true,
+                          nomeExibicao: true,
+                          fotoPerfil: true,
                         },
                       },
                       respostas: true,

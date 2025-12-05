@@ -1,10 +1,47 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import prisma from '../config/database';
 import logger from '../config/logger';
 import config from '../config/env';
 import { CustomError, asyncHandler } from '../middleware/errorHandler';
+
+// Configurar storage do multer para fotos de perfil
+const storagePerfil = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/perfis';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const userId = (req as any).userId || 'temp';
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `perfil-${userId}-${uniqueSuffix}${ext}`);
+  },
+});
+
+// Filtro para aceitar apenas imagens
+const fileFilterPerfil = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Apenas arquivos de imagem são permitidos'));
+  }
+};
+
+export const uploadFotoPerfil = multer({
+  storage: storagePerfil,
+  fileFilter: fileFilterPerfil,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB
+  },
+});
 
 export const login = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
@@ -240,6 +277,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response, next: Next
         tipo: true,
         matricula: true,
         nomeExibicao: true,
+        fotoPerfil: true,
       },
     });
 
@@ -374,6 +412,7 @@ export const atualizarUsuario = asyncHandler(async (req: Request, res: Response,
       email: email || usuario.email,
       matricula: matricula !== undefined ? matricula : usuario.matricula,
       nomeExibicao: (req.body.nomeExibicao !== undefined ? req.body.nomeExibicao : usuario.nomeExibicao) as any,
+      fotoPerfil: (req.body.fotoPerfil !== undefined ? req.body.fotoPerfil : usuario.fotoPerfil) as any,
     },
     select: {
       id: true,
@@ -381,6 +420,7 @@ export const atualizarUsuario = asyncHandler(async (req: Request, res: Response,
       email: true,
       matricula: true,
       nomeExibicao: true,
+      fotoPerfil: true,
       tipo: true,
     },
   });
@@ -439,6 +479,67 @@ export const alterarSenha = asyncHandler(async (req: Request, res: Response, nex
   });
 });
 
+export const uploadFoto = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as any).userId;
+  const file = req.file;
+
+  if (!file) {
+    throw new CustomError('Nenhuma imagem foi enviada', 400);
+  }
+
+  // Verificar se o usuário existe
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+  });
+
+  if (!usuario) {
+    // Deletar arquivo se usuário não existe
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    throw new CustomError('Usuário não encontrado', 404);
+  }
+
+  // Deletar foto antiga se existir
+  if (usuario.fotoPerfil) {
+    const oldPath = usuario.fotoPerfil.replace('/uploads/', 'uploads/');
+    if (fs.existsSync(oldPath)) {
+      try {
+        fs.unlinkSync(oldPath);
+      } catch (error) {
+        logger.warn('Erro ao deletar foto antiga', { userId, oldPath, error });
+      }
+    }
+  }
+
+  // Salvar caminho da nova foto
+  const fotoPath = `/uploads/perfis/${file.filename}`;
+  
+  const usuarioAtualizado = await prisma.usuario.update({
+    where: { id: userId },
+    data: {
+      fotoPerfil: fotoPath,
+    },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      tipo: true,
+      matricula: true,
+      nomeExibicao: true,
+      fotoPerfil: true,
+    },
+  });
+
+  logger.info('Profile photo uploaded', { userId, fotoPath });
+
+  res.json({
+    success: true,
+    message: 'Foto de perfil atualizada com sucesso',
+    data: usuarioAtualizado,
+  });
+});
+
 export const deletarUsuario = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -455,6 +556,18 @@ export const deletarUsuario = asyncHandler(async (req: Request, res: Response, n
   const currentUserId = (req as any).userId;
   if (currentUserId === userId) {
     throw new CustomError('Você não pode deletar seu próprio usuário', 400);
+  }
+
+  // Deletar foto de perfil se existir
+  if (usuario.fotoPerfil) {
+    const fotoPath = usuario.fotoPerfil.replace('/uploads/', 'uploads/');
+    if (fs.existsSync(fotoPath)) {
+      try {
+        fs.unlinkSync(fotoPath);
+      } catch (error) {
+        logger.warn('Erro ao deletar foto de perfil', { userId, fotoPath, error });
+      }
+    }
   }
 
   await prisma.usuario.delete({

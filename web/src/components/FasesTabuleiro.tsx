@@ -913,8 +913,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       cx={pos.x - 20}
                       cy={pos.y + circleRadius + 65}
                       r="16"
-                      fill="#2196F3"
-                      stroke="#1976D2"
+                      fill="#011b49e0"
+                      stroke="#011b49"
                       strokeWidth="2"
                       style={{
                         cursor: 'pointer',
@@ -928,11 +928,13 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       }}
                       onMouseEnter={(e: React.MouseEvent<SVGCircleElement>) => {
                         e.currentTarget.setAttribute('r', '18');
-                        e.currentTarget.setAttribute('fill', '#1976D2');
+                        e.currentTarget.setAttribute('fill', '#ff2c19');
+                        e.currentTarget.setAttribute('stroke', '#ff2c19');
                       }}
                       onMouseLeave={(e: React.MouseEvent<SVGCircleElement>) => {
                         e.currentTarget.setAttribute('r', '16');
-                        e.currentTarget.setAttribute('fill', '#2196F3');
+                        e.currentTarget.setAttribute('fill', '#011b49e0');
+                        e.currentTarget.setAttribute('stroke', '#011b49');
                       }}
                     />
                     <foreignObject
@@ -949,7 +951,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                           justifyContent: 'center',
                           width: '100%',
                           height: '100%',
-                          color: '#ffffff',
+                          color: '#fff3e0',
                         }}
                       >
                         <EditIcon sx={{ fontSize: '18px' }} />
@@ -961,8 +963,8 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       cx={pos.x + 20}
                       cy={pos.y + circleRadius + 65}
                       r="16"
-                      fill="#f44336"
-                      stroke="#d32f2f"
+                      fill="#011b49e0"
+                      stroke="#011b49"
                       strokeWidth="2"
                       style={{
                         cursor: 'pointer',
@@ -976,11 +978,13 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                       }}
                       onMouseEnter={(e: React.MouseEvent<SVGCircleElement>) => {
                         e.currentTarget.setAttribute('r', '18');
-                        e.currentTarget.setAttribute('fill', '#d32f2f');
+                        e.currentTarget.setAttribute('fill', '#ff2c19');
+                        e.currentTarget.setAttribute('stroke', '#ff2c19');
                       }}
                       onMouseLeave={(e: React.MouseEvent<SVGCircleElement>) => {
                         e.currentTarget.setAttribute('r', '16');
-                        e.currentTarget.setAttribute('fill', '#f44336');
+                        e.currentTarget.setAttribute('fill', '#011b49e0');
+                        e.currentTarget.setAttribute('stroke', '#011b49');
                       }}
                     />
                     <foreignObject
@@ -997,7 +1001,7 @@ const FasesTabuleiro: React.FC<FasesTabuleiroProps> = ({
                           justifyContent: 'center',
                           width: '100%',
                           height: '100%',
-                          color: '#ffffff',
+                          color: '#fff3e0',
                         }}
                       >
                         <CloseIcon sx={{ fontSize: '18px' }} />

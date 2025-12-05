@@ -392,17 +392,10 @@ const FasesJornada: React.FC = () => {
             <IconButton
               onClick={handleAbrirModal}
               sx={{
-                width: 48,
-                height: 48,
-                bgcolor: '#ff2c19',
-                color: '#ffffff',
-                border: '2px solid #e62816',
-                borderRadius: '50%',
-                transition: 'all 0.2s ease-in-out',
+                backgroundColor: '#011b49e0',
+                color: '#fff3e0',
                 '&:hover': {
-                  bgcolor: '#e62816',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                  backgroundColor: '#ff2c19',
                 },
               }}
               title="Adicionar Fase"
@@ -412,17 +405,10 @@ const FasesJornada: React.FC = () => {
             <IconButton
               onClick={() => navigate(`/admin/jornadas/${jornadaId}/avaliacao`)}
               sx={{
-                width: 48,
-                height: 48,
-                bgcolor: '#ff2c19',
-                color: '#ffffff',
-                border: '2px solid #e62816',
-                borderRadius: '50%',
-                transition: 'all 0.2s ease-in-out',
+                backgroundColor: '#011b49e0',
+                color: '#fff3e0',
                 '&:hover': {
-                  bgcolor: '#e62816',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                  backgroundColor: '#ff2c19',
                 },
               }}
               title="Avaliação da Jornada"
@@ -432,17 +418,10 @@ const FasesJornada: React.FC = () => {
             <IconButton
               onClick={() => navigate(`/admin/jornadas/${jornadaId}/configurar`)}
               sx={{
-                width: 48,
-                height: 48,
-                bgcolor: '#ff2c19',
-                color: '#ffffff',
-                border: '2px solid #e62816',
-                borderRadius: '50%',
-                transition: 'all 0.2s ease-in-out',
+                backgroundColor: '#011b49e0',
+                color: '#fff3e0',
                 '&:hover': {
-                  bgcolor: '#e62816',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                  backgroundColor: '#ff2c19',
                 },
               }}
               title="Configurar Jornada"

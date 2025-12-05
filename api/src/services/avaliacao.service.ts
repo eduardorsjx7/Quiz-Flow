@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 export interface CriarAvaliacaoDTO {
   jornadaId: number;
+  faseId?: number; // ID da fase (opcional, null se for avaliação geral)
   titulo: string;
   descricao?: string;
   ativo?: boolean;
@@ -44,6 +45,7 @@ export class AvaliacaoService {
       const avaliacao = await prisma.avaliacaoJornada.create({
         data: {
           jornadaId: dados.jornadaId,
+          faseId: dados.faseId ?? null,
           titulo: dados.titulo,
           descricao: dados.descricao,
           ativo: dados.ativo ?? true,
@@ -142,6 +144,118 @@ export class AvaliacaoService {
       return avaliacoes;
     } catch (error) {
       logger.error('Erro ao listar avaliações', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Listar avaliações disponíveis para um usuário
+   * Retorna apenas avaliações de fases que o usuário já completou e ainda não respondeu
+   */
+  async listarAvaliacoesDisponiveis(usuarioId: number) {
+    try {
+      // Buscar todas as avaliações ativas que estão vinculadas a fases
+      const avaliacoes = await prisma.avaliacaoJornada.findMany({
+        where: {
+          ativo: true,
+          faseId: { not: null }, // Apenas avaliações de fases
+        },
+        include: {
+          jornada: {
+            select: {
+              id: true,
+              titulo: true,
+            },
+          },
+          fase: {
+            select: {
+              id: true,
+              titulo: true,
+              ordem: true,
+            },
+          },
+          perguntas: {
+            include: {
+              alternativas: {
+                orderBy: {
+                  ordem: 'asc',
+                },
+              },
+            },
+            orderBy: {
+              ordem: 'asc',
+            },
+          },
+          respostas: {
+            where: {
+              usuarioId,
+            },
+            select: {
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Verificar quais fases foram completadas pelo usuário
+      const avaliacoesDisponiveis = [];
+      
+      for (const avaliacao of avaliacoes) {
+        if (!avaliacao.faseId || !avaliacao.fase) continue;
+        
+        // Verificar se o usuário já respondeu esta avaliação
+        const jaRespondeu = avaliacao.respostas.length > 0;
+        if (jaRespondeu) continue;
+
+        // Verificar se a fase foi completada (todos os quizzes da fase têm tentativas finalizadas)
+        const faseId = avaliacao.faseId;
+        const fase = await prisma.fase.findUnique({
+          where: { id: faseId },
+          include: {
+            quizzes: {
+              where: { ativo: true },
+              select: { id: true },
+            },
+          },
+        });
+
+        if (!fase) continue;
+
+        // Buscar tentativas finalizadas do usuário para os quizzes desta fase
+        const quizIds = fase.quizzes.map(q => q.id);
+        if (quizIds.length === 0) continue;
+
+        const tentativasFinalizadas = await prisma.tentativaQuiz.findMany({
+          where: {
+            quizId: { in: quizIds },
+            usuarioId,
+            status: 'FINALIZADA',
+          },
+          select: {
+            quizId: true,
+          },
+        });
+
+        // Verificar se todos os quizzes foram completados
+        const todosQuizzesCompletados = quizIds.every(quizId =>
+          tentativasFinalizadas.some(t => t.quizId === quizId)
+        );
+
+        if (todosQuizzesCompletados) {
+          avaliacoesDisponiveis.push({
+            ...avaliacao,
+            respostas: undefined, // Remover informações de respostas
+            faseCompletada: true,
+          });
+        }
+      }
+
+      return avaliacoesDisponiveis;
+    } catch (error) {
+      logger.error('Erro ao listar avaliações disponíveis', { error, usuarioId });
       throw error;
     }
   }

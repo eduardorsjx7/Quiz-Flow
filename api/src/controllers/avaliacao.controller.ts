@@ -118,6 +118,34 @@ export class AvaliacaoController {
   }
 
   /**
+   * Listar avaliações disponíveis para o usuário
+   */
+  async listarDisponiveis(req: Request, res: Response) {
+    try {
+      const usuarioId = (req as any).userId;
+      if (!usuarioId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Usuário não autenticado',
+        });
+      }
+
+      const avaliacoes = await avaliacaoService.listarAvaliacoesDisponiveis(usuarioId);
+      
+      return res.status(200).json({
+        success: true,
+        data: avaliacoes,
+      });
+    } catch (error: any) {
+      logger.error('Erro ao listar avaliações disponíveis', { error });
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Erro ao listar avaliações disponíveis',
+      });
+    }
+  }
+
+  /**
    * Responder avaliação
    */
   async responder(req: Request, res: Response) {

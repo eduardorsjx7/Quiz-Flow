@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { MenuItem } from '../config/menuConfig';
 import { useNavigation } from '../contexts/NavigationContext';
+import { construirUrlFotoPerfil } from '../utils/fotoPerfil';
 
 interface SidebarProps {
   open: boolean;
@@ -33,6 +34,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
   usuarioNome?: string;
   usuarioTipo?: string;
+  usuarioFotoPerfil?: string;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -43,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   collapsed = false,
   onToggleCollapse,
   usuarioNome,
+  usuarioFotoPerfil,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,6 +55,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [hoverCollapsed, setHoverCollapsed] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMouseOverRef = useRef<boolean>(false);
+  const preventCollapseRef = useRef<boolean>(false);
 
   // Colapso efetivo no desktop
   const isCollapsed = isMobile ? false : (collapsed && !hoverCollapsed);
@@ -60,8 +65,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleMouseEnter = () => {
     if (isMobile) return;
+    isMouseOverRef.current = true;
+    preventCollapseRef.current = false;
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
     }
     if (collapsed) {
       setHoverCollapsed(true);
@@ -70,11 +78,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleMouseLeave = () => {
     if (isMobile) return;
+    // Não encolher se estiver prevenindo o colapso (durante clique)
+    if (preventCollapseRef.current) {
+      return;
+    }
+    isMouseOverRef.current = false;
     hoverTimeoutRef.current = setTimeout(() => {
-      if (collapsed) {
+      // Só encolhe se o mouse realmente saiu e não está mais sobre o menu
+      if (collapsed && !isMouseOverRef.current && !preventCollapseRef.current) {
         setHoverCollapsed(false);
       }
-    }, 200);
+    }, 300);
   };
 
   useEffect(() => {
@@ -86,6 +100,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   const handleItemClick = async (item: MenuItem) => {
+    // Prevenir o colapso durante o clique
+    if (!isMobile && collapsed) {
+      preventCollapseRef.current = true;
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+    }
+
     if (item.children && item.children.length > 0) {
       const newExpanded = new Set(expandedItems);
       if (newExpanded.has(item.id)) {
@@ -109,18 +132,39 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClose();
       }
     }
+
+    // Após um pequeno delay, permitir o colapso novamente se o mouse não estiver sobre o menu
+    if (!isMobile && collapsed) {
+      setTimeout(() => {
+        // Verificar se o mouse ainda está sobre o menu
+        if (!isMouseOverRef.current) {
+          preventCollapseRef.current = false;
+          // Se o mouse não estiver mais sobre o menu, iniciar o timeout para encolher
+          hoverTimeoutRef.current = setTimeout(() => {
+            if (collapsed && !isMouseOverRef.current && !preventCollapseRef.current) {
+              setHoverCollapsed(false);
+            }
+          }, 300);
+        } else {
+          // Se o mouse ainda estiver sobre o menu, manter expandido
+          preventCollapseRef.current = false;
+        }
+      }, 100);
+    }
   };
 
   const isActive = (item: MenuItem): boolean => {
     // Exceção: rota de Configurar Jornada deve ativar "Fases" e não "Jornadas"
     const isConfigurarJornadaPath = /^\/admin\/jornadas\/\d+\/configurar$/.test(location.pathname);
+    // Exceção: rota de Avaliação de Fases deve ativar "Fases" e não "Jornadas"
+    const isAvaliacaoFasesPath = /^\/admin\/jornadas\/\d+\/avaliacao$/.test(location.pathname);
     
     // Caso especial: item "Jornadas" (id: 'jornadas') deve estar ativo para rotas relacionadas a jornadas
     // Incluindo /admin/jornadas/:id (detalhes), mas não /admin/jornadas/novo
-    // Exceção: não ativar para rota de configurar jornada
+    // Exceção: não ativar para rota de configurar jornada ou avaliação de fases
     if (item.id === 'jornadas') {
-      if (isConfigurarJornadaPath) {
-        return false; // Não ativar Jornadas para rota de configurar
+      if (isConfigurarJornadaPath || isAvaliacaoFasesPath) {
+        return false; // Não ativar Jornadas para rota de configurar ou avaliação
       }
       
       // Para admin
@@ -138,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         /^\/participante\/resultado\/\d+/.test(location.pathname) || // /participante/resultado/:tentativaId
         /^\/participante\/ranking\/\d+/.test(location.pathname); // /participante/ranking/:tentativaId
       
-      if ((isAdminJornadasPath && !location.pathname.includes('/fases')) || isParticipanteJornadasPath) {
+      if ((isAdminJornadasPath && !location.pathname.includes('/fases') && !isAvaliacaoFasesPath) || isParticipanteJornadasPath) {
         return true;
       }
     }
@@ -157,13 +201,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
     
     // Caso especial: /admin/fases deve estar ativo para rotas relacionadas a fases
-    // Incluindo a rota de Configurar Jornada (exceção)
+    // Incluindo a rota de Configurar Jornada e Avaliação de Fases (exceções)
     if (item.path === '/admin/fases') {
       const isFasesPath =
         location.pathname === '/admin/fases' ||
         location.pathname.startsWith('/admin/fases/') ||
         /^\/admin\/jornadas\/[^/]+\/fases/.test(location.pathname) ||
-        isConfigurarJornadaPath; // Exceção: configurar jornada ativa Fases
+        isConfigurarJornadaPath || // Exceção: configurar jornada ativa Fases
+        isAvaliacaoFasesPath; // Exceção: avaliação de fases ativa Fases
       return isFasesPath;
     }
     
@@ -396,6 +441,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <Avatar
+            src={construirUrlFotoPerfil(usuarioFotoPerfil) || undefined}
             sx={{
               width: 40,
               height: 40,
@@ -403,13 +449,21 @@ const Sidebar: React.FC<SidebarProps> = ({
               flexShrink: 0,
             }}
           >
-            <AccountCircleIcon
-              sx={{
-                fontSize: 32,
-                width: '100%',
-                height: '100%',
-              }}
-            />
+            {!usuarioFotoPerfil && (
+              usuarioNome ? (
+                <Typography variant="body2" sx={{ fontSize: '1rem', fontWeight: 'bold', color: 'white' }}>
+                  {usuarioNome.charAt(0).toUpperCase()}
+                </Typography>
+              ) : (
+                <AccountCircleIcon
+                  sx={{
+                    fontSize: 32,
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
+              )
+            )}
           </Avatar>
 
           <Box
@@ -514,6 +568,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         sx={{
           display: { xs: 'none', sm: 'block' },
           zIndex: 10001, // Na frente de tudo, inclusive AppBar
+          position: 'fixed',
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: desktopWidth,
@@ -527,6 +582,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             flexDirection: 'column',
             transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
             zIndex: 10001,
+            position: 'fixed',
+            top: 0,
+            left: 0,
             '&::-webkit-scrollbar': {
               width: '6px',
             },

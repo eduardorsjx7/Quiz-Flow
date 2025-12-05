@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
 import ConfettiOverlay from './ConfettiOverlay';
 import TituloRankingFinal from './TituloRankingFinal';
+import { construirUrlFotoPerfil } from '../utils/fotoPerfil';
 
 // Interface para dados do usuário
 interface Usuario {
   nome: string;
+  nomeExibicao?: string;
+  fotoPerfil?: string;
   [key: string]: any;
 }
 
@@ -109,6 +112,7 @@ const UserBadge: React.FC<UserBadgeProps> = ({ usuario, pontuacao, posicao, cor,
         
         {/* Avatar */}
         <Avatar
+          src={construirUrlFotoPerfil(usuario.fotoPerfil) || undefined}
           sx={{
             position: 'relative',
             width: { xs: posicao === 1 ? 70 : 60, sm: posicao === 1 ? 100 : 80, md: posicao === 1 ? 140 : 110 },
@@ -141,7 +145,7 @@ const UserBadge: React.FC<UserBadgeProps> = ({ usuario, pontuacao, posicao, cor,
             transition: 'all 0.3s ease',
           }}
         >
-          {usuario.nome.charAt(0).toUpperCase()}
+          {(usuario.nomeExibicao || usuario.nome).charAt(0).toUpperCase()}
         </Avatar>
       </Box>
 
@@ -157,7 +161,7 @@ const UserBadge: React.FC<UserBadgeProps> = ({ usuario, pontuacao, posicao, cor,
           zIndex: 2,
         }}
       >
-        {usuario.nome}
+        {usuario.nomeExibicao || usuario.nome}
       </Typography>
 
       {/* Pontuação */}

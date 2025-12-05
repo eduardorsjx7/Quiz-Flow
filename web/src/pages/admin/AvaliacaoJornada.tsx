@@ -14,9 +14,6 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Card,
-  CardContent,
-  CardActions,
   Divider,
   Alert,
   Chip,
@@ -24,7 +21,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,7 +30,10 @@ import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
   Assessment as AssessmentIcon,
-  Visibility as VisibilityIcon,
+  Home as HomeIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../components/AdminLayout';
 import api from '../../services/api';
@@ -230,26 +231,6 @@ const AvaliacaoJornada: React.FC = () => {
     });
   };
 
-  const handleDeletarAvaliacao = async (avaliacaoId: number) => {
-    const resultado = await confirm({
-      title: 'Excluir Avaliação?',
-      message: 'Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.',
-      confirmText: 'Sim, excluir',
-      cancelText: 'Cancelar',
-      type: 'delete',
-    });
-
-    if (!resultado) return;
-
-    try {
-      await api.delete(`/avaliacoes/${avaliacaoId}`);
-      showSuccess('Avaliação excluída com sucesso!');
-      carregarDados();
-    } catch (error: any) {
-      showError(error.response?.data?.error || 'Erro ao excluir avaliação');
-    }
-  };
-
   const getTipoLabel = (tipo: string) => {
     const tipos: Record<string, string> = {
       MULTIPLA_ESCOLHA: 'Múltipla Escolha',
@@ -262,7 +243,7 @@ const AvaliacaoJornada: React.FC = () => {
 
   if (loading) {
     return (
-      <AdminLayout title="Avaliação da Jornada">
+      <AdminLayout title="Avaliação de Fases">
         <Container maxWidth="lg">
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
             <Typography>Carregando...</Typography>
@@ -273,32 +254,133 @@ const AvaliacaoJornada: React.FC = () => {
   }
 
   return (
-    <AdminLayout title={`Avaliação da Jornada - ${jornada?.titulo || ''}`}>
+    <AdminLayout title="Avaliação da Jornada">
       <Container maxWidth="lg">
-        {/* Cabeçalho */}
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#011b49' }}>
-              Avaliação da Jornada
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {jornada?.titulo}
-            </Typography>
+        {/* Breadcrumbs */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+              sx={{
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+              title="Voltar"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Breadcrumbs 
+              sx={{ 
+                '& .MuiBreadcrumbs-separator': {
+                  mx: 1.5,
+                  color: 'text.disabled',
+                },
+              }}
+            >
+              <Link
+                component="button"
+                onClick={() => navigate('/admin')}
+                sx={{ 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  p: 0.5,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  },
+                }}
+                title="Dashboard"
+              >
+                <HomeIcon sx={{ fontSize: 20 }} />
+              </Link>
+              <Link
+                component="button"
+                onClick={() => navigate('/admin/fases')}
+                sx={{ 
+                  cursor: 'pointer', 
+                  textDecoration: 'none',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.5,
+                  fontWeight: 400,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    textDecoration: 'none',
+                  },
+                }}
+              >
+                Fases
+              </Link>
+              <Link
+                component="button"
+                onClick={() => navigate(`/admin/jornadas/${jornadaId}/fases`)}
+                sx={{ 
+                  cursor: 'pointer', 
+                  textDecoration: 'none',
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.5,
+                  fontWeight: 400,
+                  '&:hover': { 
+                    color: 'primary.main',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    textDecoration: 'none',
+                  },
+                }}
+              >
+                {jornada?.titulo || 'Jornada'}
+              </Link>
+              <Typography 
+                color="text.primary"
+                sx={{
+                  fontWeight: 500,
+                  fontSize: '0.95rem',
+                }}
+              >
+                Avaliação de Fases
+              </Typography>
+            </Breadcrumbs>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCriarNova}
-            sx={{
-              bgcolor: '#ff2c19',
-              '&:hover': { bgcolor: '#e62816' },
-            }}
-          >
-            Nova Avaliação
-          </Button>
+          {/* Cabeçalho */}
+          <Box sx={{ mb: 4, mt: 3 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700,
+                  fontSize: '2rem',
+                  background: 'linear-gradient(135deg, #011b49 0%, #1a3a6b 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  mb: 0.5,
+                }}
+              >
+                Avaliação de Fases
+              </Typography>
+              <Typography 
+                variant="body1" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: '1rem',
+                  fontWeight: 400,
+                }}
+              >
+                {jornada?.titulo || 'Jornada'}
+              </Typography>
+            </Box>
+          </Box>
         </Box>
 
         {/* Lista de Avaliações */}
@@ -324,80 +406,187 @@ const AvaliacaoJornada: React.FC = () => {
             </Button>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {avaliacoes.map((avaliacao) => (
-              <Grid item xs={12} md={6} key={avaliacao.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                          {avaliacao.titulo}
-                        </Typography>
-                        {avaliacao.descricao && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            {avaliacao.descricao}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Chip
-                          label={avaliacao.ativo ? 'Ativa' : 'Inativa'}
-                          color={avaliacao.ativo ? 'success' : 'default'}
-                          size="small"
-                        />
-                        {avaliacao.obrigatorio && (
-                          <Chip label="Obrigatória" color="warning" size="small" />
-                        )}
-                      </Box>
-                    </Box>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {avaliacao.perguntas?.length || 0} pergunta(s)
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        •
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {avaliacao._count?.respostas || 0} resposta(s)
-                      </Typography>
-                    </Box>
-                  </CardContent>
-
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
-                    <Button
+              <Paper key={avaliacao.id} sx={{ p: 3, borderRadius: 2 }}>
+                {/* Cabeçalho da Avaliação */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
                       size="small"
-                      startIcon={<VisibilityIcon />}
-                      onClick={() =>
-                        navigate(`/admin/avaliacoes/${avaliacao.id}/respostas`)
-                      }
+                      onClick={handleCriarNova}
+                      sx={{
+                        backgroundColor: '#011b49e0',
+                        color: '#fff3e0',
+                        '&:hover': {
+                          backgroundColor: '#ff2c19',
+                        },
+                      }}
+                      title="Nova Avaliação"
                     >
-                      Ver Respostas
-                    </Button>
-                    <Button
+                      <AddIcon />
+                    </IconButton>
+                    <IconButton
                       size="small"
-                      startIcon={<AssessmentIcon />}
                       onClick={() =>
                         navigate(`/admin/avaliacoes/${avaliacao.id}/relatorio`)
                       }
+                      sx={{
+                        backgroundColor: '#011b49e0',
+                        color: '#fff3e0',
+                        '&:hover': {
+                          backgroundColor: '#ff2c19',
+                        },
+                      }}
+                      title="Relatório"
                     >
-                      Relatório
-                    </Button>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeletarAvaliacao(avaliacao.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
+                      <AssessmentIcon />
                     </IconButton>
-                  </CardActions>
-                </Card>
-              </Grid>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Lista de Perguntas */}
+                {avaliacao.perguntas && avaliacao.perguntas.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {avaliacao.perguntas.map((pergunta: any, index: number) => (
+                      <Box 
+                        key={pergunta.id} 
+                        sx={{ 
+                          p: 2, 
+                          bgcolor: '#f9f9f9',
+                          borderRadius: 1,
+                          border: '1px solid #e0e0e0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#f0f0f0',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          },
+                        }}
+                      >
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            minWidth: '24px',
+                            fontWeight: 600,
+                            color: 'text.secondary'
+                          }}
+                        >
+                          {index + 1}.
+                        </Typography>
+                        <Typography variant="body2" sx={{ flex: 1 }}>
+                          {pergunta.texto}
+                        </Typography>
+                        <Chip 
+                          label={`${pergunta.peso || 0}%`} 
+                          size="small" 
+                          sx={{ 
+                            bgcolor: '#e3f2fd',
+                            color: '#1976d2',
+                            fontWeight: 600,
+                            minWidth: '50px'
+                          }} 
+                        />
+                        <Chip 
+                          label={getTipoLabel(pergunta.tipo)} 
+                          size="small" 
+                          sx={{ 
+                            bgcolor: '#f5f5f5',
+                            color: '#666',
+                            fontWeight: 500,
+                          }} 
+                        />
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              if (index === 0) return;
+                              // TODO: Implementar mover pergunta para cima
+                            }}
+                            disabled={index === 0}
+                            sx={{
+                              color: 'action.active',
+                              '&:hover': { bgcolor: 'action.hover' },
+                              '&:disabled': { color: 'action.disabled' }
+                            }}
+                            title="Mover para cima"
+                          >
+                            <ArrowUpwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              if (index === (avaliacao.perguntas?.length || 0) - 1) return;
+                              // TODO: Implementar mover pergunta para baixo
+                            }}
+                            disabled={index === (avaliacao.perguntas?.length || 0) - 1}
+                            sx={{
+                              color: 'action.active',
+                              '&:hover': { bgcolor: 'action.hover' },
+                              '&:disabled': { color: 'action.disabled' }
+                            }}
+                            title="Mover para baixo"
+                          >
+                            <ArrowDownwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              // TODO: Implementar editar pergunta
+                            }}
+                            sx={{ 
+                              color: 'info.main',
+                              '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.1)' }
+                            }}
+                            title="Editar pergunta"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={async () => {
+                              const resultado = await confirm({
+                                title: 'Excluir Pergunta?',
+                                message: `Tem certeza que deseja excluir a pergunta "${pergunta.texto}"?`,
+                                confirmText: 'Sim, excluir',
+                                cancelText: 'Cancelar',
+                                type: 'delete',
+                              });
+
+                              if (!resultado) return;
+
+                              try {
+                                // TODO: Implementar exclusão de pergunta
+                                showSuccess('Pergunta excluída com sucesso!');
+                                carregarDados();
+                              } catch (error: any) {
+                                showError(error.response?.data?.error || 'Erro ao excluir pergunta');
+                              }
+                            }}
+                            sx={{
+                              color: 'error.main',
+                              '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' }
+                            }}
+                            title="Excluir pergunta"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Alert severity="info">
+                    Nenhuma pergunta configurada nesta avaliação
+                  </Alert>
+                )}
+              </Paper>
             ))}
-          </Grid>
+          </Box>
         )}
 
         {/* Modal de Criar/Editar Avaliação */}

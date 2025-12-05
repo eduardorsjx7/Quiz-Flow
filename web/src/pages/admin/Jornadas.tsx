@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -31,13 +30,12 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Visibility as ViewIcon,
+  Assessment as AssessmentIcon,
   Settings as SettingsIcon,
   Search as SearchIcon,
   TableChart as TableChartIcon,
   ViewModule as ViewModuleIcon,
   Route as RouteIcon,
-  CheckCircle as CheckCircleIcon,
   Home as HomeIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
@@ -254,17 +252,10 @@ const AdminJornadas: React.FC = () => {
               right: 0,
               top: '50%',
               transform: 'translateY(-50%)',
-              width: 48,
-              height: 48,
-              bgcolor: '#ff2c19',
-              color: '#ffffff',
-              border: '2px solid #e62816',
-              borderRadius: '50%',
-              transition: 'all 0.2s ease-in-out',
+              backgroundColor: '#011b49e0',
+              color: '#fff3e0',
               '&:hover': {
-                bgcolor: '#e62816',
-                transform: 'translateY(-50%) scale(1.1)',
-                boxShadow: '0 4px 12px rgba(255, 44, 25, 0.4)',
+                backgroundColor: '#ff2c19',
               },
             }}
             title="Criar Nova Jornada"
@@ -358,11 +349,11 @@ const AdminJornadas: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Título</TableCell>
+                <TableCell sx={{ color: '#ff2c19', fontWeight: 600 }}>Título</TableCell>
                 <TableCell align="center">Fase Atual</TableCell>
                 <TableCell align="center">Total de Fases</TableCell>
                 <TableCell align="center">Status</TableCell>
-                <TableCell align="right">Ações</TableCell>
+                <TableCell align="center">Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -376,7 +367,19 @@ const AdminJornadas: React.FC = () => {
                 </TableRow>
               ) : (
                 jornadasPaginadasTabela.map((jornada) => (
-                  <TableRow key={jornada.id}>
+                  <TableRow 
+                    key={jornada.id}
+                    sx={{
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: '1px solid transparent',
+                      '&:hover': {
+                        border: '1px solid #ff2c19',
+                        boxShadow: '0 4px 12px rgba(255, 44, 25, 0.2)',
+                        transform: 'translateY(-2px)',
+                        backgroundColor: 'rgba(255, 44, 25, 0.02)',
+                      },
+                    }}
+                  >
                     <TableCell>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
                         {jornada.titulo}
@@ -388,7 +391,11 @@ const AdminJornadas: React.FC = () => {
                           label="Fases Abertas"
                           color="success"
                           size="small"
-                          sx={{ fontWeight: 500 }}
+                          sx={{ 
+                            fontWeight: 500,
+                            backgroundColor: '#011b49',
+                            color: '#fff',
+                          }}
                         />
                       ) : jornada.faseAtual ? (
                         <Chip
@@ -396,6 +403,10 @@ const AdminJornadas: React.FC = () => {
                           color="primary"
                           size="small"
                           variant="outlined"
+                          sx={{
+                            border: '1px solid #011b49',
+                            color: '#011b49',
+                          }}
                         />
                       ) : (
                         <Typography variant="body2" color="text.secondary">
@@ -439,29 +450,31 @@ const AdminJornadas: React.FC = () => {
                         );
                       })()}
                     </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                    <TableCell align="center">
+                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         <IconButton
                           size="small"
                           onClick={() => navigate(`/admin/jornadas/${jornada.id}`)}
                           title="Detalhes"
                           sx={{
-                            color: '#2196F3',
+                            backgroundColor: '#011b49e0',
+                            color: '#fff3e0',
                             '&:hover': {
-                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              backgroundColor: '#ff2c19',
                             },
                           }}
                         >
-                          <ViewIcon fontSize="small" />
+                          <AssessmentIcon fontSize="small" />
                         </IconButton>
                         <IconButton
                           size="small"
                           onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
                           title="Configurar Jornada"
                           sx={{
-                            color: '#FF9800',
+                            backgroundColor: '#011b49e0',
+                            color: '#fff3e0',
                             '&:hover': {
-                              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                              backgroundColor: '#ff2c19',
                             },
                           }}
                         >
@@ -472,9 +485,10 @@ const AdminJornadas: React.FC = () => {
                           onClick={() => handleDeletar(jornada.id)}
                           title="Deletar Jornada"
                           sx={{
-                            color: '#f44336',
+                            backgroundColor: '#011b49e0',
+                            color: '#fff3e0',
                             '&:hover': {
-                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                              backgroundColor: '#ff2c19',
                             },
                           }}
                         >
@@ -660,7 +674,7 @@ const AdminJornadas: React.FC = () => {
                         alt={jornada.titulo}
                         sx={{
                           width: '100%',
-                          height: 90,
+                          height: 157,
                           objectFit: 'cover',
                           transition: 'transform 0.3s ease',
                           flexShrink: 0,
@@ -673,7 +687,7 @@ const AdminJornadas: React.FC = () => {
                       <Box
                         sx={{
                           width: '100%',
-                          height: 90,
+                          height: 157,
                           background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                           display: 'flex',
                           alignItems: 'center',
@@ -694,14 +708,14 @@ const AdminJornadas: React.FC = () => {
                         <RouteIcon sx={{ color: '#ff2c19', fontSize: 32, position: 'relative', zIndex: 1 }} />
                       </Box>
                     )}
-                    <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, minHeight: 0 }}>
+                    <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', justifyContent: 'center' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
                         <Typography 
                           variant="h6" 
                           sx={{ 
                             fontWeight: 600, 
                             color: '#011b49', 
-                            flex: 1,
+                            textAlign: 'center',
                             fontSize: '0.875rem',
                             lineHeight: 1.3,
                             overflow: 'hidden',
@@ -714,161 +728,50 @@ const AdminJornadas: React.FC = () => {
                           {jornada.titulo}
                         </Typography>
                       </Box>
-                      
-                      <Box 
-                        sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: 0.5, 
-                          mb: 0.5,
-                          p: 0.75,
-                          borderRadius: 2,
-                          bgcolor: 'rgba(0, 0, 0, 0.02)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            gap: 1,
-                          }}
-                        >
-                          {(() => {
-                            // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
-                            const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
-                            // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
-                            const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
-                            
-                            let label = 'Ativa';
-                            let color: 'success' | 'default' | 'warning' | 'error' = 'success';
-                            const temIcone = jornada.ativo && !estaFechada && !estaBloqueada;
-                            
-                            if (estaFechada) {
-                              label = 'Fechada';
-                              color = 'default';
-                            } else if (estaBloqueada) {
-                              label = 'Bloqueada';
-                              color = 'error';
-                            } else if (jornada.ativo) {
-                              label = 'Ativa';
-                              color = 'success';
-                            } else {
-                              label = 'Inativa';
-                              color = 'default';
-                            }
-                            
-                            return (
-                              <>
-                                <CheckCircleIcon sx={{ color: temIcone ? '#4caf50' : '#6b7280', fontSize: 16 }} />
-                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                  Status:
-                                </Typography>
-                                <Chip
-                                  {...(temIcone && { icon: <CheckCircleIcon sx={{ fontSize: 14 }} /> })}
-                                  label={label}
-                                  color={color}
-                                  size="small"
-                                  sx={{ fontWeight: 600 }}
-                                />
-                              </>
-                            );
-                          })()}
-                        </Box>
-                      </Box>
                     </CardContent>
                     <CardActions sx={{ justifyContent: 'center', p: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.75, flexShrink: 0 }}>
-                      <Button
+                      <IconButton
                         size="small"
                         onClick={() => navigate(`/admin/jornadas/${jornada.id}`)}
-                        startIcon={<ViewIcon />}
                         sx={{
-                          color: '#2196F3',
-                          bgcolor: 'rgba(33, 150, 243, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(33, 150, 243, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 18,
-                          },
+                          backgroundColor: '#011b49e0',
+                          color: '#fff3e0',
                           '&:hover': {
-                            backgroundColor: '#2196F3',
-                            color: '#fff',
-                            borderColor: '#2196F3',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
+                            backgroundColor: '#ff2c19',
                           },
                         }}
+                        title="Detalhes"
                       >
-                        Detalhes
-                      </Button>
-                      <Button
+                        <AssessmentIcon />
+                      </IconButton>
+                      <IconButton
                         size="small"
                         onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
-                        startIcon={<SettingsIcon />}
                         sx={{
-                          color: '#FF9800',
-                          bgcolor: 'rgba(255, 152, 0, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(255, 152, 0, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 18,
-                          },
+                          backgroundColor: '#011b49e0',
+                          color: '#fff3e0',
                           '&:hover': {
-                            backgroundColor: '#FF9800',
-                            color: '#fff',
-                            borderColor: '#FF9800',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)',
+                            backgroundColor: '#ff2c19',
                           },
                         }}
+                        title="Configurar"
                       >
-                        Configurar
-                      </Button>
-                      <Button
+                        <SettingsIcon />
+                      </IconButton>
+                      <IconButton
                         size="small"
                         onClick={() => handleDeletar(jornada.id)}
-                        startIcon={<DeleteIcon />}
                         sx={{
-                          color: '#f44336',
-                          bgcolor: 'rgba(244, 67, 54, 0.08)',
-                          border: '1px solid',
-                          borderColor: 'rgba(244, 67, 54, 0.2)',
-                          borderRadius: 1.5,
-                          px: 1.25,
-                          py: 0.5,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 18,
-                          },
+                          backgroundColor: '#011b49e0',
+                          color: '#fff3e0',
                           '&:hover': {
-                            backgroundColor: '#f44336',
-                            color: '#fff',
-                            borderColor: '#f44336',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(244, 67, 54, 0.3)',
+                            backgroundColor: '#ff2c19',
                           },
                         }}
+                        title="Excluir"
                       >
-                        Deletar
-                      </Button>
+                        <DeleteIcon />
+                      </IconButton>
                     </CardActions>
                   </Card>
                 </Grid>

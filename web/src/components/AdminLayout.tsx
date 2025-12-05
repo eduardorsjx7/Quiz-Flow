@@ -66,6 +66,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         onToggleCollapse={handleDesktopToggle}
         usuarioNome={usuario?.nome}
         usuarioTipo={usuario?.tipo}
+        usuarioFotoPerfil={usuario?.fotoPerfil}
       />
 
       {/* AppBar */}
@@ -80,6 +81,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           zIndex: (theme) => theme.zIndex.drawer - 1, // Atrás do sidebar
           borderBottom: '1px solid rgba(255, 44, 25, 0.1)',
           transition: 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'fixed',
+          top: 0,
         }}
       >
         <Toolbar sx={{ justifyContent: 'center', position: 'relative' }}>

@@ -33,8 +33,7 @@ import {
   Home as HomeIcon,
   Settings as SettingsIcon,
   School as SchoolIcon,
-  PlayArrow as PlayArrowIcon,
-  Schedule as ScheduleIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
@@ -167,70 +166,87 @@ const DetalhesJornada: React.FC = () => {
   return (
     <AdminLayout title={`Detalhes da Jornada - ${dados?.jornada.titulo || ''}`}>
       <Container maxWidth="lg">
-        <Breadcrumbs 
-          sx={{ 
-            mb: 3,
-            '& .MuiBreadcrumbs-separator': {
-              mx: 1.5,
-              color: 'text.disabled',
-            },
-          }}
-        >
-          <Link
-            component="button"
-            onClick={() => navigate('/admin')}
-            sx={{ 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              color: 'text.secondary',
-              transition: 'all 0.2s ease',
-              borderRadius: 1,
-              p: 0.5,
-              '&:hover': { 
-                color: 'primary.main',
-                bgcolor: 'rgba(0, 0, 0, 0.04)',
-              },
-            }}
-            title="Dashboard"
-          >
-            <HomeIcon sx={{ fontSize: 20 }} />
-          </Link>
-          <Link
-            component="button"
-            onClick={() => navigate('/admin/jornadas')}
-            sx={{ 
-              cursor: 'pointer', 
-              textDecoration: 'none',
-              color: 'text.secondary',
-              transition: 'all 0.2s ease',
-              borderRadius: 1,
-              px: 0.75,
-              py: 0.5,
-              fontWeight: 400,
-              '&:hover': { 
-                color: 'primary.main',
-                bgcolor: 'rgba(0, 0, 0, 0.04)',
-                textDecoration: 'none',
-              },
-            }}
-          >
-            Jornadas
-          </Link>
-          <Typography 
-            color="text.primary"
+        <Box sx={{ position: 'relative', mb: 3 }}>
+          <IconButton 
+            onClick={() => navigate('/admin/jornadas')} 
+            size="small"
             sx={{
-              fontWeight: 500,
-              fontSize: '0.95rem',
+              position: 'absolute',
+              left: -56,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+            title="Voltar"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Breadcrumbs 
+            sx={{ 
+              '& .MuiBreadcrumbs-separator': {
+                mx: 1.5,
+                color: 'text.disabled',
+              },
             }}
           >
-            Detalhes da Jornada
-          </Typography>
-        </Breadcrumbs>
+            <Link
+              component="button"
+              onClick={() => navigate('/admin')}
+              sx={{ 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center',
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                borderRadius: 1,
+                p: 0.5,
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+              title="Dashboard"
+            >
+              <HomeIcon sx={{ fontSize: 20 }} />
+            </Link>
+            <Link
+              component="button"
+              onClick={() => navigate('/admin/jornadas')}
+              sx={{ 
+                cursor: 'pointer', 
+                textDecoration: 'none',
+                color: 'text.secondary',
+                transition: 'all 0.2s ease',
+                borderRadius: 1,
+                px: 0.75,
+                py: 0.5,
+                fontWeight: 400,
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  textDecoration: 'none',
+                },
+              }}
+            >
+              Jornadas
+            </Link>
+            <Typography 
+              color="text.primary"
+              sx={{
+                fontWeight: 500,
+                fontSize: '0.95rem',
+              }}
+            >
+              Detalhes da Jornada
+            </Typography>
+          </Breadcrumbs>
+        </Box>
 
         {/* Cabeçalho */}
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-          <Box sx={{ position: 'relative', mb: 2 }}>
+        <Paper sx={{ p: 3, mb: 0, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <Box sx={{ position: 'relative', pb: 0 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography 
                 variant="h4" 
@@ -253,56 +269,6 @@ const DetalhesJornada: React.FC = () => {
                   {jornada.descricao}
                 </Typography>
               )}
-              
-              {/* Informações de Fase Atual e Próxima Fase */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center', mt: 2 }}>
-                {proximaFase && proximaFase.dataDesbloqueio ? (
-                  <>
-                    {faseAtual && (
-                      <Chip
-                        icon={<PlayArrowIcon />}
-                        label={`Fase Atual: ${faseAtual.ordem}ª - ${faseAtual.titulo}`}
-                        color="primary"
-                        sx={{ 
-                          fontWeight: 600,
-                          fontSize: '0.9rem',
-                          height: 'auto',
-                          py: 1,
-                        }}
-                      />
-                    )}
-                    <Chip
-                      icon={<ScheduleIcon />}
-                      label={`Próxima Fase: ${proximaFase.ordem}ª - ${proximaFase.titulo} - ${new Date(proximaFase.dataDesbloqueio).toLocaleDateString('pt-BR', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}`}
-                      color="secondary"
-                      sx={{ 
-                        fontWeight: 600,
-                        fontSize: '0.9rem',
-                        height: 'auto',
-                        py: 1,
-                      }}
-                    />
-                  </>
-                ) : !proximaFase && (
-                  <Chip
-                    icon={<PlayArrowIcon />}
-                    label="Todas as fases estão abertas"
-                    color="success"
-                    sx={{ 
-                      fontWeight: 600,
-                      fontSize: '0.9rem',
-                      height: 'auto',
-                      py: 1,
-                    }}
-                  />
-                )}
-              </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, position: 'absolute', right: 0, top: 0 }}>
               <Chip
@@ -347,8 +313,41 @@ const DetalhesJornada: React.FC = () => {
         </Paper>
 
         {/* Estatísticas Gerais */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={3} sx={{ mb: 3, mt: 3 }}>
+          {/* Fase Atual */}
+          {(faseAtual || !proximaFase) && (
+            <Grid item xs={12} sm={6} md={2}>
+              <Card sx={{ borderRadius: 2 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <SchoolIcon sx={{ fontSize: 40, color: '#011b49', mr: 2 }} />
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      {faseAtual ? (
+                        <>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#011b49' }}>
+                            {faseAtual.ordem}º
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ color: '#6b7280' }}>
+                            Fase Atual
+                          </Typography>
+                        </>
+                      ) : (
+                        <>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#011b49' }}>
+                            N/A
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ color: '#6b7280' }}>
+                            Sem ordem definida
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card sx={{ borderRadius: 2 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -364,7 +363,7 @@ const DetalhesJornada: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card sx={{ borderRadius: 2 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -380,7 +379,7 @@ const DetalhesJornada: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card sx={{ borderRadius: 2 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -396,7 +395,7 @@ const DetalhesJornada: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card sx={{ borderRadius: 2 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>

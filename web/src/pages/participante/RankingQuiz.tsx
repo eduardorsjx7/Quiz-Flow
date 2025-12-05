@@ -27,6 +27,7 @@ import {
 import api from '../../services/api';
 import ParticipantLayout from '../../components/ParticipantLayout';
 import { useAuth } from '../../contexts/AuthContext';
+import { construirUrlFotoPerfil } from '../../utils/fotoPerfil';
 
 const getPosicaoColor = (posicao: number) => {
   if (posicao === 1) return '#FFD700'; // Ouro
@@ -274,6 +275,7 @@ const RankingQuiz: React.FC = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Avatar
+                            src={construirUrlFotoPerfil((item.usuario as any).fotoPerfil) || undefined}
                             sx={{
                               width: 40,
                               height: 40,
@@ -284,7 +286,7 @@ const RankingQuiz: React.FC = () => {
                               color: corPosicao,
                             }}
                           >
-                            {item.usuario.nome.charAt(0).toUpperCase()}
+                            {!((item.usuario as any).fotoPerfil) && ((item.usuario as any).nomeExibicao || item.usuario.nome).charAt(0).toUpperCase()}
                           </Avatar>
                           <Box>
                             <Typography
@@ -294,7 +296,7 @@ const RankingQuiz: React.FC = () => {
                                 color: '#011b49',
                               }}
                             >
-                              {item.usuario.nome}
+                              {(item.usuario as any).nomeExibicao || item.usuario.nome}
                               {isUsuarioAtual && (
                                 <Chip
                                   label="Você"

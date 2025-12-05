@@ -10,10 +10,8 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Chip,
   Breadcrumbs,
   Link,
-  Button,
   Stack,
   IconButton,
   TextField,
@@ -22,12 +20,12 @@ import {
 import {
   Route as RouteIcon,
   Home as HomeIcon,
-  Visibility as ViewIcon,
+  School as SchoolIcon,
   Settings as SettingsIcon,
-  CheckCircle as CheckCircleIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Search as SearchIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import AdminLayout from '../../components/AdminLayout';
@@ -324,7 +322,7 @@ const AdminFases: React.FC = () => {
                       alt={jornada.titulo}
                       sx={{
                         width: '100%',
-                        height: 90,
+                        height: 157,
                         objectFit: 'cover',
                         transition: 'transform 0.3s ease',
                         flexShrink: 0,
@@ -337,7 +335,7 @@ const AdminFases: React.FC = () => {
                     <Box
                       sx={{
                         width: '100%',
-                        height: 135,
+                        height: 157,
                         background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                         display: 'flex',
                         alignItems: 'center',
@@ -358,14 +356,14 @@ const AdminFases: React.FC = () => {
                       <RouteIcon sx={{ color: '#ff2c19', fontSize: 32, position: 'relative', zIndex: 1 }} />
                     </Box>
                   )}
-                  <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, minHeight: 0 }}>
+                  <CardContent sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', justifyContent: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
                       <Typography 
                         variant="h6" 
                         sx={{ 
                           fontWeight: 600, 
                           color: '#011b49', 
-                          flex: 1,
+                          textAlign: 'center',
                           fontSize: '0.875rem',
                           lineHeight: 1.3,
                           overflow: 'hidden',
@@ -378,131 +376,50 @@ const AdminFases: React.FC = () => {
                         {jornada.titulo}
                       </Typography>
                     </Box>
-                    
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: 0.5, 
-                        mb: 0.5,
-                        p: 0.75,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(0, 0, 0, 0.02)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Box 
-                        sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          gap: 1,
-                        }}
-                      >
-                        {(() => {
-                          // Se está inativa e não tem sequência de desbloqueio (todasFasesAbertas = true ou sem fases), está "Fechada"
-                          const estaFechada = !jornada.ativo && (jornada.todasFasesAbertas || jornada._count.fases === 0);
-                          // Se está inativa e tem sequência de desbloqueio (todasFasesAbertas = false), está "Bloqueada"
-                          const estaBloqueada = !jornada.ativo && !jornada.todasFasesAbertas && jornada._count.fases > 0;
-                          
-                          let label = 'Ativa';
-                          let color: 'success' | 'default' | 'warning' | 'error' = 'success';
-                          const temIcone = jornada.ativo && !estaFechada && !estaBloqueada;
-                          
-                          if (estaFechada) {
-                            label = 'Fechada';
-                            color = 'default';
-                          } else if (estaBloqueada) {
-                            label = 'Bloqueada';
-                            color = 'error';
-                          } else if (jornada.ativo) {
-                            label = 'Ativa';
-                            color = 'success';
-                          } else {
-                            label = 'Inativa';
-                            color = 'default';
-                          }
-                          
-                          return (
-                            <>
-                              <CheckCircleIcon sx={{ color: temIcone ? '#4caf50' : '#6b7280', fontSize: 16 }} />
-                              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                Status:
-                              </Typography>
-                              <Chip
-                                {...(temIcone && { icon: <CheckCircleIcon sx={{ fontSize: 14 }} /> })}
-                                label={label}
-                                color={color}
-                                size="small"
-                                sx={{ fontWeight: 600 }}
-                              />
-                            </>
-                          );
-                        })()}
-                      </Box>
-                    </Box>
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'center', p: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'rgba(0, 0, 0, 0.01)', gap: 0.75, flexShrink: 0 }}>
-                    <Button
+                    <IconButton
                       size="small"
                       onClick={() => navigate(`/admin/jornadas/${jornada.id}/fases`)}
-                      startIcon={<ViewIcon />}
                       sx={{
-                        color: '#2196F3',
-                        bgcolor: 'rgba(33, 150, 243, 0.08)',
-                        border: '1px solid',
-                        borderColor: 'rgba(33, 150, 243, 0.2)',
-                        borderRadius: 1.5,
-                        px: 1.25,
-                        py: 0.5,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        '& .MuiSvgIcon-root': {
-                          fontSize: 18,
-                        },
+                        backgroundColor: '#011b49e0',
+                        color: '#fff3e0',
                         '&:hover': {
-                          backgroundColor: '#2196F3',
-                          color: '#fff',
-                          borderColor: '#2196F3',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
+                          backgroundColor: '#ff2c19',
                         },
                       }}
+                      title="Ver Fases"
                     >
-                      Ver Fases
-                    </Button>
-                    <Button
+                      <SchoolIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/admin/jornadas/${jornada.id}/avaliacao`)}
+                      sx={{
+                        backgroundColor: '#011b49e0',
+                        color: '#fff3e0',
+                        '&:hover': {
+                          backgroundColor: '#ff2c19',
+                        },
+                      }}
+                      title="Avaliação"
+                    >
+                      <AssessmentIcon />
+                    </IconButton>
+                    <IconButton
                       size="small"
                       onClick={() => navigate(`/admin/jornadas/${jornada.id}/configurar`)}
-                      startIcon={<SettingsIcon />}
                       sx={{
-                        color: '#FF9800',
-                        bgcolor: 'rgba(255, 152, 0, 0.08)',
-                        border: '1px solid',
-                        borderColor: 'rgba(255, 152, 0, 0.2)',
-                        borderRadius: 1.5,
-                        px: 1.25,
-                        py: 0.5,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        '& .MuiSvgIcon-root': {
-                          fontSize: 18,
-                        },
+                        backgroundColor: '#011b49e0',
+                        color: '#fff3e0',
                         '&:hover': {
-                          backgroundColor: '#FF9800',
-                          color: '#fff',
-                          borderColor: '#FF9800',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)',
+                          backgroundColor: '#ff2c19',
                         },
                       }}
+                      title="Configurar"
                     >
-                      Configurar
-                    </Button>
+                      <SettingsIcon />
+                    </IconButton>
                   </CardActions>
                 </Card>
               </Grid>

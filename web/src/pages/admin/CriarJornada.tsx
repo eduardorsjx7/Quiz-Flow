@@ -1037,6 +1037,7 @@ const CriarJornada: React.FC = () => {
           for (const fase of fasesCriadas) {
             await api.post('/avaliacoes', {
               jornadaId: jornadaId,
+              faseId: fase.id,
               titulo: `Avaliação da Fase: ${fase.titulo}`,
               descricao: `Avalie sua experiência com a fase "${fase.titulo}"`,
               ativo: true,

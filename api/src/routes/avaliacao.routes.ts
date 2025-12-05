@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { avaliacaoController } from '../controllers/avaliacao.controller';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -7,6 +8,7 @@ const router = Router();
 router.post('/', avaliacaoController.criar.bind(avaliacaoController));
 router.get('/jornada/:jornadaId', avaliacaoController.listar.bind(avaliacaoController));
 router.get('/jornada/:jornadaId/ativa', avaliacaoController.buscarAvaliacaoAtiva.bind(avaliacaoController));
+router.get('/disponiveis', authenticate, avaliacaoController.listarDisponiveis.bind(avaliacaoController));
 router.get('/:id', avaliacaoController.buscar.bind(avaliacaoController));
 router.put('/:id', avaliacaoController.atualizar.bind(avaliacaoController));
 router.delete('/:id', avaliacaoController.deletar.bind(avaliacaoController));
